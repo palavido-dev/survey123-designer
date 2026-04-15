@@ -40,49 +40,54 @@ export function Toolbar() {
   };
 
   return (
-    <div className="h-[52px] bg-white border-b border-gray-200 flex items-center justify-between px-5">
+    <div className="bg-white border-b border-gray-200 flex items-center justify-between"
+      style={{ height: 56, padding: '0 20px' }}>
       {/* Left: Logo & Title */}
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-[#007a62] rounded-lg flex items-center justify-center">
-          <FileText size={16} className="text-white" />
+      <div className="flex items-center" style={{ gap: 12 }}>
+        <div className="bg-[#007a62] rounded-lg flex items-center justify-center"
+          style={{ width: 36, height: 36 }}>
+          <FileText size={18} className="text-white" />
         </div>
         <div>
           <span className="text-[14px] font-bold text-gray-900">Survey123 Designer</span>
-          <p className="text-[10px] text-gray-400 -mt-0.5">XLSForm Builder</p>
+          <p className="text-[10px] text-gray-400" style={{ marginTop: -2 }}>XLSForm Builder</p>
         </div>
       </div>
 
       {/* Center: Form actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center" style={{ gap: 4 }}>
         <button
           onClick={resetForm}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium
+          className="flex items-center text-[13px] font-medium
             text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast"
+          style={{ padding: '6px 12px', gap: 6 }}
           title="New Form"
         >
           <Plus size={15} className="text-gray-400" />
           New
         </button>
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium
+          className="flex items-center text-[13px] font-medium
             text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast"
+          style={{ padding: '6px 12px', gap: 6 }}
           title="Open existing XLS form"
         >
           <Upload size={15} className="text-gray-400" />
           Open
         </button>
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
 
         <button
           onClick={handleExport}
-          className="flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-semibold
+          className="flex items-center text-[13px] font-semibold
             text-white bg-[#007a62] rounded-lg transition-fast
             hover:bg-[#006652] active:scale-[0.98]"
+          style={{ padding: '6px 16px', gap: 6 }}
           title="Export as XLSX"
         >
           <Download size={15} />
@@ -99,12 +104,13 @@ export function Toolbar() {
       </div>
 
       {/* Right: Undo/Redo */}
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center" style={{ gap: 2 }}>
         <button
           onClick={undo}
           disabled={undoStack.length === 0}
-          className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-fast
+          className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-fast
             disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          style={{ padding: 8 }}
           title={`Undo (${undoStack.length})`}
         >
           <Undo2 size={16} />
@@ -112,8 +118,9 @@ export function Toolbar() {
         <button
           onClick={redo}
           disabled={redoStack.length === 0}
-          className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-fast
+          className="text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-fast
             disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          style={{ padding: 8 }}
           title={`Redo (${redoStack.length})`}
         >
           <Redo2 size={16} />

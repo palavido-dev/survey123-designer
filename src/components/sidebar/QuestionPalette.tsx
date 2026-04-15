@@ -26,18 +26,19 @@ function DraggableCard({ item }: { item: DragItem }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      style={{ padding: '10px 12px', gap: 10 }}
       className={`
-        flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-grab select-none
+        flex items-center rounded-lg cursor-grab select-none
         border border-gray-200 bg-white hover:border-[#00856a] hover:bg-[#f0faf7]
         transition-fast group
         ${isDragging ? 'opacity-40 scale-95' : ''}
       `}
     >
       <Icon
-        size={16}
+        size={18}
         className="text-[#00856a] shrink-0 group-hover:scale-110 transition-fast"
       />
-      <span className="text-[12px] text-gray-700 font-medium leading-tight">{item.label}</span>
+      <span className="text-[13px] text-gray-700 font-medium leading-snug">{item.label}</span>
     </div>
   );
 }
@@ -48,11 +49,12 @@ function DraggableCard({ item }: { item: DragItem }) {
 
 function CategoryGroup({ category }: { category: QuestionCategory }) {
   return (
-    <div className="mb-5">
-      <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
+    <div style={{ marginBottom: 20 }}>
+      <h3 style={{ padding: '0 4px', marginBottom: 8 }}
+        className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
         {category.label}
       </h3>
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid grid-cols-2" style={{ gap: 6 }}>
         {category.items.map((item) => (
           <DraggableCard key={item.id} item={item} />
         ))}
@@ -80,15 +82,18 @@ export function QuestionPalette() {
     : questionCategories;
 
   return (
-    <div className="w-[300px] bg-[#fafafa] border-r border-gray-200 flex flex-col h-full">
+    <div className="bg-[#fafafa] border-r border-gray-200 flex flex-col h-full"
+      style={{ width: 300 }}>
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between mb-3">
+      <div className="border-b border-gray-200 bg-white"
+        style={{ padding: '16px 16px 12px 16px' }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
           <h2 className="text-[15px] font-bold text-gray-900">Add</h2>
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded transition-fast"
+              className="text-gray-400 hover:text-gray-600 rounded transition-fast"
+              style={{ padding: 4 }}
             >
               <X size={14} />
             </button>
@@ -99,18 +104,22 @@ export function QuestionPalette() {
           placeholder="Search question types..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 text-[13px] bg-gray-50 border border-gray-200 rounded-lg
+          style={{ padding: '8px 12px' }}
+          className="w-full text-[13px] bg-gray-50 border border-gray-200 rounded-lg
             text-gray-700 placeholder-gray-400 transition-fast"
         />
       </div>
 
       {/* Scrollable question list */}
-      <div className="flex-1 overflow-y-auto px-3 pt-4 pb-6">
+      <div className="flex-1 overflow-y-auto"
+        style={{ padding: '16px 12px 24px 12px' }}>
         {filteredCategories.map((category) => (
           <CategoryGroup key={category.id} category={category} />
         ))}
         {filteredCategories.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-8">No matching types</p>
+          <p className="text-sm text-gray-400 text-center" style={{ padding: '32px 0' }}>
+            No matching types
+          </p>
         )}
       </div>
     </div>
