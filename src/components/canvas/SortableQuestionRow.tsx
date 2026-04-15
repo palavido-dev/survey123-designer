@@ -1,5 +1,6 @@
 /**
  * Sortable Question Row — Live form preview showing actual input widgets
+ * Renders appearance-specific previews (spinner, likert, signature, etc.)
  */
 
 import React from 'react';
@@ -27,7 +28,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    marginLeft: `${depth * 20}px`,
+    marginLeft: `${depth * 24}px`,
   };
 
   const isEndStructural = ['end_group', 'end_repeat'].includes(row.type);
@@ -40,7 +41,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   if (isEndStructural) {
     return (
       <div ref={setNodeRef} style={style}
-        className="flex items-center gap-2 py-2 px-5 text-[11px] text-gray-400 border-b border-dashed border-gray-200">
+        className="flex items-center gap-2 py-2 px-6 text-[11px] text-gray-400 border-b border-dashed border-gray-200">
         <span className="font-mono">{row.type === 'end_group' ? '} end group' : '} end repeat'}</span>
       </div>
     );
@@ -51,7 +52,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
     return (
       <div ref={setNodeRef} style={style}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
-        className={`flex items-center gap-3 py-3 px-5 rounded-lg text-[12px] cursor-pointer transition-fast
+        className={`flex items-center gap-3 py-3 px-6 rounded-lg text-[12px] cursor-pointer transition-fast
           ${isSelected ? 'bg-[#f0faf7] selected-glow' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="text-gray-400 font-mono text-[11px]">{row.type}</span>
         <span className="text-gray-500">{row.name}</span>
@@ -77,7 +78,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
           ${isBeginGroup
             ? 'bg-[#f7f3ff] border border-purple-200'
             : 'bg-[#f0faf7] border border-teal-200'}`}>
-        <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <span className={`text-[11px] font-bold uppercase tracking-wide
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
@@ -109,7 +110,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       className={`
-        relative rounded-lg p-5 cursor-pointer transition-fast
+        relative rounded-lg px-6 py-5 cursor-pointer transition-fast
         ${isDragging ? 'opacity-40 shadow-card-hover z-50' : ''}
         ${isSelected
           ? 'bg-[#f0faf7] selected-glow'
@@ -117,7 +118,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
       `}
     >
       {/* Action buttons (top right) */}
-      <div className={`absolute top-3 right-3 flex items-center gap-0.5
+      <div className={`absolute top-3 right-4 flex items-center gap-0.5
         ${isSelected ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-fast`}>
         <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
           className="p-1.5 text-gray-400 hover:text-[#00856a] hover:bg-white rounded transition-fast">
@@ -130,7 +131,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
       </div>
 
       {/* Question label + hint */}
-      <div className="mb-3">
+      <div className="mb-3 pr-16">
         <label className="text-[14px] text-gray-800 font-medium leading-relaxed">
           {row.label || <span className="text-gray-400 italic">Untitled question</span>}
           {row.required === 'yes' && <span className="text-red-500 ml-1">*</span>}
@@ -147,60 +148,100 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
 }
 
 // ============================================================
+// Shared input class
+// ============================================================
+
+const INPUT_CLS = "w-full px-4 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white text-gray-400 cursor-pointer";
+
+// ============================================================
 // Live Input Widgets — Render actual form controls
+// Appearance-aware: shows spinners, likert scales, dropdowns, etc.
 // ============================================================
 
 function QuestionWidget({ row }: { row: SurveyRow }) {
+  const appearance = row.appearance || '';
+
   switch (row.type) {
     case 'text':
-      if (row.appearance?.includes('multiline')) {
+      if (appearance.includes('multiline')) {
         return (
           <textarea
             disabled
             placeholder="Enter text..."
-            className="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg bg-white
-              text-gray-400 resize-none h-20 cursor-pointer"
+            className={`${INPUT_CLS} resize-none h-24`}
           />
         );
       }
-      return (
-        <input type="text" disabled placeholder="Enter text..."
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+      return <input type="text" disabled placeholder="Enter text..." className={INPUT_CLS} />;
 
     case 'email':
-      return (
-        <input type="text" disabled placeholder="name@example.com"
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+      return <input type="text" disabled placeholder="name@example.com" className={INPUT_CLS} />;
 
     case 'password':
-      return (
-        <input type="text" disabled placeholder="••••••••"
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+      return <input type="text" disabled placeholder="••••••••" className={INPUT_CLS} />;
 
     case 'integer':
-    case 'decimal':
-      return (
-        <input type="text" disabled placeholder={row.type === 'integer' ? '0' : '0.00'}
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+    case 'decimal': {
+      const placeholder = row.type === 'integer' ? '0' : '0.00';
+
+      // Spinner appearance
+      if (appearance.includes('spinner')) {
+        return (
+          <div className="flex items-center gap-0">
+            <button disabled className="px-3 py-2.5 bg-gray-100 border border-gray-300 rounded-l-lg text-gray-500 text-[16px] font-bold">
+              −
+            </button>
+            <input type="text" disabled placeholder={placeholder}
+              className="flex-1 px-4 py-2.5 text-[13px] text-center border-t border-b border-gray-300 bg-white text-gray-400 cursor-pointer" />
+            <button disabled className="px-3 py-2.5 bg-gray-100 border border-gray-300 rounded-r-lg text-gray-500 text-[16px] font-bold">
+              +
+            </button>
+          </div>
+        );
+      }
+
+      // Calculator appearance
+      if (appearance.includes('calculator')) {
+        return (
+          <div className="flex items-center gap-2">
+            <input type="text" disabled placeholder={placeholder}
+              className={`flex-1 ${INPUT_CLS}`} />
+            <button disabled className="px-3 py-2.5 bg-gray-100 border border-gray-300 rounded-lg text-[18px] text-gray-500">
+              🔢
+            </button>
+          </div>
+        );
+      }
+
+      // Distress (integer only)
+      if (appearance.includes('distress')) {
+        return (
+          <div className="flex items-center gap-1 py-1">
+            {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
+              <div key={n} className={`flex-1 text-center py-2 rounded text-[11px] font-medium border
+                ${n <= 3 ? 'bg-green-50 border-green-200 text-green-600'
+                  : n <= 6 ? 'bg-yellow-50 border-yellow-200 text-yellow-600'
+                  : 'bg-red-50 border-red-200 text-red-600'}`}>
+                {n}
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return <input type="text" disabled placeholder={placeholder} className={INPUT_CLS} />;
+    }
 
     case 'range':
       return (
-        <div className="flex items-center gap-3 py-1">
-          <span className="text-[12px] text-gray-400">0</span>
+        <div className="flex items-center gap-3 py-2">
+          <span className="text-[12px] text-gray-400 font-medium">0</span>
           <div className="flex-1 relative h-2 bg-gray-200 rounded-full">
             <div className="absolute left-0 top-0 h-2 w-1/3 bg-[#00856a] rounded-full" />
             <div className="absolute left-1/3 top-1/2 -translate-y-1/2 -translate-x-1/2
-              w-4 h-4 bg-[#00856a] rounded-full border-2 border-white shadow" />
+              w-5 h-5 bg-[#00856a] rounded-full border-2 border-white shadow" />
           </div>
-          <span className="text-[12px] text-gray-400">10</span>
+          <span className="text-[12px] text-gray-400 font-medium">10</span>
         </div>
       );
 
@@ -214,29 +255,23 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
       return <SelectPreview row={row} multi={false} />;
 
     case 'date':
-      return (
-        <input type="text" disabled placeholder="mm/dd/yyyy"
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+      if (appearance.includes('year')) {
+        return <input type="text" disabled placeholder="yyyy" className={INPUT_CLS} />;
+      }
+      if (appearance.includes('month-year')) {
+        return <input type="text" disabled placeholder="mm/yyyy" className={INPUT_CLS} />;
+      }
+      return <input type="text" disabled placeholder="mm/dd/yyyy" className={INPUT_CLS} />;
 
     case 'time':
-      return (
-        <input type="text" disabled placeholder="--:-- --"
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+      return <input type="text" disabled placeholder="--:-- --" className={INPUT_CLS} />;
 
     case 'datetime':
-      return (
-        <input type="text" disabled placeholder="mm/dd/yyyy  --:-- --"
-          className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-            text-gray-400 cursor-pointer" />
-      );
+      return <input type="text" disabled placeholder="mm/dd/yyyy  --:-- --" className={INPUT_CLS} />;
 
     case 'geopoint':
       return (
-        <div className="w-full h-32 bg-[#e8efe8] rounded-lg border border-gray-200 flex items-center justify-center">
+        <div className="w-full h-36 bg-[#e8efe8] rounded-lg border border-gray-200 flex items-center justify-center">
           <div className="text-center">
             <div className="text-[24px] mb-1">📍</div>
             <span className="text-[12px] text-gray-500">Tap to capture location</span>
@@ -247,7 +282,7 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
     case 'geotrace':
     case 'geoshape':
       return (
-        <div className="w-full h-32 bg-[#e8efe8] rounded-lg border border-gray-200 flex items-center justify-center">
+        <div className="w-full h-36 bg-[#e8efe8] rounded-lg border border-gray-200 flex items-center justify-center">
           <span className="text-[12px] text-gray-500">
             {row.type === 'geotrace' ? 'Draw a line on the map' : 'Draw a shape on the map'}
           </span>
@@ -255,15 +290,32 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
       );
 
     case 'image':
-      if (row.appearance?.includes('signature')) {
+      if (appearance.includes('signature')) {
         return (
-          <div className="w-full h-24 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-            <span className="text-[13px] text-gray-400">Tap to sign</span>
+          <div className="w-full h-28 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-1">
+            <span className="text-[20px]">✍️</span>
+            <span className="text-[12px] text-gray-400">Tap to sign</span>
+          </div>
+        );
+      }
+      if (appearance.includes('draw')) {
+        return (
+          <div className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-1">
+            <span className="text-[20px]">🖊️</span>
+            <span className="text-[12px] text-gray-400">Tap to draw</span>
+          </div>
+        );
+      }
+      if (appearance.includes('annotate')) {
+        return (
+          <div className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-1">
+            <span className="text-[20px]">🖼️</span>
+            <span className="text-[12px] text-gray-400">Take photo and annotate</span>
           </div>
         );
       }
       return (
-        <div className="w-full py-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-1">
+        <div className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center gap-1">
           <div className="text-[28px]">📷</div>
           <span className="text-[12px] text-gray-400">Take photo or choose image</span>
         </div>
@@ -271,9 +323,9 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
 
     case 'audio':
       return (
-        <div className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-            <div className="w-3 h-3 rounded-full bg-red-500" />
+        <div className="w-full py-5 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <div className="w-3.5 h-3.5 rounded-full bg-red-500" />
           </div>
           <span className="text-[12px] text-gray-400">Tap to record audio</span>
         </div>
@@ -281,7 +333,7 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
 
     case 'file':
       return (
-        <div className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+        <div className="w-full py-5 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
           <span className="text-[12px] text-gray-400">Choose a file to upload</span>
         </div>
       );
@@ -290,9 +342,8 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
       return (
         <div className="flex gap-2">
           <input type="text" disabled placeholder="Scan result..."
-            className="flex-1 px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-              text-gray-400 cursor-pointer" />
-          <button disabled className="px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg
+            className={`flex-1 ${INPUT_CLS}`} />
+          <button disabled className="px-5 py-2.5 bg-gray-100 border border-gray-300 rounded-lg
             text-[12px] text-gray-500 font-medium">
             Scan
           </button>
@@ -301,7 +352,7 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
 
     case 'note':
       return (
-        <div className="text-[13px] text-gray-500 italic">
+        <div className="text-[13px] text-gray-500 italic py-1">
           {row.label || 'Information note'}
         </div>
       );
@@ -311,9 +362,14 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
   }
 }
 
+// ============================================================
 // Select question preview with actual radio/check options
+// Appearance-aware: minimal=dropdown, likert=scale, autocomplete=search
+// ============================================================
+
 function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
   const { form } = useSurveyStore();
+  const appearance = row.appearance || '';
   const list = row.listName
     ? form.choiceLists.find((cl) => cl.list_name === row.listName)
     : null;
@@ -324,24 +380,30 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
     { name: 'option_3', label: 'Option 3' },
   ];
 
-  // Minimal appearance = dropdown
-  if (row.appearance?.includes('minimal') || row.appearance?.includes('autocomplete')) {
+  // Minimal / autocomplete = dropdown
+  if (appearance.includes('minimal') || appearance.includes('autocomplete')) {
     return (
-      <select disabled
-        className="w-full px-3 py-2.5 text-[13px] border border-gray-300 rounded-lg bg-white
-          text-gray-400 cursor-pointer appearance-none">
-        <option>Select an option...</option>
-      </select>
+      <div className="relative">
+        <select disabled
+          className={`${INPUT_CLS} appearance-none pr-10`}>
+          <option>{appearance.includes('autocomplete') ? 'Type to search...' : 'Select an option...'}</option>
+        </select>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </div>
     );
   }
 
-  // Likert appearance
-  if (row.appearance?.includes('likert')) {
+  // Likert appearance — horizontal scale
+  if (appearance.includes('likert')) {
     return (
-      <div className="flex gap-1">
+      <div className="flex gap-1.5">
         {choices.map((c, i) => (
           <div key={i} className="flex-1 text-center">
-            <div className="w-full py-2 border border-gray-300 rounded text-[11px] text-gray-500 bg-white">
+            <div className="w-full py-2.5 border border-gray-300 rounded-lg text-[11px] text-gray-500 bg-white hover:bg-gray-50">
               {c.label}
             </div>
           </div>
@@ -350,9 +412,30 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
     );
   }
 
-  // Default: radio/checkbox list
+  // Horizontal / compact appearance
+  if (appearance.includes('horizontal') || appearance.includes('compact')) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {choices.slice(0, 8).map((c, i) => (
+          <label key={i} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-white cursor-pointer">
+            {multi ? (
+              <div className="w-4 h-4 rounded border-2 border-gray-300 bg-white shrink-0" />
+            ) : (
+              <div className="w-4 h-4 rounded-full border-2 border-gray-300 bg-white shrink-0" />
+            )}
+            <span className="text-[12px] text-gray-600">{c.label}</span>
+          </label>
+        ))}
+        {choices.length > 8 && (
+          <span className="text-[11px] text-gray-400 self-center">+{choices.length - 8} more</span>
+        )}
+      </div>
+    );
+  }
+
+  // Default: radio/checkbox list (vertical)
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {choices.slice(0, 6).map((c, i) => (
         <label key={i} className="flex items-center gap-3 cursor-pointer">
           {multi ? (

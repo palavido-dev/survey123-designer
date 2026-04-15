@@ -62,20 +62,6 @@ function CategoryGroup({ category }: { category: QuestionCategory }) {
 }
 
 // ============================================================
-// Search Icon (inline SVG to avoid rendering issues)
-// ============================================================
-
-function SearchIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-      <circle cx="11" cy="11" r="8" />
-      <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    </svg>
-  );
-}
-
-// ============================================================
 // Main Palette
 // ============================================================
 
@@ -108,19 +94,14 @@ export function QuestionPalette() {
             </button>
           )}
         </div>
-        <div className="relative">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <SearchIcon />
-          </div>
-          <input
-            type="text"
-            placeholder="Search question types..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-[13px] bg-gray-50 border border-gray-200 rounded-lg
-              text-gray-700 placeholder-gray-400 transition-fast"
-          />
-        </div>
+        <input
+          type="text"
+          placeholder="Search question types..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-3 py-2 text-[13px] bg-gray-50 border border-gray-200 rounded-lg
+            text-gray-700 placeholder-gray-400 transition-fast"
+        />
       </div>
 
       {/* Scrollable question list */}
