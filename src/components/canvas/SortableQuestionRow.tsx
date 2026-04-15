@@ -1,12 +1,13 @@
 /**
  * Sortable Question Row — Live form preview showing actual input widgets
  * Renders appearance-specific previews (spinner, likert, signature, etc.)
+ * Supports inline editing of labels (double-click) and choice options.
  */
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { SurveyRow } from '../../types/survey';
+import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
 import { X, Copy } from '../../utils/icons';
 
@@ -18,8 +19,89 @@ interface Props {
   onSelect: () => void;
 }
 
+// ============================================================
+// Inline Editable Text — swaps to input on double-click
+// ============================================================
+
+function InlineEdit({
+  value,
+  onChange,
+  placeholder,
+  className,
+  inputClassName,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  inputClassName?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  // Sync draft when value changes externally
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed !== value) {
+      onChange(trimmed);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit();
+          if (e.key === 'Escape') { setDraft(value); setEditing(false); }
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        placeholder={placeholder}
+        className={inputClassName || `w-full bg-white border border-[#00856a] rounded px-1.5 py-0.5 outline-none text-gray-800 ${className || ''}`}
+        style={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit' }}
+      />
+    );
+  }
+
+  return (
+    <span
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setEditing(true);
+      }}
+      className={`cursor-text hover:bg-[#e6f5f0] hover:outline hover:outline-1 hover:outline-[#00856a]/30 rounded px-0.5 -mx-0.5 transition-colors ${className || ''}`}
+      title="Double-click to edit"
+    >
+      {value || <span className="text-gray-400 italic">{placeholder || 'Untitled'}</span>}
+    </span>
+  );
+}
+
+// ============================================================
+// Main Component
+// ============================================================
+
 export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }: Props) {
-  const { removeRow, duplicateRow } = useSurveyStore();
+  const { removeRow, duplicateRow, updateRow } = useSurveyStore();
 
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
@@ -37,7 +119,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   const isMetadata = ['start', 'end', 'username', 'deviceid'].includes(row.type);
   const isHidden = ['calculate', 'hidden'].includes(row.type);
 
-  // End structural markers — styled to match the begin_group/begin_repeat headers
+  // End structural markers
   if (isEndStructural) {
     const isEndGroup = row.type === 'end_group';
     return (
@@ -92,7 +174,13 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
               {isBeginGroup ? 'Group' : 'Repeat'}
             </span>
-            <span className="text-[14px] text-gray-700 font-medium">{row.label || row.name}</span>
+            <span className="text-[14px] text-gray-700 font-medium">
+              <InlineEdit
+                value={row.label || ''}
+                onChange={(v) => updateRow(row.id, { label: v })}
+                placeholder={row.name}
+              />
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
@@ -138,10 +226,14 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
         </button>
       </div>
 
-      {/* Question label + hint */}
+      {/* Question label + hint (inline editable) */}
       <div className="mb-3 pr-16">
         <label className="text-[14px] text-gray-800 font-medium leading-relaxed">
-          {row.label || <span className="text-gray-400 italic">Untitled question</span>}
+          <InlineEdit
+            value={row.label || ''}
+            onChange={(v) => updateRow(row.id, { label: v })}
+            placeholder="Untitled question"
+          />
           {row.required === 'yes' && <span className="text-red-500 ml-1">*</span>}
         </label>
         {row.hint && (
@@ -192,7 +284,6 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
     case 'decimal': {
       const placeholder = row.type === 'integer' ? '0' : '0.00';
 
-      // Spinner appearance
       if (appearance.includes('spinner')) {
         return (
           <div className="flex items-center gap-0">
@@ -208,7 +299,6 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
         );
       }
 
-      // Calculator appearance
       if (appearance.includes('calculator')) {
         return (
           <div className="flex items-center gap-2">
@@ -221,7 +311,6 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
         );
       }
 
-      // Distress (integer only)
       if (appearance.includes('distress')) {
         return (
           <div className="flex items-center gap-1 py-1">
@@ -371,24 +460,61 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
 }
 
 // ============================================================
-// Select question preview with actual radio/check options
+// Inline Editable Choice Label
+// ============================================================
+
+function InlineChoiceEdit({
+  choice,
+  listName,
+}: {
+  choice: ChoiceItem;
+  listName: string;
+}) {
+  const { updateChoice } = useSurveyStore();
+
+  return (
+    <InlineEdit
+      value={choice.label}
+      onChange={(v) => updateChoice(listName, choice.id, { label: v })}
+      placeholder="Option label"
+      className="text-[13px]"
+    />
+  );
+}
+
+// ============================================================
+// Select question preview with inline-editable choice options
 // Appearance-aware: minimal=dropdown, likert=scale, autocomplete=search
 // ============================================================
 
 function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
-  const { form } = useSurveyStore();
+  const { form, addChoice } = useSurveyStore();
   const appearance = row.appearance || '';
   const list = row.listName
     ? form.choiceLists.find((cl) => cl.list_name === row.listName)
     : null;
 
-  const choices = list?.choices || [
-    { name: 'option_1', label: 'Option 1' },
-    { name: 'option_2', label: 'Option 2' },
-    { name: 'option_3', label: 'Option 3' },
-  ];
+  const choices = list?.choices || [];
+  const hasRealList = !!list;
 
-  // Minimal / autocomplete = dropdown
+  // Fallback display choices when no list exists
+  const displayChoices = choices.length > 0
+    ? choices
+    : [
+        { id: '_1', list_name: '', name: 'option_1', label: 'Option 1' },
+        { id: '_2', list_name: '', name: 'option_2', label: 'Option 2' },
+        { id: '_3', list_name: '', name: 'option_3', label: 'Option 3' },
+      ];
+
+  const handleAddOption = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (row.listName) {
+      addChoice(row.listName);
+    }
+  };
+
+  // Minimal / autocomplete = dropdown (no inline editing for dropdown)
   if (appearance.includes('minimal') || appearance.includes('autocomplete')) {
     return (
       <div className="relative">
@@ -401,6 +527,15 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </div>
+        {hasRealList && (
+          <button
+            onClick={handleAddOption}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="mt-1.5 text-[11px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast"
+          >
+            + Add option
+          </button>
+        )}
       </div>
     );
   }
@@ -408,14 +543,29 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
   // Likert appearance — horizontal scale
   if (appearance.includes('likert')) {
     return (
-      <div className="flex gap-1.5">
-        {choices.map((c, i) => (
-          <div key={i} className="flex-1 text-center">
-            <div className="w-full py-2.5 border border-gray-300 rounded-lg text-[11px] text-gray-500 bg-white hover:bg-gray-50">
-              {c.label}
+      <div>
+        <div className="flex gap-1.5">
+          {displayChoices.map((c, i) => (
+            <div key={c.id || i} className="flex-1 text-center">
+              <div className="w-full py-2.5 border border-gray-300 rounded-lg text-[11px] text-gray-500 bg-white hover:bg-gray-50">
+                {hasRealList ? (
+                  <InlineChoiceEdit choice={c} listName={row.listName!} />
+                ) : (
+                  c.label
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        {hasRealList && (
+          <button
+            onClick={handleAddOption}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="mt-2 text-[11px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast"
+          >
+            + Add option
+          </button>
+        )}
       </div>
     );
   }
@@ -423,39 +573,76 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
   // Horizontal / compact appearance
   if (appearance.includes('horizontal') || appearance.includes('compact')) {
     return (
-      <div className="flex flex-wrap gap-2">
-        {choices.slice(0, 8).map((c, i) => (
-          <label key={i} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-white cursor-pointer">
-            {multi ? (
-              <div className="w-4 h-4 rounded border-2 border-gray-300 bg-white shrink-0" />
-            ) : (
-              <div className="w-4 h-4 rounded-full border-2 border-gray-300 bg-white shrink-0" />
-            )}
-            <span className="text-[12px] text-gray-600">{c.label}</span>
-          </label>
-        ))}
-        {choices.length > 8 && (
-          <span className="text-[11px] text-gray-400 self-center">+{choices.length - 8} more</span>
+      <div>
+        <div className="flex flex-wrap gap-2">
+          {displayChoices.slice(0, 8).map((c, i) => (
+            <label key={c.id || i} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-white cursor-pointer">
+              {multi ? (
+                <div className="w-4 h-4 rounded border-2 border-gray-300 bg-white shrink-0" />
+              ) : (
+                <div className="w-4 h-4 rounded-full border-2 border-gray-300 bg-white shrink-0" />
+              )}
+              <span className="text-[12px] text-gray-600">
+                {hasRealList ? (
+                  <InlineChoiceEdit choice={c} listName={row.listName!} />
+                ) : (
+                  c.label
+                )}
+              </span>
+            </label>
+          ))}
+          {displayChoices.length > 8 && (
+            <span className="text-[11px] text-gray-400 self-center">+{displayChoices.length - 8} more</span>
+          )}
+        </div>
+        {hasRealList && (
+          <button
+            onClick={handleAddOption}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="mt-2 text-[11px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast"
+          >
+            + Add option
+          </button>
         )}
       </div>
     );
   }
 
-  // Default: radio/checkbox list (vertical)
+  // Default: radio/checkbox list (vertical) with inline editing
   return (
     <div className="space-y-2.5">
-      {choices.slice(0, 6).map((c, i) => (
-        <label key={i} className="flex items-center gap-3 cursor-pointer">
+      {displayChoices.slice(0, 8).map((c, i) => (
+        <label key={c.id || i} className="flex items-center gap-3 cursor-pointer">
           {multi ? (
             <div className="w-[18px] h-[18px] rounded border-2 border-gray-300 bg-white shrink-0" />
           ) : (
             <div className="w-[18px] h-[18px] rounded-full border-2 border-gray-300 bg-white shrink-0" />
           )}
-          <span className="text-[13px] text-gray-600">{c.label}</span>
+          <span className="text-[13px] text-gray-600">
+            {hasRealList ? (
+              <InlineChoiceEdit choice={c} listName={row.listName!} />
+            ) : (
+              c.label
+            )}
+          </span>
         </label>
       ))}
-      {choices.length > 6 && (
-        <p className="text-[11px] text-gray-400 pl-8">+{choices.length - 6} more options</p>
+      {displayChoices.length > 8 && (
+        <p className="text-[11px] text-gray-400 pl-8">+{displayChoices.length - 8} more options</p>
+      )}
+      {hasRealList && (
+        <button
+          onClick={handleAddOption}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="flex items-center gap-3 text-[12px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast pl-0.5"
+        >
+          <div className="w-[18px] h-[18px] rounded-full border-2 border-dashed border-[#00856a]/40 shrink-0 flex items-center justify-center">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </div>
+          Add option
+        </button>
       )}
     </div>
   );
