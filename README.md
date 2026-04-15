@@ -1,6 +1,6 @@
 # Survey123 Designer
 
-A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file — no XLSForm syntax knowledge required.
+A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file. No XLSForm syntax knowledge required.
 
 <!-- Screenshots: run the app locally with `npm run dev` and see it in action -->
 
@@ -10,10 +10,10 @@ ArcGIS Survey123 is powerful, but authoring surveys still means wrestling with X
 
 Key pain points it solves:
 
-- **No spreadsheet editing** — visual drag-and-drop instead of typing into Excel rows
-- **Expression building** — guided wizard and field picker for `relevant`, `constraint`, and `calculation` expressions instead of hand-writing XPath
-- **Platform awareness** — toggle between Field App and Web App to see only the question types each platform supports
-- **Instant preview** — see how questions will look as you build, with live property editing
+- **No spreadsheet editing**: visual drag-and-drop instead of typing into Excel rows
+- **Expression building**: guided wizard and field picker for `relevant`, `constraint`, and `calculation` expressions instead of hand-writing XPath
+- **Platform awareness**: toggle between Field App and Web App to see only the question types each platform supports
+- **Instant preview**: see how questions will look as you build, with live property editing
 
 ## Features
 
@@ -24,26 +24,26 @@ Key pain points it solves:
 - Group and repeat support with visual nesting
 
 ### Visual Expression Builder
-- **Quick-start templates** — common patterns like "Show when equals", "Required if not empty", "Sum two fields" pre-built per expression type
-- **Guided wizard flow** — step-by-step field selection and value input with live preview
-- **Field picker** — browse all form fields with type badges, click to insert `${field}` references
-- **Operator palette** — comparison, logical, arithmetic operators and common values
-- **Function library** — categorized XLSForm functions (math, text, date, select, utility) with descriptions
-- **Choice-aware values** — for select fields, pick from the actual choice list options
-- **Syntax-highlighted preview** — color-coded tokens showing fields, operators, functions, strings, numbers
+- **Quick-start templates**: common patterns like "Show when equals", "Required if not empty", "Sum two fields" pre-built per expression type
+- **Guided wizard flow**: step-by-step field selection and value input with live preview
+- **Field picker**: browse all form fields with type badges, click to insert `${field}` references
+- **Operator palette**: comparison, logical, arithmetic operators and common values
+- **Function library**: categorized XLSForm functions (math, text, date, select, utility) with descriptions
+- **Choice-aware values**: for select fields, pick from the actual choice list options
+- **Syntax-highlighted preview**: color-coded tokens showing fields, operators, functions, strings, numbers
 
 ### Platform Filter
 Toggle between **All**, **Field App**, and **Web App** to filter the question palette. Web App mode hides field-only types (barcode, geotrace, audio recording, file upload, etc.) so you only see what your target platform supports.
 
 ### Full Property Editor
-- **Basic** — name, label, hint, guidance hint, choice list selection
-- **Validation** — required toggle, required message, constraint expression, constraint message
-- **Logic** — relevant (visibility) expression, calculation, default value, choice filter, read-only toggle
-- **Appearance** — type-appropriate appearance options from the Survey123 spec
-- **Parameters** — free-form parameters (max-pixels, codec, etc.)
-- **Media** — image and audio attachment fields
-- **Body (Esri)** — input masks, file type accept, visibility, style
-- **Bind (Esri)** — field type, field length, field alias, bind parameters, workflow, warnings
+- **Basic**: name, label, hint, guidance hint, choice list selection
+- **Validation**: required toggle, required message, constraint expression, constraint message
+- **Logic**: relevant (visibility) expression, calculation, default value, choice filter, read-only toggle
+- **Appearance**: type-appropriate appearance options from the Survey123 spec
+- **Parameters**: free-form parameters (max-pixels, codec, etc.)
+- **Media**: image and audio attachment fields
+- **Body (Esri)**: input masks, file type accept, visibility, style
+- **Bind (Esri)**: field type, field length, field alias, bind parameters, workflow, warnings
 
 ### Choice List Editor
 - Create and manage choice lists for select_one, select_multiple, and rank questions
@@ -95,7 +95,7 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 npm run build
 ```
 
-Output goes to `dist/` — deploy to any static hosting (GitHub Pages, Netlify, Vercel, S3, etc.).
+Output goes to `dist/`. Deploy to any static hosting (GitHub Pages, Netlify, Vercel, S3, etc.).
 
 ## Project Structure
 
