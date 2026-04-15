@@ -60,6 +60,13 @@ function InlineEdit({
     }
   };
 
+  // Block all pointer/mouse events from reaching dnd-kit's sortable listeners
+  const stopDrag = {
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+  };
+
   if (editing) {
     return (
       <input
@@ -72,8 +79,7 @@ function InlineEdit({
           if (e.key === 'Enter') commit();
           if (e.key === 'Escape') { setDraft(value); setEditing(false); }
         }}
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
+        {...stopDrag}
         placeholder={placeholder}
         className={inputClassName || `w-full bg-white border border-[#00856a] rounded px-1.5 py-0.5 outline-none text-gray-800 ${className || ''}`}
         style={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit' }}
@@ -88,6 +94,7 @@ function InlineEdit({
         e.preventDefault();
         setEditing(true);
       }}
+      {...stopDrag}
       className={`cursor-text hover:bg-[#e6f5f0] hover:outline hover:outline-1 hover:outline-[#00856a]/30 rounded px-0.5 -mx-0.5 transition-colors ${className || ''}`}
       title="Double-click to edit"
     >
@@ -531,6 +538,7 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
           <button
             onClick={handleAddOption}
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             className="mt-1.5 text-[11px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast"
           >
             + Add option
@@ -561,6 +569,7 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
           <button
             onClick={handleAddOption}
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             className="mt-2 text-[11px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast"
           >
             + Add option
@@ -599,6 +608,7 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
           <button
             onClick={handleAddOption}
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             className="mt-2 text-[11px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast"
           >
             + Add option
@@ -634,6 +644,7 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
         <button
           onClick={handleAddOption}
           onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           className="flex items-center gap-3 text-[12px] text-[#00856a] hover:text-[#006b54] font-medium transition-fast pl-0.5"
         >
           <div className="w-[18px] h-[18px] rounded-full border-2 border-dashed border-[#00856a]/40 shrink-0 flex items-center justify-center">
