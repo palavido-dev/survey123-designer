@@ -146,7 +146,7 @@ src/
 - [ ] Multi-language support (translation columns)
 - [ ] Cascading select wizard
 - [ ] Form theme / styling options
-- [ ] Publish directly to ArcGIS Online (OAuth integration)
+- [ ] Publish directly to ArcGIS Online (OAuth login, Portal REST API + Survey123 API)
 - [ ] Collaborative editing
 - [ ] Form validation / lint warnings
 
