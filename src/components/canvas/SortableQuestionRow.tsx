@@ -1,8 +1,5 @@
 /**
- * Sortable Question Row
- *
- * Individual question card on the canvas. Shows a preview of the
- * question type with drag handle, and supports selection for editing.
+ * Sortable Question Row — Polished card design with depth, color coding, and nesting
  */
 
 import React from 'react';
@@ -16,11 +13,12 @@ import { QuestionPreview } from './QuestionPreview';
 interface Props {
   row: SurveyRow;
   index: number;
+  depth: number;
   isSelected: boolean;
   onSelect: () => void;
 }
 
-// Map question types to their sidebar icon names
+// Type icon mapping
 const typeIconMap: Record<string, string> = {
   text: 'Type', email: 'Mail', password: 'Lock',
   integer: 'Hash', decimal: 'Percent', range: 'SlidersHorizontal',
@@ -35,118 +33,144 @@ const typeIconMap: Record<string, string> = {
   start: 'Play', end: 'Square', username: 'User', deviceid: 'Smartphone',
 };
 
+// Friendly labels
 const typeLabels: Record<string, string> = {
   text: 'Text', email: 'Email', password: 'Password',
   integer: 'Integer', decimal: 'Decimal', range: 'Range',
   select_one: 'Select One', select_multiple: 'Select Multiple', rank: 'Rank',
-  select_one_from_file: 'Select One (File)', select_multiple_from_file: 'Select Multiple (File)',
+  select_one_from_file: 'Select (File)', select_multiple_from_file: 'Multi-Select (File)',
   geopoint: 'Geopoint', geotrace: 'Geotrace', geoshape: 'Geoshape',
   date: 'Date', time: 'Time', datetime: 'Date & Time',
   image: 'Image', audio: 'Audio', file: 'File', barcode: 'Barcode',
-  note: 'Note', begin_group: 'Begin Group', end_group: 'End Group',
-  begin_repeat: 'Begin Repeat', end_repeat: 'End Repeat',
+  note: 'Note', begin_group: 'Group Start', end_group: 'Group End',
+  begin_repeat: 'Repeat Start', end_repeat: 'Repeat End',
   calculate: 'Calculate', hidden: 'Hidden',
   start: 'Start', end: 'End', username: 'Username', deviceid: 'Device ID',
 };
 
-export function SortableQuestionRow({ row, index, isSelected, onSelect }: Props) {
+// Color coding by category
+function getTypeColor(type: string): { bg: string; text: string; icon: string } {
+  if (['text', 'email', 'password'].includes(type))
+    return { bg: 'bg-blue-50', text: 'text-blue-600', icon: 'text-blue-500' };
+  if (['integer', 'decimal', 'range'].includes(type))
+    return { bg: 'bg-violet-50', text: 'text-violet-600', icon: 'text-violet-500' };
+  if (['select_one', 'select_multiple', 'rank', 'select_one_from_file', 'select_multiple_from_file'].includes(type))
+    return { bg: 'bg-amber-50', text: 'text-amber-700', icon: 'text-amber-500' };
+  if (['geopoint', 'geotrace', 'geoshape'].includes(type))
+    return { bg: 'bg-emerald-50', text: 'text-emerald-700', icon: 'text-emerald-500' };
+  if (['date', 'time', 'datetime'].includes(type))
+    return { bg: 'bg-sky-50', text: 'text-sky-700', icon: 'text-sky-500' };
+  if (['image', 'audio', 'file', 'barcode'].includes(type))
+    return { bg: 'bg-pink-50', text: 'text-pink-700', icon: 'text-pink-500' };
+  if (['begin_group', 'end_group'].includes(type))
+    return { bg: 'bg-purple-50', text: 'text-purple-600', icon: 'text-purple-500' };
+  if (['begin_repeat', 'end_repeat'].includes(type))
+    return { bg: 'bg-teal-50', text: 'text-teal-600', icon: 'text-teal-500' };
+  if (['calculate', 'hidden'].includes(type))
+    return { bg: 'bg-gray-50', text: 'text-gray-500', icon: 'text-gray-400' };
+  if (['note'].includes(type))
+    return { bg: 'bg-yellow-50', text: 'text-yellow-700', icon: 'text-yellow-500' };
+  return { bg: 'bg-gray-50', text: 'text-gray-500', icon: 'text-gray-400' };
+}
+
+export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }: Props) {
   const { removeRow, duplicateRow } = useSurveyStore();
 
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: row.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    marginLeft: `${depth * 28}px`,
   };
 
   const Icon = getIcon(typeIconMap[row.type] || 'Info');
   const isStructural = ['end_group', 'end_repeat'].includes(row.type);
-  const isGroupStart = ['begin_group', 'begin_repeat'].includes(row.type);
+  const isGroupStart = row.type === 'begin_group';
+  const isRepeatStart = row.type === 'begin_repeat';
   const isMetadata = ['start', 'end', 'username', 'deviceid'].includes(row.type);
-
-  // Indentation for group contents
-  const depth = getDepth(index);
+  const colors = getTypeColor(row.type);
 
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        marginLeft: `${depth * 24}px`,
-      }}
+      style={style}
       className={`
-        group relative bg-white border rounded-md mb-1 transition-all
-        ${isDragging ? 'opacity-50 shadow-lg z-50' : ''}
-        ${isSelected ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'}
-        ${isStructural ? 'bg-gray-50 border-dashed' : ''}
-        ${isGroupStart ? 'border-l-4 border-l-purple-400' : ''}
+        group relative bg-white rounded-xl transition-all duration-150 card-hover
+        ${isDragging ? 'opacity-40 shadow-2xl z-50 scale-[1.02]' : ''}
+        ${isSelected ? 'glow-selected ring-2 ring-emerald-400/50' : 'shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_3px_12px_rgba(0,0,0,0.08)]'}
+        ${isStructural ? 'bg-gray-50/80 border border-dashed border-gray-200' : 'border border-gray-200/60'}
+        ${isGroupStart ? 'border-l-[3px] border-l-purple-400' : ''}
+        ${isRepeatStart ? 'border-l-[3px] border-l-teal-400' : ''}
       `}
-      onClick={(e) => {
-        e.stopPropagation();
-        onSelect();
-      }}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
     >
-      <div className="flex items-center gap-2 p-3">
+      <div className="flex items-center gap-2.5 p-3.5">
         {/* Drag Handle */}
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500"
+          className="cursor-grab active:cursor-grabbing text-gray-200 hover:text-gray-400 transition-smooth"
         >
           <GripVertical size={16} />
         </div>
 
-        {/* Type Icon */}
+        {/* Type Icon Badge */}
         <div className={`
-          flex items-center justify-center w-8 h-8 rounded-md shrink-0
-          ${isStructural ? 'bg-gray-100' : 'bg-blue-50'}
+          flex items-center justify-center w-9 h-9 rounded-xl shrink-0
+          ${isStructural ? 'bg-gray-100' : colors.bg}
+          transition-smooth
         `}>
-          <Icon size={16} className={isStructural ? 'text-gray-400' : 'text-blue-600'} />
+          <Icon size={17} className={isStructural ? 'text-gray-400' : colors.icon} />
         </div>
 
         {/* Question Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-400 uppercase">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${colors.text}`}>
               {typeLabels[row.type] || row.type}
             </span>
             {row.required === 'yes' && (
-              <span className="text-red-500 text-xs font-bold">*</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400" title="Required" />
+            )}
+            {row.relevant && (
+              <span className="text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-medium">
+                conditional
+              </span>
+            )}
+            {row.calculation && (
+              <span className="text-[9px] bg-violet-100 text-violet-600 px-1.5 py-0.5 rounded font-medium">
+                calculated
+              </span>
             )}
           </div>
-          {row.label && (
-            <p className="text-sm text-gray-800 truncate">{row.label}</p>
+          {row.label ? (
+            <p className="text-[13px] text-gray-800 font-medium truncate leading-snug">{row.label}</p>
+          ) : !isMetadata ? (
+            <p className="text-[13px] text-gray-300 italic font-mono">{row.name || 'unnamed'}</p>
+          ) : (
+            <p className="text-[11px] text-gray-400 font-mono">{row.name}</p>
           )}
-          {!row.label && !isMetadata && (
-            <p className="text-sm text-gray-400 italic">
-              {row.name || 'Unnamed'}
-            </p>
-          )}
-          {isMetadata && (
-            <p className="text-xs text-gray-400">{row.name}</p>
+          {row.hint && (
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">{row.hint}</p>
           )}
         </div>
 
-        {/* Question Preview (visual hint of the input type) */}
+        {/* Question Preview */}
         {!isStructural && !isMetadata && (
-          <div className="hidden lg:block w-48 shrink-0">
+          <div className="hidden lg:block w-44 shrink-0">
             <QuestionPreview row={row} />
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-smooth">
           {!isStructural && (
             <button
               onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
-              className="p-1 text-gray-400 hover:text-blue-600 rounded"
+              className="p-1.5 text-gray-300 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-smooth"
               title="Duplicate"
             >
               <Copy size={14} />
@@ -154,27 +178,13 @@ export function SortableQuestionRow({ row, index, isSelected, onSelect }: Props)
           )}
           <button
             onClick={(e) => { e.stopPropagation(); removeRow(row.id); }}
-            className="p-1 text-gray-400 hover:text-red-600 rounded"
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-smooth"
             title="Delete"
           >
             <Trash2 size={14} />
           </button>
         </div>
       </div>
-
-      {/* Hint preview */}
-      {row.hint && (
-        <div className="px-3 pb-2 -mt-1">
-          <p className="text-xs text-gray-400 italic truncate">{row.hint}</p>
-        </div>
-      )}
     </div>
   );
-}
-
-// Helper: Calculate nesting depth for a row based on group/repeat structure
-function getDepth(_index: number): number {
-  // This will be calculated from the store in a more complete implementation
-  // For now, we rely on CSS margin for visual nesting
-  return 0;
 }

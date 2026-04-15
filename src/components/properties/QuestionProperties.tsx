@@ -34,13 +34,14 @@ function TextField({
   multiline?: boolean;
   mono?: boolean;
 }) {
-  const cls = `w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md
-    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+  const cls = `w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-gray-50/50
+    focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400
+    focus:bg-white transition-smooth placeholder-gray-300
     ${mono ? 'font-mono text-xs' : ''}`;
 
   return (
-    <div className="mb-3">
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+    <div className="mb-3.5">
+      <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
       {multiline ? (
         <textarea
           value={value}
@@ -74,13 +75,14 @@ function SelectField({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="mb-3">
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+    <div className="mb-3.5">
+      <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-md
-          focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-gray-50/50
+          focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400
+          focus:bg-white transition-smooth"
       >
         <option value="">-- None --</option>
         {options.map((opt) => (
@@ -101,15 +103,15 @@ function ToggleField({
   onChange: (val: boolean) => void;
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <label className="text-xs font-medium text-gray-600">{label}</label>
+    <div className="mb-3.5 flex items-center justify-between">
+      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{label}</label>
       <button
         onClick={() => onChange(!value)}
-        className={`relative w-9 h-5 rounded-full transition-colors
-          ${value ? 'bg-blue-500' : 'bg-gray-300'}`}
+        className={`relative w-10 h-[22px] rounded-full transition-all duration-200
+          ${value ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-gray-200'}`}
       >
-        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform
-          ${value ? 'translate-x-4' : 'translate-x-0.5'}`}
+        <div className={`absolute top-[3px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200
+          ${value ? 'translate-x-[22px]' : 'translate-x-[3px]'}`}
         />
       </button>
     </div>
@@ -127,16 +129,18 @@ function Section({ title, children, defaultOpen = false }: {
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-gray-100">
+    <div className="border-b border-gray-100/80">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-4 py-2 text-xs font-semibold
-          text-gray-500 uppercase tracking-wide hover:bg-gray-50"
+        className="flex items-center gap-2 w-full px-5 py-3 text-[11px] font-bold
+          text-gray-400 uppercase tracking-[0.08em] hover:bg-gray-50/80 transition-smooth"
       >
-        {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <div className={`transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'}`}>
+          <ChevronDown size={12} />
+        </div>
         {title}
       </button>
-      {open && <div className="px-4 pb-3">{children}</div>}
+      {open && <div className="px-5 pb-4">{children}</div>}
     </div>
   );
 }
@@ -171,9 +175,9 @@ export function QuestionProperties({ row }: Props) {
     <div className="divide-y divide-gray-100">
       {/* Basic Properties — Always shown */}
       <Section title="Basic" defaultOpen={true}>
-        <div className="mb-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
-          <div className="px-2 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-md text-gray-500">
+        <div className="mb-3.5">
+          <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Type</label>
+          <div className="px-3 py-2 text-[13px] bg-gray-50 border border-gray-200/80 rounded-lg text-gray-500 font-medium">
             {row.type.replace(/_/g, ' ')}
           </div>
         </div>

@@ -1,7 +1,5 @@
 /**
- * Top Toolbar
- *
- * Contains form actions: New, Open, Export, Undo, Redo
+ * Top Toolbar — Polished design with gradient background and rich iconography
  */
 
 import React, { useRef } from 'react';
@@ -31,7 +29,6 @@ export function Toolbar() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       const importedForm = await importFromXlsx(file);
       loadForm(importedForm);
@@ -39,56 +36,58 @@ export function Toolbar() {
       console.error('Import error:', err);
       alert(`Failed to import: ${(err as Error).message}`);
     }
-
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <div className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+    <div className="h-14 gradient-toolbar border-b border-gray-200/80 flex items-center justify-between px-5
+      shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       {/* Left: Logo & Title */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
-            <FileText size={16} className="text-white" />
-          </div>
-          <span className="text-sm font-bold text-gray-900">Survey123 Designer</span>
+        <div className="w-9 h-9 gradient-header rounded-xl flex items-center justify-center
+          shadow-[0_2px_8px_rgba(5,150,105,0.3)]">
+          <FileText size={18} className="text-white" />
+        </div>
+        <div>
+          <span className="text-[15px] font-bold text-gray-900 tracking-tight">Survey123 Designer</span>
+          <p className="text-[10px] text-gray-400 -mt-0.5 font-medium">Visual XLSForm Builder</p>
         </div>
       </div>
 
       {/* Center: Form actions */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 bg-gray-50/80 rounded-xl p-1 border border-gray-200/60">
         <button
           onClick={resetForm}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium
-            text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium
+            text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-smooth"
           title="New Form"
         >
-          <Plus size={14} />
+          <Plus size={15} className="text-gray-400" />
           New
         </button>
 
-        <div className="w-px h-5 bg-gray-200 mx-1" />
+        <div className="w-px h-5 bg-gray-200/80" />
 
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium
-            text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium
+            text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-smooth"
           title="Open existing XLS form"
         >
-          <Upload size={14} />
+          <Upload size={15} className="text-gray-400" />
           Open
         </button>
 
+        <div className="w-px h-5 bg-gray-200/80" />
+
         <button
           onClick={handleExport}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium
-            text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+          className="flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold
+            text-white gradient-header rounded-lg transition-smooth
+            hover:shadow-[0_2px_8px_rgba(5,150,105,0.35)] active:scale-[0.98]"
           title="Export as XLSX"
         >
-          <Download size={14} />
+          <Download size={15} />
           Export XLSX
         </button>
 
@@ -102,24 +101,24 @@ export function Toolbar() {
       </div>
 
       {/* Right: Undo/Redo */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <button
           onClick={undo}
           disabled={undoStack.length === 0}
-          className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors
-            disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Undo"
+          className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-smooth
+            disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          title={`Undo (${undoStack.length})`}
         >
-          <Undo2 size={16} />
+          <Undo2 size={17} />
         </button>
         <button
           onClick={redo}
           disabled={redoStack.length === 0}
-          className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-md transition-colors
-            disabled:opacity-30 disabled:cursor-not-allowed"
-          title="Redo"
+          className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-smooth
+            disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+          title={`Redo (${redoStack.length})`}
         >
-          <Redo2 size={16} />
+          <Redo2 size={17} />
         </button>
       </div>
     </div>

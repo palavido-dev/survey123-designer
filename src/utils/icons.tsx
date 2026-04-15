@@ -14,7 +14,7 @@ import {
   Trash2, Copy, ChevronDown, ChevronRight,
   Download, Upload, Settings, Undo2, Redo2, Plus,
   Eye, FileText, X, Search, AlertCircle, HelpCircle,
-  ToggleLeft, Maximize2, Minimize2,
+  ToggleLeft, Maximize2, Minimize2, MousePointerClick,
 } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -28,7 +28,7 @@ const iconMap: Record<string, LucideIcon> = {
   Trash2, Copy, ChevronDown, ChevronRight,
   Download, Upload, Settings, Undo2, Redo2, Plus,
   Eye, FileText, X, Search, AlertCircle, HelpCircle,
-  ToggleLeft, Maximize2, Minimize2,
+  ToggleLeft, Maximize2, Minimize2, MousePointerClick,
 };
 
 export function getIcon(name: string): LucideIcon {
@@ -46,5 +46,5 @@ export {
   Trash2, Copy, ChevronDown, ChevronRight,
   Download, Upload, Settings, Undo2, Redo2, Plus,
   Eye, FileText, X, Search, AlertCircle, HelpCircle,
-  ToggleLeft, Maximize2, Minimize2,
+  ToggleLeft, Maximize2, Minimize2, MousePointerClick,
 };

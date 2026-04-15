@@ -1,8 +1,5 @@
 /**
- * Question Palette (Left Sidebar)
- *
- * Displays all available question types organized by category.
- * Items are draggable and can be dropped onto the form canvas.
+ * Question Palette (Left Sidebar) — Dark themed, polished design
  */
 
 import React, { useState } from 'react';
@@ -29,14 +26,17 @@ function DraggableItem({ item }: { item: DragItem }) {
       {...attributes}
       {...listeners}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-md cursor-grab
-        text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700
-        transition-colors select-none
-        ${isDragging ? 'opacity-50 bg-blue-100' : ''}
+        flex items-center gap-2.5 px-3 py-[7px] rounded-lg cursor-grab
+        text-[13px] text-slate-400 hover:text-white hover:bg-white/[0.08]
+        transition-smooth select-none group
+        ${isDragging ? 'opacity-40 scale-95' : ''}
       `}
     >
-      <Icon size={16} className="shrink-0 text-gray-400" />
-      <span>{item.label}</span>
+      <div className="w-7 h-7 rounded-lg bg-white/[0.06] flex items-center justify-center
+        group-hover:bg-emerald-500/20 transition-smooth shrink-0">
+        <Icon size={14} className="text-slate-500 group-hover:text-emerald-400 transition-smooth" />
+      </div>
+      <span className="font-medium">{item.label}</span>
     </div>
   );
 }
@@ -50,23 +50,32 @@ function CategorySection({ category }: { category: QuestionCategory }) {
   const Icon = getIcon(category.icon);
 
   return (
-    <div className="mb-1">
+    <div className="mb-0.5">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold
-          text-gray-500 uppercase tracking-wide hover:bg-gray-100 rounded-md transition-colors"
+        className="flex items-center gap-2 w-full px-3 py-2 text-[11px] font-bold
+          text-slate-500 uppercase tracking-[0.08em] hover:text-slate-300 rounded-lg transition-smooth"
       >
-        {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        <Icon size={14} />
-        <span>{category.label}</span>
+        <div className="flex items-center gap-1.5 flex-1">
+          <Icon size={12} className="text-slate-600" />
+          <span>{category.label}</span>
+        </div>
+        {expanded ? (
+          <ChevronDown size={12} className="text-slate-600" />
+        ) : (
+          <ChevronRight size={12} className="text-slate-600" />
+        )}
       </button>
-      {expanded && (
-        <div className="ml-2">
+      <div
+        className={`overflow-hidden transition-all duration-200 ease-out
+          ${expanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
+      >
+        <div className="ml-1 mb-1">
           {category.items.map((item) => (
             <DraggableItem key={item.id} item={item} />
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -90,25 +99,43 @@ export function QuestionPalette() {
     : questionCategories;
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
-      <div className="p-3 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">Question Types</h2>
+    <div className="w-[260px] bg-[#1a1f2e] flex flex-col h-full shadow-[2px_0_12px_rgba(0,0,0,0.15)]">
+      {/* Header */}
+      <div className="p-4 pb-3">
+        <h2 className="text-[13px] font-bold text-white tracking-tight mb-3">Question Types</h2>
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search types..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-9 pr-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.08]
+              rounded-lg text-slate-300 placeholder-slate-600
+              focus:outline-none focus:border-emerald-500/40 focus:bg-white/[0.08]
+              transition-smooth"
           />
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-2">
+
+      {/* Divider */}
+      <div className="mx-4 h-px bg-white/[0.06]" />
+
+      {/* Scrollable Categories */}
+      <div className="flex-1 overflow-y-auto p-3 dark-scrollbar">
         {filteredCategories.map((category) => (
           <CategorySection key={category.id} category={category} />
         ))}
+        {filteredCategories.length === 0 && (
+          <p className="text-sm text-slate-600 text-center py-8">No matching types</p>
+        )}
+      </div>
+
+      {/* Footer hint */}
+      <div className="px-4 py-3 border-t border-white/[0.06]">
+        <p className="text-[11px] text-slate-600 text-center">
+          Drag items onto the canvas to add
+        </p>
       </div>
     </div>
   );

@@ -1,8 +1,5 @@
 /**
- * Choice List Editor
- *
- * Manages choices for select_one, select_multiple, and rank questions.
- * Supports add, remove, reorder, and edit operations.
+ * Choice List Editor — Polished with sortable choices
  */
 
 import React from 'react';
@@ -20,26 +17,19 @@ interface Props {
   listName: string;
 }
 
-// ============================================================
-// Sortable Choice Row
-// ============================================================
-
 function SortableChoice({
   choice,
   listName,
+  index,
 }: {
   choice: ChoiceItem;
   listName: string;
+  index: number;
 }) {
   const { updateChoice, removeChoice } = useSurveyStore();
 
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: choice.id });
 
   const style = {
@@ -51,22 +41,26 @@ function SortableChoice({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-1 mb-1 ${isDragging ? 'opacity-50' : ''}`}
+      className={`flex items-center gap-1.5 mb-1.5 group ${isDragging ? 'opacity-40' : ''}`}
     >
+      <span className="text-[10px] text-gray-300 w-4 text-right font-mono shrink-0">
+        {index + 1}
+      </span>
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab text-gray-300 hover:text-gray-500 shrink-0"
+        className="cursor-grab text-gray-200 hover:text-gray-400 shrink-0 transition-smooth"
       >
-        <GripVertical size={14} />
+        <GripVertical size={12} />
       </div>
 
       <input
         type="text"
         value={choice.name}
         onChange={(e) => updateChoice(listName, choice.id, { name: e.target.value })}
-        className="w-24 px-1.5 py-1 text-xs font-mono border border-gray-200 rounded
-          focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-20 px-2 py-1.5 text-[11px] font-mono border border-gray-200 rounded-lg bg-gray-50/50
+          focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400
+          focus:bg-white transition-smooth"
         placeholder="value"
       />
 
@@ -74,14 +68,15 @@ function SortableChoice({
         type="text"
         value={choice.label}
         onChange={(e) => updateChoice(listName, choice.id, { label: e.target.value })}
-        className="flex-1 px-1.5 py-1 text-xs border border-gray-200 rounded
-          focus:outline-none focus:ring-1 focus:ring-blue-500"
-        placeholder="Label"
+        className="flex-1 px-2 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-gray-50/50
+          focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400
+          focus:bg-white transition-smooth"
+        placeholder="Display label"
       />
 
       <button
         onClick={() => removeChoice(listName, choice.id)}
-        className="p-1 text-gray-300 hover:text-red-500 shrink-0"
+        className="p-1 text-gray-200 hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-smooth"
       >
         <Trash2 size={12} />
       </button>
@@ -89,18 +84,13 @@ function SortableChoice({
   );
 }
 
-// ============================================================
-// Main Choice List Editor
-// ============================================================
-
 export function ChoiceListEditor({ listName }: Props) {
   const { form, addChoice } = useSurveyStore();
-
   const list = form.choiceLists.find((cl) => cl.list_name === listName);
 
   if (!list) {
     return (
-      <div className="p-4 text-sm text-gray-500">
+      <div className="p-5 text-sm text-gray-400">
         Choice list "{listName}" not found.
       </div>
     );
@@ -109,39 +99,41 @@ export function ChoiceListEditor({ listName }: Props) {
   const choiceIds = list.choices.map((c) => c.id);
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="p-5">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Choices</h3>
-          <p className="text-xs text-gray-400">List: {listName}</p>
+          <h3 className="text-[13px] font-bold text-gray-900">Choices</h3>
+          <p className="text-[11px] text-gray-400 font-mono mt-0.5">{listName}</p>
         </div>
         <button
           onClick={() => addChoice(listName)}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium
-            text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold
+            text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100
+            transition-smooth active:scale-[0.97]"
         >
-          <Plus size={12} />
+          <Plus size={13} />
           Add
         </button>
       </div>
 
       {/* Column Headers */}
-      <div className="flex items-center gap-1 mb-1 px-5">
-        <span className="w-24 text-[10px] font-medium text-gray-400 uppercase">Value</span>
-        <span className="flex-1 text-[10px] font-medium text-gray-400 uppercase">Label</span>
+      <div className="flex items-center gap-1.5 mb-2 pl-[52px]">
+        <span className="w-20 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Value</span>
+        <span className="flex-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Label</span>
       </div>
 
       {/* Choice Rows */}
       <SortableContext items={choiceIds} strategy={verticalListSortingStrategy}>
-        {list.choices.map((choice) => (
-          <SortableChoice key={choice.id} choice={choice} listName={listName} />
+        {list.choices.map((choice, index) => (
+          <SortableChoice key={choice.id} choice={choice} listName={listName} index={index} />
         ))}
       </SortableContext>
 
       {list.choices.length === 0 && (
-        <p className="text-xs text-gray-400 text-center py-4">
-          No choices yet. Click "Add" to create one.
-        </p>
+        <div className="text-center py-8">
+          <p className="text-[12px] text-gray-300">No choices yet</p>
+          <p className="text-[11px] text-gray-300 mt-1">Click "Add" to create one</p>
+        </div>
       )}
     </div>
   );
