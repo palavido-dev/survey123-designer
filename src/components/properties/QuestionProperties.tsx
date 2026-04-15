@@ -10,6 +10,7 @@ import { SurveyRow, EsriFieldType } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
 import { validAppearances } from '../../data/questionTypes';
 import { ChevronDown } from '../../utils/icons';
+import { ExpressionBuilder } from './ExpressionBuilder';
 
 interface Props {
   row: SurveyRow;
@@ -264,12 +265,13 @@ export function QuestionProperties({ row }: Props) {
             />
           )}
 
-          <TextField
+          <ExpressionBuilder
             label="Constraint"
             value={row.constraint || ''}
             onChange={(v) => update('constraint', v)}
             placeholder=". > 0 and . < 100"
-            mono
+            currentRowId={row.id}
+            mode="constraint"
           />
 
           {row.constraint && (
@@ -286,22 +288,23 @@ export function QuestionProperties({ row }: Props) {
       {/* Logic */}
       {!isMetadata && (
         <Section title="Logic">
-          <TextField
+          <ExpressionBuilder
             label="Relevant (visibility)"
             value={row.relevant || ''}
             onChange={(v) => update('relevant', v)}
             placeholder="${other_question} = 'yes'"
-            mono
+            currentRowId={row.id}
+            mode="relevant"
           />
 
           {(isCalcOrHidden || !isStructural) && (
-            <TextField
+            <ExpressionBuilder
               label="Calculation"
               value={row.calculation || ''}
               onChange={(v) => update('calculation', v)}
               placeholder="concat(${first_name}, ' ', ${last_name})"
-              mono
-              multiline
+              currentRowId={row.id}
+              mode="calculation"
             />
           )}
 

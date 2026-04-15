@@ -37,12 +37,20 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   const isMetadata = ['start', 'end', 'username', 'deviceid'].includes(row.type);
   const isHidden = ['calculate', 'hidden'].includes(row.type);
 
-  // End structural markers are minimal
+  // End structural markers — styled to match the begin_group/begin_repeat headers
   if (isEndStructural) {
+    const isEndGroup = row.type === 'end_group';
     return (
       <div ref={setNodeRef} style={style}
-        className="flex items-center gap-2 py-2 px-6 text-[11px] text-gray-400 border-b border-dashed border-gray-200">
-        <span className="font-mono">{row.type === 'end_group' ? '} end group' : '} end repeat'}</span>
+        className={`rounded-lg ${isEndGroup
+          ? 'bg-[#f7f3ff] border border-purple-200'
+          : 'bg-[#f0faf7] border border-teal-200'}`}>
+        <div className="flex items-center px-6 py-2.5">
+          <span className={`text-[11px] font-bold uppercase tracking-wide
+            ${isEndGroup ? 'text-purple-400' : 'text-teal-400'}`}>
+            {isEndGroup ? 'End Group' : 'End Repeat'}
+          </span>
+        </div>
       </div>
     );
   }
