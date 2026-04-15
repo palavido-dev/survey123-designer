@@ -1,5 +1,5 @@
 /**
- * Question Properties Editor — Clean Survey123 style
+ * Question Properties Editor — Matches left-pane font sizes and padding
  *
  * Dynamic property editor that shows relevant fields based on question type.
  * Supports all Survey123 XLS columns including Esri extensions.
@@ -16,7 +16,7 @@ interface Props {
 }
 
 // ============================================================
-// Field Components
+// Field Components — 13px text, 12px labels, generous padding
 // ============================================================
 
 function TextField({
@@ -34,20 +34,21 @@ function TextField({
   multiline?: boolean;
   mono?: boolean;
 }) {
-  const cls = `w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white
-    focus:border-[#00856a] focus:bg-white transition-fast placeholder-gray-300
-    ${mono ? 'font-mono text-[12px]' : ''}`;
-
   return (
-    <div className="mb-3">
-      <label className="block text-[11px] font-medium text-gray-500 mb-1">{label}</label>
+    <div style={{ marginBottom: 14 }}>
+      <label className="block text-gray-500" style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+        {label}
+      </label>
       {multiline ? (
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={3}
-          className={cls + ' resize-y'}
+          style={{ padding: '8px 12px', fontSize: mono ? 12 : 13 }}
+          className={`w-full border border-gray-200 rounded-lg bg-white
+            focus:border-[#00856a] transition-fast placeholder-gray-300 resize-y
+            ${mono ? 'font-mono' : ''}`}
         />
       ) : (
         <input
@@ -55,7 +56,10 @@ function TextField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={cls}
+          style={{ padding: '8px 12px', fontSize: mono ? 12 : 13 }}
+          className={`w-full border border-gray-200 rounded-lg bg-white
+            focus:border-[#00856a] transition-fast placeholder-gray-300
+            ${mono ? 'font-mono' : ''}`}
         />
       )}
     </div>
@@ -74,12 +78,15 @@ function SelectField({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="mb-3">
-      <label className="block text-[11px] font-medium text-gray-500 mb-1">{label}</label>
+    <div style={{ marginBottom: 14 }}>
+      <label className="block text-gray-500" style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
+        {label}
+      </label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white
+        style={{ padding: '8px 12px', fontSize: 13 }}
+        className="w-full border border-gray-200 rounded-lg bg-white
           focus:border-[#00856a] transition-fast"
       >
         <option value="">-- None --</option>
@@ -101,15 +108,16 @@ function ToggleField({
   onChange: (val: boolean) => void;
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <label className="text-[12px] text-gray-600">{label}</label>
+    <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+      <label className="text-gray-600" style={{ fontSize: 13 }}>{label}</label>
       <button
         onClick={() => onChange(!value)}
-        className={`relative w-9 h-5 rounded-full transition-fast
+        className={`relative rounded-full transition-fast
           ${value ? 'bg-[#00856a]' : 'bg-gray-200'}`}
+        style={{ width: 36, height: 20 }}
       >
-        <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-fast
-          ${value ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
+        <div className={`absolute bg-white rounded-full shadow-sm transition-fast`}
+          style={{ top: 2, width: 16, height: 16, transform: value ? 'translateX(18px)' : 'translateX(2px)' }}
         />
       </button>
     </div>
@@ -130,15 +138,15 @@ function Section({ title, children, defaultOpen = false }: {
     <div className="border-b border-gray-100">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-4 py-2.5 text-[12px] font-semibold
-          text-gray-500 hover:bg-gray-50 transition-fast"
+        className="flex items-center w-full text-gray-500 hover:bg-gray-50 transition-fast"
+        style={{ padding: '10px 16px', gap: 8, fontSize: 13, fontWeight: 600 }}
       >
         <div className={`transition-transform duration-150 ${open ? 'rotate-0' : '-rotate-90'}`}>
-          <ChevronDown size={12} />
+          <ChevronDown size={13} />
         </div>
         {title}
       </button>
-      {open && <div className="px-4 pb-3">{children}</div>}
+      {open && <div style={{ padding: '0 16px 14px 16px' }}>{children}</div>}
     </div>
   );
 }
@@ -171,12 +179,14 @@ export function QuestionProperties({ row }: Props) {
   return (
     <div>
       {/* Question type badge */}
-      <div className="px-4 py-3 bg-[#f0faf7] border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <span className="inline-block px-2 py-0.5 text-[11px] font-semibold text-[#007a62] bg-white rounded border border-[#007a62]/20">
+      <div className="bg-[#f0faf7] border-b border-gray-100"
+        style={{ padding: '12px 16px' }}>
+        <div className="flex items-center" style={{ gap: 8 }}>
+          <span className="inline-block bg-white rounded border border-[#007a62]/20"
+            style={{ padding: '2px 8px', fontSize: 11, fontWeight: 600, color: '#007a62' }}>
             {row.type.replace(/_/g, ' ')}
           </span>
-          <span className="text-[12px] text-gray-500 truncate">{row.name}</span>
+          <span className="text-gray-500 truncate" style={{ fontSize: 12 }}>{row.name}</span>
         </div>
       </div>
 

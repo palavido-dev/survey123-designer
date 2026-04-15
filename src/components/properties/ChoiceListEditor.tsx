@@ -1,5 +1,5 @@
 /**
- * Choice List Editor — Clean Survey123 style with sortable choices
+ * Choice List Editor — Matches left-pane font sizes and padding
  */
 
 import React from 'react';
@@ -40,10 +40,11 @@ function SortableChoice({
   return (
     <div
       ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-1.5 mb-1.5 group ${isDragging ? 'opacity-40' : ''}`}
+      style={{ ...style, marginBottom: 6, gap: 6 }}
+      className={`flex items-center group ${isDragging ? 'opacity-40' : ''}`}
     >
-      <span className="text-[10px] text-gray-300 w-4 text-right font-mono shrink-0">
+      <span className="text-gray-300 font-mono shrink-0 text-right"
+        style={{ fontSize: 10, width: 16 }}>
         {index + 1}
       </span>
       <div
@@ -58,8 +59,9 @@ function SortableChoice({
         type="text"
         value={choice.name}
         onChange={(e) => updateChoice(listName, choice.id, { name: e.target.value })}
-        className="w-20 px-2 py-1.5 text-[11px] font-mono border border-gray-200 rounded-lg bg-white
-          focus:border-[#00856a] transition-fast"
+        style={{ width: 80, padding: '6px 8px', fontSize: 12 }}
+        className="font-mono border border-gray-200 rounded-lg bg-white
+          focus:border-[#00856a] transition-fast shrink-0"
         placeholder="value"
       />
 
@@ -67,14 +69,16 @@ function SortableChoice({
         type="text"
         value={choice.label}
         onChange={(e) => updateChoice(listName, choice.id, { label: e.target.value })}
-        className="flex-1 px-2 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white
+        style={{ padding: '6px 8px', fontSize: 13 }}
+        className="flex-1 border border-gray-200 rounded-lg bg-white
           focus:border-[#00856a] transition-fast"
         placeholder="Display label"
       />
 
       <button
         onClick={() => removeChoice(listName, choice.id)}
-        className="p-1 text-gray-200 hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-fast"
+        className="text-gray-200 hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-fast"
+        style={{ padding: 4 }}
       >
         <Trash2 size={12} />
       </button>
@@ -88,7 +92,7 @@ export function ChoiceListEditor({ listName }: Props) {
 
   if (!list) {
     return (
-      <div className="p-4 text-sm text-gray-400">
+      <div style={{ padding: 16 }} className="text-sm text-gray-400">
         Choice list "{listName}" not found.
       </div>
     );
@@ -97,27 +101,27 @@ export function ChoiceListEditor({ listName }: Props) {
   const choiceIds = list.choices.map((c) => c.id);
 
   return (
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div style={{ padding: 16 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
         <div>
-          <h3 className="text-[13px] font-semibold text-gray-800">Choices</h3>
-          <p className="text-[11px] text-gray-400 font-mono mt-0.5">{listName}</p>
+          <h3 className="text-gray-800" style={{ fontSize: 14, fontWeight: 600 }}>Choices</h3>
+          <p className="text-gray-400 font-mono" style={{ fontSize: 11, marginTop: 2 }}>{listName}</p>
         </div>
         <button
           onClick={() => addChoice(listName)}
-          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium
-            text-[#007a62] bg-[#f0faf7] rounded-lg hover:bg-[#e0f5ef]
+          className="flex items-center text-[#007a62] bg-[#f0faf7] rounded-lg hover:bg-[#e0f5ef]
             transition-fast active:scale-[0.97]"
+          style={{ padding: '6px 12px', gap: 4, fontSize: 13, fontWeight: 500 }}
         >
-          <Plus size={13} />
+          <Plus size={14} />
           Add
         </button>
       </div>
 
       {/* Column Headers */}
-      <div className="flex items-center gap-1.5 mb-2 pl-[52px]">
-        <span className="w-20 text-[10px] font-medium text-gray-400">Value</span>
-        <span className="flex-1 text-[10px] font-medium text-gray-400">Label</span>
+      <div className="flex items-center" style={{ gap: 6, marginBottom: 8, paddingLeft: 52 }}>
+        <span className="text-gray-400" style={{ width: 80, fontSize: 11, fontWeight: 500 }}>Value</span>
+        <span className="flex-1 text-gray-400" style={{ fontSize: 11, fontWeight: 500 }}>Label</span>
       </div>
 
       {/* Choice Rows */}
@@ -128,9 +132,9 @@ export function ChoiceListEditor({ listName }: Props) {
       </SortableContext>
 
       {list.choices.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-[12px] text-gray-400">No choices yet</p>
-          <p className="text-[11px] text-gray-300 mt-1">Click "Add" to create one</p>
+        <div className="text-center" style={{ padding: '32px 0' }}>
+          <p className="text-gray-400" style={{ fontSize: 13 }}>No choices yet</p>
+          <p className="text-gray-300" style={{ fontSize: 12, marginTop: 4 }}>Click "Add" to create one</p>
         </div>
       )}
     </div>

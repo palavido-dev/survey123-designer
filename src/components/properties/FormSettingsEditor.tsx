@@ -1,5 +1,5 @@
 /**
- * Form Settings Editor — Clean Survey123 style
+ * Form Settings Editor — Matches left-pane font sizes and padding
  */
 
 import React from 'react';
@@ -21,8 +21,8 @@ function Field({
   help?: string;
 }) {
   return (
-    <div className="mb-4">
-      <label className="block text-[11px] font-medium text-gray-500 mb-1">
+    <div style={{ marginBottom: 16 }}>
+      <label className="block text-gray-500" style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>
         {label}
       </label>
       <input
@@ -30,11 +30,16 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white
+        style={{ padding: '8px 12px', fontSize: mono ? 12 : 13 }}
+        className={`w-full border border-gray-200 rounded-lg bg-white
           focus:border-[#00856a] transition-fast placeholder-gray-300
-          ${mono ? 'font-mono text-[12px]' : ''}`}
+          ${mono ? 'font-mono' : ''}`}
       />
-      {help && <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">{help}</p>}
+      {help && (
+        <p className="text-gray-400" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.4 }}>
+          {help}
+        </p>
+      )}
     </div>
   );
 }
@@ -44,8 +49,10 @@ export function FormSettingsEditor() {
   const s = form.settings;
 
   return (
-    <div className="p-4">
-      <h3 className="text-[13px] font-semibold text-gray-800 mb-4">Form Settings</h3>
+    <div style={{ padding: 16 }}>
+      <h3 className="text-gray-800" style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>
+        Form Settings
+      </h3>
 
       <Field
         label="Form Title"

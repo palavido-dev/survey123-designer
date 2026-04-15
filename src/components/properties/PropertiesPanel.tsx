@@ -21,9 +21,11 @@ export function PropertiesPanel() {
     ['select_one', 'select_multiple', 'rank'].includes(selectedRow.type);
 
   return (
-    <div className="w-[320px] bg-white border-l border-gray-200 flex flex-col h-full">
+    <div className="bg-white border-l border-gray-200 flex flex-col h-full"
+      style={{ width: 320 }}>
       {/* Tab bar */}
-      <div className="flex border-b border-gray-200 bg-[#fafafa]">
+      <div className="flex border-b border-gray-200 bg-[#fafafa]"
+        style={{ padding: '0 4px' }}>
         <TabButton
           active={panelView === 'properties'}
           onClick={() => setPanelView('properties')}
@@ -40,7 +42,7 @@ export function PropertiesPanel() {
           active={panelView === 'settings'}
           onClick={() => setPanelView('settings')}
           label="Settings"
-          icon={<Settings size={12} />}
+          icon={<Settings size={13} />}
         />
       </div>
 
@@ -53,8 +55,10 @@ export function PropertiesPanel() {
         ) : selectedRow ? (
           <QuestionProperties row={selectedRow} />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-gray-300 px-8">
-            <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+          <div className="flex flex-col items-center justify-center h-full text-gray-300"
+            style={{ padding: '0 32px' }}>
+            <div className="rounded-full bg-gray-50 flex items-center justify-center"
+              style={{ width: 56, height: 56, marginBottom: 16 }}>
               <MousePointerClick size={24} className="text-gray-300" />
             </div>
             <p className="text-[13px] text-gray-400 text-center">
@@ -81,11 +85,12 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-2.5 text-[12px] font-semibold transition-fast relative
+      className={`flex items-center transition-fast relative
         ${active
           ? 'text-[#007a62] bg-white border-b-2 border-[#007a62]'
           : 'text-gray-400 hover:text-gray-600'
         }`}
+      style={{ padding: '10px 16px', gap: 6, fontSize: 13, fontWeight: 600 }}
     >
       {icon}
       {label}
