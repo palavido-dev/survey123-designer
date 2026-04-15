@@ -19,7 +19,7 @@ type PlatformFilter = 'all' | 'field' | 'web';
 // Draggable Question Card
 // ============================================================
 
-function DraggableCard({ item, dimmed }: { item: DragItem; dimmed?: boolean }) {
+function DraggableCard({ item }: { item: DragItem }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${item.id}`,
     data: { type: item.type, fromPalette: true, defaultAppearance: item.defaultAppearance },
@@ -38,7 +38,6 @@ function DraggableCard({ item, dimmed }: { item: DragItem; dimmed?: boolean }) {
         border border-gray-200 bg-white hover:border-[#00856a] hover:bg-[#f0faf7]
         transition-fast group
         ${isDragging ? 'opacity-40 scale-95' : ''}
-        ${dimmed ? 'opacity-40' : ''}
       `}
     >
       <Icon
@@ -46,20 +45,6 @@ function DraggableCard({ item, dimmed }: { item: DragItem; dimmed?: boolean }) {
         className="text-[#00856a] shrink-0 group-hover:scale-110 transition-fast"
       />
       <span className="text-[13px] text-gray-700 font-medium leading-snug">{item.label}</span>
-
-      {/* Platform-only badge */}
-      {item.platform === 'field' && (
-        <span className="ml-auto shrink-0 rounded bg-amber-50 border border-amber-200 text-amber-600"
-          style={{ padding: '0px 4px', fontSize: 9, fontWeight: 600, lineHeight: '16px' }}>
-          FIELD
-        </span>
-      )}
-      {item.platform === 'web' && (
-        <span className="ml-auto shrink-0 rounded bg-blue-50 border border-blue-200 text-blue-600"
-          style={{ padding: '0px 4px', fontSize: 9, fontWeight: 600, lineHeight: '16px' }}>
-          WEB
-        </span>
-      )}
     </div>
   );
 }
