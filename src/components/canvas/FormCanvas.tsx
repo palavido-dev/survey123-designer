@@ -1,5 +1,6 @@
 /**
  * Form Canvas — Live form preview style like Survey123 web designer
+ * Centered on screen with proper padding throughout
  */
 
 import React from 'react';
@@ -21,20 +22,20 @@ export function FormCanvas() {
 
   return (
     <div
-      className="flex-1 overflow-y-auto canvas-bg"
+      className="flex-1 overflow-y-auto canvas-bg flex justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) selectRow(null);
       }}
     >
-      <div className="max-w-[680px] mx-auto py-8 px-4">
+      <div className="w-full max-w-[720px] py-8 px-6">
         {/* Survey Card */}
         <div className="bg-white rounded-xl shadow-card overflow-hidden">
           {/* Green header bar */}
-          <div className="bg-[#007a62] px-8 py-6">
+          <div className="bg-[#007a62] px-10 py-7">
             <h1 className="text-[22px] font-bold text-white leading-tight">
               {form.settings.form_title || 'Untitled survey'}
             </h1>
-            <p className="text-[14px] text-white/60 mt-1.5">
+            <p className="text-[14px] text-white/60 mt-2">
               Description content for the survey
             </p>
           </div>
@@ -42,7 +43,7 @@ export function FormCanvas() {
           {/* Form body */}
           <div
             ref={setNodeRef}
-            className={`px-8 py-6 min-h-[300px] transition-fast
+            className={`px-10 py-8 min-h-[300px] transition-fast
               ${isOver ? 'bg-[#f0faf7]' : 'bg-white'}`}
           >
             {items.length === 0 ? (
@@ -61,7 +62,7 @@ export function FormCanvas() {
               </div>
             ) : (
               <SortableContext items={items} strategy={verticalListSortingStrategy}>
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {form.survey.map((row, index) => (
                     <SortableQuestionRow
                       key={row.id}
@@ -79,7 +80,7 @@ export function FormCanvas() {
 
           {/* Submit button (visual only) */}
           {items.length > 0 && (
-            <div className="px-8 py-6 border-t border-gray-100 flex justify-center">
+            <div className="px-10 py-6 border-t border-gray-100 flex justify-center">
               <div className="bg-[#007a62] text-white px-8 py-2.5 rounded-lg text-[14px] font-semibold opacity-60 cursor-default">
                 Submit
               </div>
@@ -87,7 +88,7 @@ export function FormCanvas() {
           )}
 
           {/* Footer */}
-          <div className="px-8 py-3 border-t border-gray-100 text-center">
+          <div className="px-10 py-4 border-t border-gray-100 text-center">
             <p className="text-[11px] text-gray-400">Powered by ArcGIS Survey123</p>
           </div>
         </div>

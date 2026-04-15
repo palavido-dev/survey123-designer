@@ -34,7 +34,7 @@ interface SurveyStore {
   redoStack: SurveyForm[];
 
   // === Survey Row Actions ===
-  addRow: (type: QuestionType, index?: number) => void;
+  addRow: (type: QuestionType, index?: number, appearance?: string) => void;
   removeRow: (id: string) => void;
   updateRow: (id: string, updates: Partial<SurveyRow>) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
@@ -98,11 +98,11 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   // Survey Row Actions
   // ----------------------------------------------------------
 
-  addRow: (type, index) => {
+  addRow: (type, index, appearance) => {
     const state = get();
     state.pushUndo();
 
-    const newRow = createDefaultRow(type);
+    const newRow = createDefaultRow(type, appearance);
     const newSurvey = [...state.form.survey];
 
     // For groups and repeats, also add the closing element

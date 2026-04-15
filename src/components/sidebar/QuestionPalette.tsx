@@ -1,12 +1,13 @@
 /**
  * Question Palette — Card-based grid layout like Survey123 web designer
+ * Includes appearance variant cards for easy drag-and-drop
  */
 
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { questionCategories } from '../../data/questionTypes';
 import { DragItem, QuestionCategory } from '../../types/survey';
-import { getIcon, Search, X } from '../../utils/icons';
+import { getIcon, X } from '../../utils/icons';
 
 // ============================================================
 // Draggable Question Card
@@ -15,7 +16,7 @@ import { getIcon, Search, X } from '../../utils/icons';
 function DraggableCard({ item }: { item: DragItem }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${item.id}`,
-    data: { type: item.type, fromPalette: true },
+    data: { type: item.type, fromPalette: true, defaultAppearance: item.defaultAppearance },
   });
 
   const Icon = getIcon(item.icon);
@@ -33,10 +34,10 @@ function DraggableCard({ item }: { item: DragItem }) {
       `}
     >
       <Icon
-        size={18}
+        size={16}
         className="text-[#00856a] shrink-0 group-hover:scale-110 transition-fast"
       />
-      <span className="text-[13px] text-gray-700 font-medium leading-tight">{item.label}</span>
+      <span className="text-[12px] text-gray-700 font-medium leading-tight">{item.label}</span>
     </div>
   );
 }
@@ -48,7 +49,7 @@ function DraggableCard({ item }: { item: DragItem }) {
 function CategoryGroup({ category }: { category: QuestionCategory }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[12px] font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
+      <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
         {category.label}
       </h3>
       <div className="grid grid-cols-2 gap-1.5">
@@ -57,6 +58,20 @@ function CategoryGroup({ category }: { category: QuestionCategory }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// Search Icon (inline SVG to avoid rendering issues)
+// ============================================================
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
   );
 }
 
@@ -94,7 +109,9 @@ export function QuestionPalette() {
           )}
         </div>
         <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+            <SearchIcon />
+          </div>
           <input
             type="text"
             placeholder="Search question types..."

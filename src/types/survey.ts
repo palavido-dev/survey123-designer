@@ -257,6 +257,8 @@ export interface DragItem {
   type: QuestionType;
   label: string;
   icon: string;
+  /** Pre-set appearance when dragged onto canvas (e.g. 'multiline', 'signature') */
+  defaultAppearance?: string;
 }
 
 // ============================================================

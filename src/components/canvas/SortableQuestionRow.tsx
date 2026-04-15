@@ -40,7 +40,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   if (isEndStructural) {
     return (
       <div ref={setNodeRef} style={style}
-        className="flex items-center gap-2 py-1 px-3 text-[11px] text-gray-400 border-b border-dashed border-gray-200">
+        className="flex items-center gap-2 py-2 px-5 text-[11px] text-gray-400 border-b border-dashed border-gray-200">
         <span className="font-mono">{row.type === 'end_group' ? '} end group' : '} end repeat'}</span>
       </div>
     );
@@ -51,7 +51,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
     return (
       <div ref={setNodeRef} style={style}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
-        className={`flex items-center gap-3 py-2 px-3 rounded-lg text-[12px] cursor-pointer transition-fast
+        className={`flex items-center gap-3 py-3 px-5 rounded-lg text-[12px] cursor-pointer transition-fast
           ${isSelected ? 'bg-[#f0faf7] selected-glow' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="text-gray-400 font-mono text-[11px]">{row.type}</span>
         <span className="text-gray-500">{row.name}</span>
@@ -59,7 +59,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
           <span className="text-[10px] text-gray-400 font-mono truncate flex-1">= {row.calculation}</span>
         )}
         <button onClick={(e) => { e.stopPropagation(); removeRow(row.id); }}
-          className="p-1 text-gray-300 hover:text-red-500 transition-fast">
+          className="p-1.5 text-gray-300 hover:text-red-500 transition-fast">
           <X size={13} />
         </button>
       </div>
@@ -77,8 +77,8 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
           ${isBeginGroup
             ? 'bg-[#f7f3ff] border border-purple-200'
             : 'bg-[#f0faf7] border border-teal-200'}`}>
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between px-5 py-4">
+          <div className="flex items-center gap-3">
             <span className={`text-[11px] font-bold uppercase tracking-wide
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
               {isBeginGroup ? 'Group' : 'Repeat'}
@@ -87,11 +87,11 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
           </div>
           <div className="flex items-center gap-1">
             <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
-              className="p-1 text-gray-300 hover:text-gray-500 transition-fast">
+              className="p-1.5 text-gray-300 hover:text-gray-500 transition-fast">
               <Copy size={13} />
             </button>
             <button onClick={(e) => { e.stopPropagation(); removeRow(row.id); }}
-              className="p-1 text-gray-300 hover:text-red-500 transition-fast">
+              className="p-1.5 text-gray-300 hover:text-red-500 transition-fast">
               <X size={13} />
             </button>
           </div>
@@ -109,7 +109,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       className={`
-        relative rounded-lg p-4 cursor-pointer transition-fast
+        relative rounded-lg p-5 cursor-pointer transition-fast
         ${isDragging ? 'opacity-40 shadow-card-hover z-50' : ''}
         ${isSelected
           ? 'bg-[#f0faf7] selected-glow'
@@ -117,7 +117,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
       `}
     >
       {/* Action buttons (top right) */}
-      <div className={`absolute top-2 right-2 flex items-center gap-0.5
+      <div className={`absolute top-3 right-3 flex items-center gap-0.5
         ${isSelected ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-fast`}>
         <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
           className="p-1.5 text-gray-400 hover:text-[#00856a] hover:bg-white rounded transition-fast">
@@ -129,14 +129,14 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
         </button>
       </div>
 
-      {/* Question number + label */}
-      <div className="mb-2">
+      {/* Question label + hint */}
+      <div className="mb-3">
         <label className="text-[14px] text-gray-800 font-medium leading-relaxed">
           {row.label || <span className="text-gray-400 italic">Untitled question</span>}
           {row.required === 'yes' && <span className="text-red-500 ml-1">*</span>}
         </label>
         {row.hint && (
-          <p className="text-[12px] text-gray-400 mt-0.5">{row.hint}</p>
+          <p className="text-[12px] text-gray-400 mt-1">{row.hint}</p>
         )}
       </div>
 

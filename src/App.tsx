@@ -59,18 +59,19 @@ export default function App() {
     // Dropping from palette onto canvas
     if (activeData?.fromPalette) {
       const questionType = activeData.type as QuestionType;
+      const appearance = activeData.defaultAppearance as string | undefined;
 
       // Determine insertion index
       if (over.id === 'canvas-drop-zone') {
         // Dropped on empty canvas or at the end
-        addRow(questionType);
+        addRow(questionType, undefined, appearance);
       } else {
         // Dropped on/near an existing row — insert after it
         const overIndex = form.survey.findIndex((r) => r.id === over.id);
         if (overIndex !== -1) {
-          addRow(questionType, overIndex + 1);
+          addRow(questionType, overIndex + 1, appearance);
         } else {
-          addRow(questionType);
+          addRow(questionType, undefined, appearance);
         }
       }
       return;

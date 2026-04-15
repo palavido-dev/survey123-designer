@@ -3,6 +3,7 @@
  *
  * Defines all available Survey123 question types organized by category,
  * with their default properties, valid appearances, and metadata.
+ * Includes appearance variants as separate draggable cards for ease of use.
  */
 
 import { QuestionCategory, QuestionType, SurveyRow } from '../types/survey';
@@ -19,6 +20,7 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'Type',
     items: [
       { id: 'text', type: 'text', label: 'Text', icon: 'Type' },
+      { id: 'text-multiline', type: 'text', label: 'Multiline Text', icon: 'AlignLeft', defaultAppearance: 'multiline' },
       { id: 'email', type: 'email', label: 'Email', icon: 'Mail' },
       { id: 'password', type: 'password', label: 'Password', icon: 'Lock' },
     ],
@@ -29,6 +31,8 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'Hash',
     items: [
       { id: 'integer', type: 'integer', label: 'Integer', icon: 'Hash' },
+      { id: 'integer-spinner', type: 'integer', label: 'Spinner', icon: 'Hash', defaultAppearance: 'spinner' },
+      { id: 'integer-calculator', type: 'integer', label: 'Calculator', icon: 'Calculator', defaultAppearance: 'calculator' },
       { id: 'decimal', type: 'decimal', label: 'Decimal', icon: 'Percent' },
       { id: 'range', type: 'range', label: 'Range / Slider', icon: 'SlidersHorizontal' },
     ],
@@ -39,6 +43,9 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'List',
     items: [
       { id: 'select_one', type: 'select_one', label: 'Select One', icon: 'CircleDot' },
+      { id: 'select_one-dropdown', type: 'select_one', label: 'Dropdown', icon: 'ChevronDown', defaultAppearance: 'minimal' },
+      { id: 'select_one-autocomplete', type: 'select_one', label: 'Autocomplete', icon: 'Search', defaultAppearance: 'autocomplete' },
+      { id: 'select_one-likert', type: 'select_one', label: 'Likert Scale', icon: 'SlidersHorizontal', defaultAppearance: 'likert' },
       { id: 'select_multiple', type: 'select_multiple', label: 'Select Multiple', icon: 'CheckSquare' },
       { id: 'rank', type: 'rank', label: 'Rank', icon: 'ArrowUpDown' },
       { id: 'select_one_from_file', type: 'select_one_from_file', label: 'Select One (CSV)', icon: 'FileSpreadsheet' },
@@ -61,6 +68,8 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'Calendar',
     items: [
       { id: 'date', type: 'date', label: 'Date', icon: 'Calendar' },
+      { id: 'date-year', type: 'date', label: 'Year Only', icon: 'Calendar', defaultAppearance: 'year' },
+      { id: 'date-month-year', type: 'date', label: 'Month-Year', icon: 'Calendar', defaultAppearance: 'month-year' },
       { id: 'time', type: 'time', label: 'Time', icon: 'Clock' },
       { id: 'datetime', type: 'datetime', label: 'Date & Time', icon: 'CalendarClock' },
     ],
@@ -70,7 +79,10 @@ export const questionCategories: QuestionCategory[] = [
     label: 'Media & Files',
     icon: 'Camera',
     items: [
-      { id: 'image', type: 'image', label: 'Image', icon: 'Camera' },
+      { id: 'image', type: 'image', label: 'Photo', icon: 'Camera' },
+      { id: 'image-signature', type: 'image', label: 'Signature', icon: 'Pen', defaultAppearance: 'signature' },
+      { id: 'image-draw', type: 'image', label: 'Draw', icon: 'Pen', defaultAppearance: 'draw' },
+      { id: 'image-annotate', type: 'image', label: 'Annotate', icon: 'Camera', defaultAppearance: 'annotate' },
       { id: 'audio', type: 'audio', label: 'Audio', icon: 'Mic' },
       { id: 'file', type: 'file', label: 'File Upload', icon: 'Paperclip' },
       { id: 'barcode', type: 'barcode', label: 'Barcode / QR', icon: 'ScanLine' },
@@ -151,7 +163,7 @@ export function resetQuestionCounter() {
   questionCounter = {};
 }
 
-export function createDefaultRow(type: QuestionType): SurveyRow {
+export function createDefaultRow(type: QuestionType, appearance?: string): SurveyRow {
   const count = (questionCounter[type] || 0) + 1;
   questionCounter[type] = count;
 
@@ -164,6 +176,11 @@ export function createDefaultRow(type: QuestionType): SurveyRow {
     name,
     label: getDefaultLabel(type, count),
   };
+
+  // Apply default appearance if provided
+  if (appearance) {
+    base.appearance = appearance;
+  }
 
   // Type-specific defaults
   switch (type) {

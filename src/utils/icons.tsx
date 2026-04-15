@@ -15,6 +15,7 @@ import {
   Download, Upload, Settings, Undo2, Redo2, Plus,
   Eye, FileText, X, Search, AlertCircle, HelpCircle,
   ToggleLeft, Maximize2, Minimize2, MousePointerClick,
+  Pen, AlignLeft,
 } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -29,6 +30,7 @@ const iconMap: Record<string, LucideIcon> = {
   Download, Upload, Settings, Undo2, Redo2, Plus,
   Eye, FileText, X, Search, AlertCircle, HelpCircle,
   ToggleLeft, Maximize2, Minimize2, MousePointerClick,
+  Pen, AlignLeft,
 };
 
 export function getIcon(name: string): LucideIcon {
@@ -47,4 +49,5 @@ export {
   Download, Upload, Settings, Undo2, Redo2, Plus,
   Eye, FileText, X, Search, AlertCircle, HelpCircle,
   ToggleLeft, Maximize2, Minimize2, MousePointerClick,
+  Pen, AlignLeft,
 };
