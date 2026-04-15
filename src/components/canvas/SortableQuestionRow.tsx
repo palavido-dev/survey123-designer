@@ -134,7 +134,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
         className={`rounded-lg ${isEndGroup
           ? 'bg-[#f7f3ff] border border-purple-200'
           : 'bg-[#f0faf7] border border-teal-200'}`}>
-        <div className="flex items-center px-6 py-2.5">
+        <div className="flex items-center px-10 py-3">
           <span className={`text-[11px] font-bold uppercase tracking-wide
             ${isEndGroup ? 'text-purple-400' : 'text-teal-400'}`}>
             {isEndGroup ? 'End Group' : 'End Repeat'}
@@ -149,7 +149,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
     return (
       <div ref={setNodeRef} style={style}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
-        className={`flex items-center gap-3 py-3 px-6 rounded-lg text-[12px] cursor-pointer transition-fast
+        className={`flex items-center gap-3 py-4 px-10 rounded-lg text-[12px] cursor-pointer transition-fast
           ${isSelected ? 'bg-[#f0faf7] selected-glow' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="text-gray-400 font-mono text-[11px]">{row.type}</span>
         <span className="text-gray-500">{row.name}</span>
@@ -175,7 +175,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
           ${isBeginGroup
             ? 'bg-[#f7f3ff] border border-purple-200'
             : 'bg-[#f0faf7] border border-teal-200'}`}>
-        <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center justify-between px-10 py-6">
           <div className="flex items-center gap-3">
             <span className={`text-[11px] font-bold uppercase tracking-wide
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
@@ -208,12 +208,12 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, padding: '10px 14px' }}
       {...attributes}
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       className={`
-        relative rounded-lg px-6 py-5 cursor-pointer transition-fast
+        relative rounded-lg cursor-pointer transition-fast
         ${isDragging ? 'opacity-40 shadow-card-hover z-50' : ''}
         ${isSelected
           ? 'bg-[#f0faf7] selected-glow'
@@ -221,7 +221,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
       `}
     >
       {/* Action buttons (top right) */}
-      <div className={`absolute top-3 right-4 flex items-center gap-0.5
+      <div className={`absolute top-5 right-7 flex items-center gap-0.5
         ${isSelected ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-fast`}>
         <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
           className="p-1.5 text-gray-400 hover:text-[#00856a] hover:bg-white rounded transition-fast">
