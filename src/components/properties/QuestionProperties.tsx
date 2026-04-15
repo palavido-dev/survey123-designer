@@ -1,5 +1,5 @@
 /**
- * Question Properties Editor
+ * Question Properties Editor — Clean Survey123 style
  *
  * Dynamic property editor that shows relevant fields based on question type.
  * Supports all Survey123 XLS columns including Esri extensions.
@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { SurveyRow, EsriFieldType } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
 import { validAppearances } from '../../data/questionTypes';
-import { ChevronDown, ChevronRight } from '../../utils/icons';
+import { ChevronDown } from '../../utils/icons';
 
 interface Props {
   row: SurveyRow;
@@ -34,14 +34,13 @@ function TextField({
   multiline?: boolean;
   mono?: boolean;
 }) {
-  const cls = `w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-gray-50/50
-    focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400
-    focus:bg-white transition-smooth placeholder-gray-300
-    ${mono ? 'font-mono text-xs' : ''}`;
+  const cls = `w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white
+    focus:border-[#00856a] focus:bg-white transition-fast placeholder-gray-300
+    ${mono ? 'font-mono text-[12px]' : ''}`;
 
   return (
-    <div className="mb-3.5">
-      <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
+    <div className="mb-3">
+      <label className="block text-[11px] font-medium text-gray-500 mb-1">{label}</label>
       {multiline ? (
         <textarea
           value={value}
@@ -75,14 +74,13 @@ function SelectField({
   options: { value: string; label: string }[];
 }) {
   return (
-    <div className="mb-3.5">
-      <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{label}</label>
+    <div className="mb-3">
+      <label className="block text-[11px] font-medium text-gray-500 mb-1">{label}</label>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-gray-50/50
-          focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400
-          focus:bg-white transition-smooth"
+        className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg bg-white
+          focus:border-[#00856a] transition-fast"
       >
         <option value="">-- None --</option>
         {options.map((opt) => (
@@ -103,15 +101,15 @@ function ToggleField({
   onChange: (val: boolean) => void;
 }) {
   return (
-    <div className="mb-3.5 flex items-center justify-between">
-      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">{label}</label>
+    <div className="mb-3 flex items-center justify-between">
+      <label className="text-[12px] text-gray-600">{label}</label>
       <button
         onClick={() => onChange(!value)}
-        className={`relative w-10 h-[22px] rounded-full transition-all duration-200
-          ${value ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-gray-200'}`}
+        className={`relative w-9 h-5 rounded-full transition-fast
+          ${value ? 'bg-[#00856a]' : 'bg-gray-200'}`}
       >
-        <div className={`absolute top-[3px] w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200
-          ${value ? 'translate-x-[22px]' : 'translate-x-[3px]'}`}
+        <div className={`absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-fast
+          ${value ? 'translate-x-[18px]' : 'translate-x-[2px]'}`}
         />
       </button>
     </div>
@@ -129,18 +127,18 @@ function Section({ title, children, defaultOpen = false }: {
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-gray-100/80">
+    <div className="border-b border-gray-100">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-5 py-3 text-[11px] font-bold
-          text-gray-400 uppercase tracking-[0.08em] hover:bg-gray-50/80 transition-smooth"
+        className="flex items-center gap-2 w-full px-4 py-2.5 text-[12px] font-semibold
+          text-gray-500 hover:bg-gray-50 transition-fast"
       >
-        <div className={`transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'}`}>
+        <div className={`transition-transform duration-150 ${open ? 'rotate-0' : '-rotate-90'}`}>
           <ChevronDown size={12} />
         </div>
         {title}
       </button>
-      {open && <div className="px-5 pb-4">{children}</div>}
+      {open && <div className="px-4 pb-3">{children}</div>}
     </div>
   );
 }
@@ -165,28 +163,31 @@ export function QuestionProperties({ row }: Props) {
 
   const appearances = validAppearances[row.type] || [];
 
-  // Available choice lists for select types
   const availableLists = form.choiceLists.map((cl) => ({
     value: cl.list_name,
     label: cl.list_name,
   }));
 
   return (
-    <div className="divide-y divide-gray-100">
-      {/* Basic Properties — Always shown */}
-      <Section title="Basic" defaultOpen={true}>
-        <div className="mb-3.5">
-          <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Type</label>
-          <div className="px-3 py-2 text-[13px] bg-gray-50 border border-gray-200/80 rounded-lg text-gray-500 font-medium">
+    <div>
+      {/* Question type badge */}
+      <div className="px-4 py-3 bg-[#f0faf7] border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="inline-block px-2 py-0.5 text-[11px] font-semibold text-[#007a62] bg-white rounded border border-[#007a62]/20">
             {row.type.replace(/_/g, ' ')}
-          </div>
+          </span>
+          <span className="text-[12px] text-gray-500 truncate">{row.name}</span>
         </div>
+      </div>
 
+      {/* Basic Properties */}
+      <Section title="Basic" defaultOpen={true}>
         <TextField
           label="Name (field ID)"
           value={row.name}
           onChange={(v) => update('name', v)}
           placeholder="field_name"
+          mono
         />
 
         {!isMetadata && !isCalcOrHidden && (
@@ -199,12 +200,20 @@ export function QuestionProperties({ row }: Props) {
         )}
 
         {!isMetadata && !isStructural && !isCalcOrHidden && (
-          <TextField
-            label="Hint"
-            value={row.hint || ''}
-            onChange={(v) => update('hint', v)}
-            placeholder="Help text shown below the question"
-          />
+          <>
+            <TextField
+              label="Hint"
+              value={row.hint || ''}
+              onChange={(v) => update('hint', v)}
+              placeholder="Help text below the question"
+            />
+            <TextField
+              label="Guidance Hint"
+              value={row.guidance_hint || ''}
+              onChange={(v) => update('guidance_hint', v)}
+              placeholder="Expandable guidance text"
+            />
+          </>
         )}
 
         {isSelectType && (
@@ -268,7 +277,7 @@ export function QuestionProperties({ row }: Props) {
       {!isMetadata && (
         <Section title="Logic">
           <TextField
-            label="Relevant (visibility condition)"
+            label="Relevant (visibility)"
             value={row.relevant || ''}
             onChange={(v) => update('relevant', v)}
             placeholder="${other_question} = 'yes'"
@@ -321,15 +330,6 @@ export function QuestionProperties({ row }: Props) {
             onChange={(v) => update('appearance', v)}
             options={appearances.map((a) => ({ value: a, label: a }))}
           />
-
-          {(isGroup || isRepeat) && (
-            <TextField
-              label="Grid Width (w1-w4)"
-              value=""
-              onChange={() => {}}
-              placeholder="e.g., w4"
-            />
-          )}
         </Section>
       )}
 
@@ -364,7 +364,7 @@ export function QuestionProperties({ row }: Props) {
         </Section>
       )}
 
-      {/* Body Columns */}
+      {/* Body (Esri) */}
       {!isStructural && !isMetadata && (
         <Section title="Body (Esri)">
           <TextField
@@ -380,19 +380,24 @@ export function QuestionProperties({ row }: Props) {
             onChange={(v) => update('body::accept', v)}
             placeholder=".pdf,.docx"
           />
+          <ToggleField
+            label="Visible"
+            value={row['body::esri:visible'] !== 'false'}
+            onChange={(v) => update('body::esri:visible', v ? undefined : 'false')}
+          />
           {(isGroup || isRepeat) && (
             <TextField
               label="Style"
               value={row['body::esri:style'] || ''}
               onChange={(v) => update('body::esri:style', v)}
-              placeholder="backgroundColor=blue borderColor=#FF0000"
+              placeholder="backgroundColor=blue"
               mono
             />
           )}
         </Section>
       )}
 
-      {/* Bind Columns (Esri Extensions) */}
+      {/* Bind (Esri) */}
       {!isMetadata && (
         <Section title="Bind (Esri)">
           <SelectField
@@ -429,7 +434,7 @@ export function QuestionProperties({ row }: Props) {
           />
 
           <TextField
-            label="Parameters"
+            label="Bind Parameters"
             value={row['bind::esri:parameters'] || ''}
             onChange={(v) => update('bind::esri:parameters', v)}
             placeholder="calculationMode=whenEmpty"
@@ -442,6 +447,21 @@ export function QuestionProperties({ row }: Props) {
             onChange={(v) => update('bind::esri:workflow', v)}
             placeholder="rangefinderMode=height"
             mono
+          />
+
+          <TextField
+            label="Warning"
+            value={row['bind::esri:warning'] || ''}
+            onChange={(v) => update('bind::esri:warning', v)}
+            placeholder="Warning condition expression"
+            mono
+          />
+
+          <TextField
+            label="Warning Message"
+            value={row['bind::esri:warning_message'] || ''}
+            onChange={(v) => update('bind::esri:warning_message', v)}
+            placeholder="Warning message to display"
           />
 
           <ToggleField

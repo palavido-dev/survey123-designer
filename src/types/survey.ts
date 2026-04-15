@@ -155,6 +155,7 @@ export interface SurveyRow {
 
   // === Common Optional Columns ===
   hint?: string;
+  guidance_hint?: string;
   required?: string;           // 'yes', 'no', or expression
   required_message?: string;
   constraint?: string;
@@ -175,6 +176,8 @@ export interface SurveyRow {
   'body::accept'?: string;
   'body::esri:inputMask'?: string;
   'body::esri:style'?: string;
+  'body::esri:visible'?: string;
+  'body::accuracyThreshold'?: string;
 
   // === Bind Columns (Esri Extensions) ===
   'bind::type'?: string;
@@ -183,6 +186,8 @@ export interface SurveyRow {
   'bind::esri:fieldAlias'?: string;
   'bind::esri:workflow'?: string;
   'bind::esri:parameters'?: string;
+  'bind::esri:warning'?: string;
+  'bind::esri:warning_message'?: string;
   'bind::saveInComplete'?: string;
 
   // === Parameters Column ===

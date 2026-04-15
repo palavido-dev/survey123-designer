@@ -1,5 +1,5 @@
 /**
- * Choice List Editor — Polished with sortable choices
+ * Choice List Editor — Clean Survey123 style with sortable choices
  */
 
 import React from 'react';
@@ -49,7 +49,7 @@ function SortableChoice({
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab text-gray-200 hover:text-gray-400 shrink-0 transition-smooth"
+        className="cursor-grab text-gray-200 hover:text-gray-400 shrink-0 transition-fast"
       >
         <GripVertical size={12} />
       </div>
@@ -58,9 +58,8 @@ function SortableChoice({
         type="text"
         value={choice.name}
         onChange={(e) => updateChoice(listName, choice.id, { name: e.target.value })}
-        className="w-20 px-2 py-1.5 text-[11px] font-mono border border-gray-200 rounded-lg bg-gray-50/50
-          focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400
-          focus:bg-white transition-smooth"
+        className="w-20 px-2 py-1.5 text-[11px] font-mono border border-gray-200 rounded-lg bg-white
+          focus:border-[#00856a] transition-fast"
         placeholder="value"
       />
 
@@ -68,15 +67,14 @@ function SortableChoice({
         type="text"
         value={choice.label}
         onChange={(e) => updateChoice(listName, choice.id, { label: e.target.value })}
-        className="flex-1 px-2 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-gray-50/50
-          focus:outline-none focus:ring-1 focus:ring-emerald-400 focus:border-emerald-400
-          focus:bg-white transition-smooth"
+        className="flex-1 px-2 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white
+          focus:border-[#00856a] transition-fast"
         placeholder="Display label"
       />
 
       <button
         onClick={() => removeChoice(listName, choice.id)}
-        className="p-1 text-gray-200 hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-smooth"
+        className="p-1 text-gray-200 hover:text-red-400 shrink-0 opacity-0 group-hover:opacity-100 transition-fast"
       >
         <Trash2 size={12} />
       </button>
@@ -90,7 +88,7 @@ export function ChoiceListEditor({ listName }: Props) {
 
   if (!list) {
     return (
-      <div className="p-5 text-sm text-gray-400">
+      <div className="p-4 text-sm text-gray-400">
         Choice list "{listName}" not found.
       </div>
     );
@@ -99,17 +97,17 @@ export function ChoiceListEditor({ listName }: Props) {
   const choiceIds = list.choices.map((c) => c.id);
 
   return (
-    <div className="p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-[13px] font-bold text-gray-900">Choices</h3>
+          <h3 className="text-[13px] font-semibold text-gray-800">Choices</h3>
           <p className="text-[11px] text-gray-400 font-mono mt-0.5">{listName}</p>
         </div>
         <button
           onClick={() => addChoice(listName)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold
-            text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100
-            transition-smooth active:scale-[0.97]"
+          className="flex items-center gap-1 px-3 py-1.5 text-[12px] font-medium
+            text-[#007a62] bg-[#f0faf7] rounded-lg hover:bg-[#e0f5ef]
+            transition-fast active:scale-[0.97]"
         >
           <Plus size={13} />
           Add
@@ -118,8 +116,8 @@ export function ChoiceListEditor({ listName }: Props) {
 
       {/* Column Headers */}
       <div className="flex items-center gap-1.5 mb-2 pl-[52px]">
-        <span className="w-20 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Value</span>
-        <span className="flex-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">Label</span>
+        <span className="w-20 text-[10px] font-medium text-gray-400">Value</span>
+        <span className="flex-1 text-[10px] font-medium text-gray-400">Label</span>
       </div>
 
       {/* Choice Rows */}
@@ -131,7 +129,7 @@ export function ChoiceListEditor({ listName }: Props) {
 
       {list.choices.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-[12px] text-gray-300">No choices yet</p>
+          <p className="text-[12px] text-gray-400">No choices yet</p>
           <p className="text-[11px] text-gray-300 mt-1">Click "Add" to create one</p>
         </div>
       )}

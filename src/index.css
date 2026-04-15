@@ -1,41 +1,9 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Survey123 Designer — Custom Design System
-   Warm, polished UI with depth, curves, and rich contrast
+   Survey123 Designer — Clean, readable design system
+   Inspired by Esri's Survey123 web designer
    ============================================================ */
-
-@theme {
-  /* Brand palette — warm teal/emerald with earth tones */
-  --color-brand-50: #ecfdf5;
-  --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
-  --color-brand-800: #065f46;
-  --color-brand-900: #064e3b;
-  --color-brand-950: #022c22;
-
-  /* Sidebar dark */
-  --color-sidebar: #1a1f2e;
-  --color-sidebar-hover: #252b3d;
-  --color-sidebar-active: #2d3548;
-  --color-sidebar-text: #94a3b8;
-  --color-sidebar-text-bright: #e2e8f0;
-
-  /* Surface layers */
-  --color-surface-0: #f8fafb;
-  --color-surface-1: #ffffff;
-  --color-surface-2: #f1f5f9;
-  --color-surface-border: #e2e8f0;
-
-  /* Warm accent for highlights */
-  --color-accent-warm: #f59e0b;
-  --color-accent-warm-light: #fef3c7;
-}
 
 /* Reset & Base */
 * {
@@ -48,7 +16,8 @@ body {
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--color-surface-0);
+  background: #f4f4f4;
+  color: #333;
 }
 
 #root {
@@ -56,7 +25,7 @@ body {
   height: 100vh;
 }
 
-/* Smooth scrollbars */
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -65,68 +34,44 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #ccc;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #aaa;
 }
 
-/* Dark scrollbar for sidebar */
-.dark-scrollbar::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-.dark-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+/* Smooth transitions */
+.transition-fast {
+  transition: all 0.15s ease;
 }
 
-/* Transitions */
-.transition-smooth {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* Form preview canvas background */
+.canvas-bg {
+  background-color: #d5ddd5;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.03) 0%, transparent 100%);
 }
 
-/* Custom focus ring */
-.focus-ring:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-  border-radius: 6px;
+/* Card shadow system */
+.shadow-card {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+}
+.shadow-card-hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+}
+.shadow-panel {
+  box-shadow: 0 0 12px rgba(0,0,0,0.06);
 }
 
-/* Glow effect for selected items */
-.glow-selected {
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(16, 185, 129, 0.15);
+/* Selected question glow */
+.selected-glow {
+  box-shadow: 0 0 0 2px #00856a, 0 2px 8px rgba(0,133,106,0.2);
 }
 
-/* Card hover elevation */
-.card-hover {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-hover:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-}
-
-/* Subtle gradient backgrounds */
-.gradient-header {
-  background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%);
-}
-
-.gradient-toolbar {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafb 100%);
-}
-
-/* Input styling */
-input[type="text"],
-input[type="number"],
-textarea,
-select {
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-input[type="text"]:focus,
-input[type="number"]:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--color-brand-500);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+/* Input focus style */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #00856a;
+  box-shadow: 0 0 0 3px rgba(0,133,106,0.12);
 }

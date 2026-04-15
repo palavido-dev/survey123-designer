@@ -1,5 +1,5 @@
 /**
- * Form Canvas (Center) — Clean design with subtle background pattern
+ * Form Canvas — Live form preview style like Survey123 web designer
  */
 
 import React from 'react';
@@ -10,97 +10,92 @@ import {
 import { useDroppable } from '@dnd-kit/core';
 import { useSurveyStore } from '../../store/surveyStore';
 import { SortableQuestionRow } from './SortableQuestionRow';
-import { FileText } from '../../utils/icons';
+import { Plus } from '../../utils/icons';
 
 export function FormCanvas() {
   const { form, selectedRowId, selectRow } = useSurveyStore();
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop-zone' });
 
   const items = form.survey.map((row) => row.id);
-
-  // Calculate nesting depth for each row
   const depths = calculateDepths(form.survey);
 
   return (
     <div
-      className="flex-1 overflow-y-auto"
-      style={{
-        background: 'linear-gradient(180deg, #f1f5f9 0%, #e8eef4 100%)',
-        backgroundImage: `radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0)`,
-        backgroundSize: '24px 24px',
-      }}
+      className="flex-1 overflow-y-auto canvas-bg"
       onClick={(e) => {
         if (e.target === e.currentTarget) selectRow(null);
       }}
     >
-      <div className="max-w-[720px] mx-auto py-8 px-4">
-        {/* Form Header Card */}
-        <div className="gradient-header rounded-2xl p-6 mb-4 shadow-[0_4px_20px_rgba(5,150,105,0.25)]">
-          <h1 className="text-xl font-bold text-white tracking-tight">
-            {form.settings.form_title || 'Untitled Survey'}
-          </h1>
-          <div className="flex items-center gap-3 mt-2">
-            {form.settings.form_id && (
-              <span className="text-xs text-emerald-200/70 bg-white/10 px-2.5 py-0.5 rounded-full font-mono">
-                {form.settings.form_id}
-              </span>
-            )}
-            {form.settings.version && (
-              <span className="text-xs text-emerald-200/70 bg-white/10 px-2.5 py-0.5 rounded-full">
-                v{form.settings.version}
-              </span>
-            )}
-            <span className="text-xs text-emerald-200/50">
-              {form.survey.filter(r => !['end_group', 'end_repeat'].includes(r.type)).length} items
-            </span>
+      <div className="max-w-[680px] mx-auto py-8 px-4">
+        {/* Survey Card */}
+        <div className="bg-white rounded-xl shadow-card overflow-hidden">
+          {/* Green header bar */}
+          <div className="bg-[#007a62] px-8 py-6">
+            <h1 className="text-[22px] font-bold text-white leading-tight">
+              {form.settings.form_title || 'Untitled survey'}
+            </h1>
+            <p className="text-[14px] text-white/60 mt-1.5">
+              Description content for the survey
+            </p>
           </div>
-        </div>
 
-        {/* Drop Zone */}
-        <div
-          ref={setNodeRef}
-          className={`min-h-[200px] transition-all duration-200 rounded-2xl
-            ${isOver ? 'bg-emerald-50/50 ring-2 ring-emerald-300/30 ring-dashed' : ''}`}
-        >
-          {items.length === 0 ? (
-            <div className={`
-              flex flex-col items-center justify-center py-24
-              border-2 border-dashed rounded-2xl transition-all duration-200
-              ${isOver
-                ? 'border-emerald-400 bg-emerald-50/60'
-                : 'border-gray-300/60 bg-white/40 backdrop-blur-sm'}
-            `}>
-              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-5">
-                <FileText size={28} className="text-gray-300" />
+          {/* Form body */}
+          <div
+            ref={setNodeRef}
+            className={`px-8 py-6 min-h-[300px] transition-fast
+              ${isOver ? 'bg-[#f0faf7]' : 'bg-white'}`}
+          >
+            {items.length === 0 ? (
+              <div className={`
+                flex flex-col items-center justify-center py-16
+                border-2 border-dashed rounded-lg transition-fast
+                ${isOver ? 'border-[#00856a] bg-[#f0faf7]' : 'border-gray-200'}
+              `}>
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                  <Plus size={24} className="text-gray-400" />
+                </div>
+                <p className="text-[15px] text-gray-500 font-medium">Drop questions here</p>
+                <p className="text-[13px] text-gray-400 mt-1">
+                  Drag from the sidebar to build your form
+                </p>
               </div>
-              <p className="text-gray-500 text-lg font-semibold mb-1">Drop questions here</p>
-              <p className="text-gray-400 text-sm max-w-xs text-center">
-                Drag question types from the sidebar to start building your survey form
-              </p>
+            ) : (
+              <SortableContext items={items} strategy={verticalListSortingStrategy}>
+                <div className="space-y-4">
+                  {form.survey.map((row, index) => (
+                    <SortableQuestionRow
+                      key={row.id}
+                      row={row}
+                      index={index}
+                      depth={depths[index] || 0}
+                      isSelected={row.id === selectedRowId}
+                      onSelect={() => selectRow(row.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            )}
+          </div>
+
+          {/* Submit button (visual only) */}
+          {items.length > 0 && (
+            <div className="px-8 py-6 border-t border-gray-100 flex justify-center">
+              <div className="bg-[#007a62] text-white px-8 py-2.5 rounded-lg text-[14px] font-semibold opacity-60 cursor-default">
+                Submit
+              </div>
             </div>
-          ) : (
-            <SortableContext items={items} strategy={verticalListSortingStrategy}>
-              <div className="space-y-1.5">
-                {form.survey.map((row, index) => (
-                  <SortableQuestionRow
-                    key={row.id}
-                    row={row}
-                    index={index}
-                    depth={depths[index] || 0}
-                    isSelected={row.id === selectedRowId}
-                    onSelect={() => selectRow(row.id)}
-                  />
-                ))}
-              </div>
-            </SortableContext>
           )}
+
+          {/* Footer */}
+          <div className="px-8 py-3 border-t border-gray-100 text-center">
+            <p className="text-[11px] text-gray-400">Powered by ArcGIS Survey123</p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-// Calculate nesting depth for visual indentation
 function calculateDepths(rows: { type: string }[]): number[] {
   const depths: number[] = [];
   let depth = 0;

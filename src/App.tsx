@@ -104,9 +104,8 @@ export default function App() {
         {/* Drag Overlay */}
         <DragOverlay>
           {activeId ? (
-            <div className="bg-white border border-emerald-300 rounded-xl px-5 py-3
-              shadow-[0_8px_32px_rgba(0,0,0,0.12)] text-[13px] text-emerald-700 font-semibold
-              opacity-95 backdrop-blur-sm">
+            <div className="bg-white border border-[#00856a] rounded-lg px-4 py-2.5
+              shadow-[0_4px_20px_rgba(0,0,0,0.12)] text-[13px] text-[#007a62] font-medium">
               Drop on canvas
             </div>
           ) : null}
