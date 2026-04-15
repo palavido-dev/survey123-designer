@@ -101,7 +101,7 @@ export function ChoiceListEditor({ listName }: Props) {
   const choiceIds = list.choices.map((c) => c.id);
 
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ padding: '16px 20px' }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
         <div>
           <h3 className="text-gray-800" style={{ fontSize: 14, fontWeight: 600 }}>Choices</h3>

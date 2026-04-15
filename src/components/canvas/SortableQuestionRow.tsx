@@ -168,16 +168,17 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   if (isBeginGroup || isBeginRepeat) {
     return (
       <div ref={setNodeRef} style={style}
-        {...attributes} {...listeners}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
         className={`rounded-lg cursor-pointer transition-fast
           ${isSelected ? 'selected-glow' : ''}
           ${isBeginGroup
             ? 'bg-[#f7f3ff] border border-purple-200'
             : 'bg-[#f0faf7] border border-teal-200'}`}>
-        <div className="flex items-center justify-between px-10 py-6">
+        <div className="flex items-center justify-between" style={{ padding: '16px 28px' }}>
           <div className="flex items-center gap-3">
-            <span className={`text-[11px] font-bold uppercase tracking-wide
+            {/* Drag handle — only this area initiates drag */}
+            <span {...attributes} {...listeners}
+              className={`text-[11px] font-bold uppercase tracking-wide cursor-grab active:cursor-grabbing
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
               {isBeginGroup ? 'Group' : 'Repeat'}
             </span>
@@ -495,7 +496,7 @@ function InlineChoiceEdit({
 // ============================================================
 
 function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
-  const { form, addChoice } = useSurveyStore();
+  const { form, addChoice, removeChoice } = useSurveyStore();
   const appearance = row.appearance || '';
   const list = row.listName
     ? form.choiceLists.find((cl) => cl.list_name === row.listName)
@@ -585,7 +586,7 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
       <div>
         <div className="flex flex-wrap gap-2">
           {displayChoices.slice(0, 8).map((c, i) => (
-            <label key={c.id || i} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-white cursor-pointer">
+            <div key={c.id || i} className="flex items-center gap-2 px-3 py-1.5 border border-gray-200 rounded-lg bg-white group/choice">
               {multi ? (
                 <div className="w-4 h-4 rounded border-2 border-gray-300 bg-white shrink-0" />
               ) : (
@@ -598,7 +599,18 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
                   c.label
                 )}
               </span>
-            </label>
+              {hasRealList && displayChoices.length > 1 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); removeChoice(row.listName!, c.id); }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className="opacity-0 group-hover/choice:opacity-100 text-gray-300 hover:text-red-400 transition-fast shrink-0 -mr-1"
+                  title="Remove option"
+                >
+                  <X size={10} />
+                </button>
+              )}
+            </div>
           ))}
           {displayChoices.length > 8 && (
             <span className="text-[11px] text-gray-400 self-center">+{displayChoices.length - 8} more</span>
@@ -622,20 +634,31 @@ function SelectPreview({ row, multi }: { row: SurveyRow; multi: boolean }) {
   return (
     <div className="space-y-2.5">
       {displayChoices.slice(0, 8).map((c, i) => (
-        <label key={c.id || i} className="flex items-center gap-3 cursor-pointer">
+        <div key={c.id || i} className="flex items-center gap-3 group/choice">
           {multi ? (
             <div className="w-[18px] h-[18px] rounded border-2 border-gray-300 bg-white shrink-0" />
           ) : (
             <div className="w-[18px] h-[18px] rounded-full border-2 border-gray-300 bg-white shrink-0" />
           )}
-          <span className="text-[13px] text-gray-600">
+          <span className="text-[13px] text-gray-600 flex-1">
             {hasRealList ? (
               <InlineChoiceEdit choice={c} listName={row.listName!} />
             ) : (
               c.label
             )}
           </span>
-        </label>
+          {hasRealList && displayChoices.length > 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); removeChoice(row.listName!, c.id); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="opacity-0 group-hover/choice:opacity-100 text-gray-300 hover:text-red-400 transition-fast shrink-0"
+              title="Remove option"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
       ))}
       {displayChoices.length > 8 && (
         <p className="text-[11px] text-gray-400 pl-8">+{displayChoices.length - 8} more options</p>
