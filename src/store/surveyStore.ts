@@ -30,6 +30,7 @@ interface SurveyStore {
   selectedRowId: string | null;
   panelView: PanelView;
   isDragging: boolean;
+  collapsedGroups: Set<string>;
   undoStack: SurveyForm[];
   redoStack: SurveyForm[];
 
@@ -55,6 +56,7 @@ interface SurveyStore {
   selectRow: (id: string | null) => void;
   setPanelView: (view: PanelView) => void;
   setDragging: (isDragging: boolean) => void;
+  toggleGroupCollapse: (id: string) => void;
 
   // === History ===
   undo: () => void;
@@ -91,6 +93,7 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   selectedRowId: null,
   panelView: 'properties',
   isDragging: false,
+  collapsedGroups: new Set<string>(),
   undoStack: [],
   redoStack: [],
 
@@ -405,6 +408,13 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   selectRow: (id) => set({ selectedRowId: id }),
   setPanelView: (view) => set({ panelView: view }),
   setDragging: (isDragging) => set({ isDragging }),
+  toggleGroupCollapse: (id) => {
+    const state = get();
+    const next = new Set(state.collapsedGroups);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    set({ collapsedGroups: next });
+  },
 
   // ----------------------------------------------------------
   // History (Undo/Redo)

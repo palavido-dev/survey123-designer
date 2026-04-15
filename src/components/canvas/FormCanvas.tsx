@@ -12,13 +12,15 @@ import { useDroppable } from '@dnd-kit/core';
 import { useSurveyStore } from '../../store/surveyStore';
 import { SortableQuestionRow } from './SortableQuestionRow';
 import { Plus } from '../../utils/icons';
+import { SurveyRow } from '../../types/survey';
 
 export function FormCanvas() {
-  const { form, selectedRowId, selectRow } = useSurveyStore();
+  const { form, selectedRowId, selectRow, collapsedGroups } = useSurveyStore();
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop-zone' });
 
   const items = form.survey.map((row) => row.id);
   const depths = calculateDepths(form.survey);
+  const hiddenSet = calculateHiddenRows(form.survey, collapsedGroups);
 
   return (
     <div
@@ -63,16 +65,19 @@ export function FormCanvas() {
             ) : (
               <SortableContext items={items} strategy={verticalListSortingStrategy}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  {form.survey.map((row, index) => (
-                    <SortableQuestionRow
-                      key={row.id}
-                      row={row}
-                      index={index}
-                      depth={depths[index] || 0}
-                      isSelected={row.id === selectedRowId}
-                      onSelect={() => selectRow(row.id)}
-                    />
-                  ))}
+                  {form.survey.map((row, index) => {
+                    if (hiddenSet.has(row.id)) return null;
+                    return (
+                      <SortableQuestionRow
+                        key={row.id}
+                        row={row}
+                        index={index}
+                        depth={depths[index] || 0}
+                        isSelected={row.id === selectedRowId}
+                        onSelect={() => selectRow(row.id)}
+                      />
+                    );
+                  })}
                 </div>
               </SortableContext>
             )}
@@ -111,4 +116,34 @@ function calculateDepths(rows: { type: string }[]): number[] {
     }
   }
   return depths;
+}
+
+/**
+ * Compute which row IDs should be hidden when groups are collapsed.
+ * The begin row stays visible (it shows the collapse toggle).
+ * Everything between begin and its matching end is hidden, including the end marker.
+ */
+function calculateHiddenRows(rows: SurveyRow[], collapsedGroups: Set<string>): Set<string> {
+  const hidden = new Set<string>();
+  let hideDepth = 0;
+  const groupStack: string[] = [];
+
+  for (const row of rows) {
+    const isBegin = row.type === 'begin_group' || row.type === 'begin_repeat';
+    const isEnd = row.type === 'end_group' || row.type === 'end_repeat';
+
+    if (isBegin) {
+      if (hideDepth > 0) hidden.add(row.id);
+      groupStack.push(row.id);
+      if (collapsedGroups.has(row.id)) hideDepth++;
+    } else if (isEnd) {
+      const matchId = groupStack.pop();
+      if (matchId && collapsedGroups.has(matchId)) hideDepth = Math.max(0, hideDepth - 1);
+      if ((matchId && collapsedGroups.has(matchId)) || hideDepth > 0) hidden.add(row.id);
+    } else {
+      if (hideDepth > 0) hidden.add(row.id);
+    }
+  }
+
+  return hidden;
 }

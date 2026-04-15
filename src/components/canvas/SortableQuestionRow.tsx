@@ -9,7 +9,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
-import { X, Copy } from '../../utils/icons';
+import { X, Copy, ChevronDown, ChevronRight } from '../../utils/icons';
 
 interface Props {
   row: SurveyRow;
@@ -108,7 +108,7 @@ function InlineEdit({
 // ============================================================
 
 export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }: Props) {
-  const { removeRow, duplicateRow, updateRow } = useSurveyStore();
+  const { removeRow, duplicateRow, updateRow, collapsedGroups, toggleGroupCollapse } = useSurveyStore();
 
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
@@ -166,6 +166,26 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
 
   // Group/Repeat start headers
   if (isBeginGroup || isBeginRepeat) {
+    const isCollapsed = collapsedGroups.has(row.id);
+    const CollapseIcon = isCollapsed ? ChevronRight : ChevronDown;
+    const childCount = (() => {
+      // Count items inside this group (for collapsed summary)
+      const { form } = useSurveyStore.getState();
+      const startIdx = form.survey.findIndex((r) => r.id === row.id);
+      if (startIdx === -1) return 0;
+      const endType = isBeginGroup ? 'end_group' : 'end_repeat';
+      let depth = 0;
+      let count = 0;
+      for (let i = startIdx; i < form.survey.length; i++) {
+        const r = form.survey[i];
+        if (r.type === row.type) depth++;
+        if (r.type === endType) depth--;
+        if (depth === 0) break;
+        if (i > startIdx && !['begin_group', 'begin_repeat', 'end_group', 'end_repeat'].includes(r.type)) count++;
+      }
+      return count;
+    })();
+
     return (
       <div ref={setNodeRef} style={style}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
@@ -175,8 +195,19 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
             ? 'bg-[#f7f3ff] border border-purple-200'
             : 'bg-[#f0faf7] border border-teal-200'}`}>
         <div className="flex items-center justify-between" style={{ padding: '16px 28px' }}>
-          <div className="flex items-center gap-3">
-            {/* Drag handle — only this area initiates drag */}
+          <div className="flex items-center gap-2">
+            {/* Collapse/expand toggle */}
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleGroupCollapse(row.id); }}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`p-0.5 rounded transition-fast ${isBeginGroup
+                ? 'text-purple-400 hover:text-purple-600 hover:bg-purple-100'
+                : 'text-teal-400 hover:text-teal-600 hover:bg-teal-100'}`}
+              title={isCollapsed ? 'Expand' : 'Collapse'}
+            >
+              <CollapseIcon size={14} />
+            </button>
+            {/* Drag handle */}
             <span {...attributes} {...listeners}
               className={`text-[11px] font-bold uppercase tracking-wide cursor-grab active:cursor-grabbing
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
@@ -189,6 +220,11 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
                 placeholder={row.name}
               />
             </span>
+            {isCollapsed && (
+              <span className="text-[11px] text-gray-400 ml-1">
+                ({childCount} {childCount === 1 ? 'question' : 'questions'})
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
