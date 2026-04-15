@@ -1,10 +1,8 @@
 /**
  * Expression Builder — Visual expression editor for XLSForm logic
  *
- * Helps users build expressions for "relevant", "constraint", "calculation",
- * and other expression fields without knowing XLSForm syntax.
- *
  * Features:
+ *   - **Guided Quick Start wizard**: pick a template → pick field(s) → fill value → done
  *   - Click to insert field references from the survey
  *   - Operator palette (=, !=, >, <, and, or, etc.)
  *   - Common function snippets (selected, count-selected, concat, etc.)
@@ -15,18 +13,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { SurveyRow } from '../../types/survey';
-import { X, ChevronDown } from '../../utils/icons';
 
 interface Props {
   value: string;
   onChange: (val: string) => void;
-  /** The current row being edited — excluded from field list */
   currentRowId: string;
-  /** Label shown above the builder */
   label: string;
-  /** Placeholder when empty */
   placeholder?: string;
-  /** Type of expression: 'relevant' shows condition helpers, 'calculation' shows math/concat */
   mode?: 'relevant' | 'calculation' | 'constraint' | 'general';
 }
 
@@ -72,33 +65,243 @@ interface FunctionTemplate {
 }
 
 const FUNCTIONS: FunctionTemplate[] = [
-  // Selection functions
   { label: 'selected', template: "selected(${field}, 'value')", description: 'Check if value is selected in multi-select', category: 'selection' },
   { label: 'count-selected', template: 'count-selected(${field})', description: 'Count how many options are selected', category: 'selection' },
   { label: 'selected-at', template: 'selected-at(${field}, 0)', description: 'Get the nth selected value', category: 'selection' },
-  // Text functions
   { label: 'concat', template: "concat(${field}, ' ', ${field})", description: 'Join text values together', category: 'text' },
   { label: 'string-length', template: 'string-length(${field})', description: 'Length of text value', category: 'text' },
   { label: 'substr', template: 'substr(${field}, 0, 5)', description: 'Extract part of text', category: 'text' },
   { label: 'contains', template: "contains(${field}, 'text')", description: 'Check if text contains a substring', category: 'text' },
   { label: 'regex', template: "regex(${field}, '[0-9]+')", description: 'Test text against a pattern', category: 'text' },
-  // Math functions
   { label: 'sum', template: 'sum(${field})', description: 'Sum of repeat values', category: 'math' },
   { label: 'count', template: 'count(${field})', description: 'Count of repeat instances', category: 'math' },
   { label: 'min', template: 'min(${field})', description: 'Minimum value', category: 'math' },
   { label: 'max', template: 'max(${field})', description: 'Maximum value', category: 'math' },
   { label: 'round', template: 'round(${field}, 2)', description: 'Round to decimal places', category: 'math' },
   { label: 'int', template: 'int(${field})', description: 'Convert to integer', category: 'math' },
-  // Date functions
   { label: 'today', template: 'today()', description: "Today's date", category: 'date' },
   { label: 'now', template: 'now()', description: 'Current date and time', category: 'date' },
   { label: 'format-date', template: "format-date(${field}, '%Y-%m-%d')", description: 'Format a date value', category: 'date' },
-  // Logic helpers
   { label: 'if', template: "if(condition, 'yes_value', 'no_value')", description: 'Conditional value', category: 'logic' },
   { label: 'coalesce', template: 'coalesce(${field}, ${field})', description: 'First non-empty value', category: 'logic' },
   { label: 'once', template: 'once(${field})', description: 'Calculate only on first entry', category: 'logic' },
   { label: 'pulldata', template: "pulldata('filename', 'return_col', 'lookup_col', ${field})", description: 'Look up value from CSV', category: 'logic' },
 ];
+
+// ============================================================
+// Quick Start Wizard Templates
+// ============================================================
+
+interface WizardTemplate {
+  label: string;
+  description: string;
+  /** How many field slots to fill (0 = no fields needed, e.g. constraint self-ref) */
+  fieldCount: number;
+  /** Labels for each field slot */
+  fieldLabels?: string[];
+  /** Does it need a user-provided value? */
+  needsValue?: boolean;
+  /** Label for the value input */
+  valueLabel?: string;
+  /** Placeholder for value input */
+  valuePlaceholder?: string;
+  /** Value type hint */
+  valueType?: 'text' | 'number' | 'choice';
+  /** Preset value (skip the value step) */
+  presetValue?: string;
+  /** Build the final expression from collected parts */
+  build: (fields: string[], value: string) => string;
+}
+
+function getWizardTemplates(mode: string): WizardTemplate[] {
+  if (mode === 'relevant') {
+    return [
+      {
+        label: 'Show when equals...',
+        description: 'Show this question when another field equals a specific value',
+        fieldCount: 1,
+        fieldLabels: ['Which field should control visibility?'],
+        needsValue: true,
+        valueLabel: 'Equal to what value?',
+        valuePlaceholder: 'yes',
+        valueType: 'text',
+        build: (fields, value) => `\${${fields[0]}} = '${value}'`,
+      },
+      {
+        label: 'Show when not empty',
+        description: 'Show this question when another field has any value',
+        fieldCount: 1,
+        fieldLabels: ['Which field must have a value?'],
+        needsValue: false,
+        build: (fields) => `\${${fields[0]}} != ''`,
+      },
+      {
+        label: 'Show when yes',
+        description: "Show when another field is answered 'yes'",
+        fieldCount: 1,
+        fieldLabels: ['Which yes/no field?'],
+        needsValue: false,
+        presetValue: 'yes',
+        build: (fields) => `\${${fields[0]}} = 'yes'`,
+      },
+      {
+        label: 'Show when selected...',
+        description: 'Show when a specific option is selected in a multi-select',
+        fieldCount: 1,
+        fieldLabels: ['Which select field?'],
+        needsValue: true,
+        valueLabel: 'Which option value?',
+        valuePlaceholder: 'option_1',
+        valueType: 'choice',
+        build: (fields, value) => `selected(\${${fields[0]}}, '${value}')`,
+      },
+      {
+        label: 'Show when greater than...',
+        description: 'Show when a numeric field exceeds a threshold',
+        fieldCount: 1,
+        fieldLabels: ['Which numeric field?'],
+        needsValue: true,
+        valueLabel: 'Greater than what number?',
+        valuePlaceholder: '0',
+        valueType: 'number',
+        build: (fields, value) => `\${${fields[0]}} > ${value}`,
+      },
+      {
+        label: 'Show when between...',
+        description: 'Show when a field value falls within a range',
+        fieldCount: 1,
+        fieldLabels: ['Which field to check?'],
+        needsValue: true,
+        valueLabel: 'Range (e.g. 1,10)',
+        valuePlaceholder: '1,10',
+        valueType: 'text',
+        build: (fields, value) => {
+          const parts = value.split(',').map(s => s.trim());
+          if (parts.length === 2) return `\${${fields[0]}} >= ${parts[0]} and \${${fields[0]}} <= ${parts[1]}`;
+          return `\${${fields[0]}} >= ${value}`;
+        },
+      },
+    ];
+  }
+
+  if (mode === 'calculation') {
+    return [
+      {
+        label: 'Add two fields',
+        description: 'Sum two field values together',
+        fieldCount: 2,
+        fieldLabels: ['First field', 'Second field'],
+        needsValue: false,
+        build: (fields) => `\${${fields[0]}} + \${${fields[1]}}`,
+      },
+      {
+        label: 'Concatenate text',
+        description: 'Join two text fields with a separator',
+        fieldCount: 2,
+        fieldLabels: ['First field', 'Second field'],
+        needsValue: true,
+        valueLabel: 'Separator (e.g. space, comma)',
+        valuePlaceholder: ' ',
+        valueType: 'text',
+        build: (fields, value) => `concat(\${${fields[0]}}, '${value}', \${${fields[1]}})`,
+      },
+      {
+        label: 'Conditional value',
+        description: 'Return different values based on a condition',
+        fieldCount: 1,
+        fieldLabels: ['Which field to check?'],
+        needsValue: true,
+        valueLabel: "Value to check for (e.g. 'yes')",
+        valuePlaceholder: 'yes',
+        valueType: 'text',
+        build: (fields, value) => `if(\${${fields[0]}} = '${value}', 'Result A', 'Result B')`,
+      },
+      {
+        label: 'Count selected options',
+        description: 'Count how many options are selected in a multi-select',
+        fieldCount: 1,
+        fieldLabels: ['Which select field?'],
+        needsValue: false,
+        build: (fields) => `count-selected(\${${fields[0]}})`,
+      },
+      {
+        label: "Today's date",
+        description: 'Insert the current date',
+        fieldCount: 0,
+        needsValue: false,
+        build: () => 'today()',
+      },
+    ];
+  }
+
+  if (mode === 'constraint') {
+    return [
+      {
+        label: 'Must be positive',
+        description: 'Value must be greater than zero',
+        fieldCount: 0,
+        needsValue: false,
+        build: () => '. > 0',
+      },
+      {
+        label: 'Range...',
+        description: 'Value must be between two numbers',
+        fieldCount: 0,
+        needsValue: true,
+        valueLabel: 'Range (e.g. 0,100)',
+        valuePlaceholder: '0,100',
+        valueType: 'text',
+        build: (_, value) => {
+          const parts = value.split(',').map(s => s.trim());
+          if (parts.length === 2) return `. >= ${parts[0]} and . <= ${parts[1]}`;
+          return `. > ${value}`;
+        },
+      },
+      {
+        label: 'Not empty',
+        description: 'Field cannot be left blank',
+        fieldCount: 0,
+        needsValue: false,
+        build: () => ". != ''",
+      },
+      {
+        label: 'Min length...',
+        description: 'Text must be at least N characters',
+        fieldCount: 0,
+        needsValue: true,
+        valueLabel: 'Minimum characters',
+        valuePlaceholder: '3',
+        valueType: 'number',
+        build: (_, value) => `string-length(.) >= ${value}`,
+      },
+      {
+        label: 'Regex pattern...',
+        description: 'Match a custom pattern',
+        fieldCount: 0,
+        needsValue: true,
+        valueLabel: 'Regex pattern',
+        valuePlaceholder: '[A-Z][0-9]{3}',
+        valueType: 'text',
+        build: (_, value) => `regex(., '${value}')`,
+      },
+    ];
+  }
+
+  return [];
+}
+
+// ============================================================
+// Wizard State
+// ============================================================
+
+interface WizardState {
+  template: WizardTemplate;
+  /** Which step: 'field_0', 'field_1', 'value', 'done' */
+  step: string;
+  fields: string[];
+  value: string;
+  fieldSearch: string;
+}
 
 // ============================================================
 // Expression Builder Component
@@ -110,10 +313,11 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
   const [activeTab, setActiveTab] = useState<'fields' | 'operators' | 'functions'>('fields');
   const [fieldSearch, setFieldSearch] = useState('');
   const [funcCategory, setFuncCategory] = useState<string>('all');
+  const [wizard, setWizard] = useState<WizardState | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const builderRef = useRef<HTMLDivElement>(null);
+  const valueInputRef = useRef<HTMLInputElement>(null);
 
-  // Get all available fields (excluding the current row and structural end markers)
   const availableFields = form.survey.filter(
     (r) =>
       r.id !== currentRowId &&
@@ -129,7 +333,15 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       )
     : availableFields;
 
-  // Filter functions based on mode
+  // Wizard-filtered fields (same logic but separate search)
+  const wizardFilteredFields = wizard?.fieldSearch
+    ? availableFields.filter(
+        (r) =>
+          r.name.toLowerCase().includes(wizard.fieldSearch.toLowerCase()) ||
+          r.label.toLowerCase().includes(wizard.fieldSearch.toLowerCase())
+      )
+    : availableFields;
+
   const relevantFunctions = FUNCTIONS.filter((f) => {
     if (funcCategory !== 'all') return f.category === funcCategory;
     if (mode === 'relevant') return ['selection', 'logic', 'text'].includes(f.category);
@@ -147,7 +359,8 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     { value: 'logic', label: 'Logic' },
   ];
 
-  // Insert text at cursor position in the textarea
+  const quickTemplates = getWizardTemplates(mode);
+
   const insertAtCursor = (text: string) => {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -158,8 +371,6 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     const end = textarea.selectionEnd;
     const newValue = value.substring(0, start) + text + value.substring(end);
     onChange(newValue);
-
-    // Set cursor position after insertion
     requestAnimationFrame(() => {
       textarea.focus();
       const cursorPos = start + text.length;
@@ -181,34 +392,112 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     const handleClick = (e: MouseEvent) => {
       if (builderRef.current && !builderRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setWizard(null);
       }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
-  // Quick-build templates for common patterns
-  const quickTemplates = mode === 'relevant' ? [
-    { label: 'Show when equals...', template: "${field} = 'value'" },
-    { label: 'Show when not empty', template: "${field} != ''" },
-    { label: 'Show when yes', template: "${field} = 'yes'" },
-    { label: 'Show when selected...', template: "selected(${field}, 'value')" },
-    { label: 'Show when greater than...', template: '${field} > 0' },
-  ] : mode === 'calculation' ? [
-    { label: 'Add two fields', template: '${field} + ${field}' },
-    { label: 'Concatenate text', template: "concat(${field}, ' ', ${field})" },
-    { label: 'Conditional value', template: "if(${field} = 'yes', 'Result A', 'Result B')" },
-    { label: 'Count selected', template: 'count-selected(${field})' },
-    { label: "Today's date", template: 'today()' },
-  ] : mode === 'constraint' ? [
-    { label: 'Must be positive', template: '. > 0' },
-    { label: 'Range (0-100)', template: '. > 0 and . <= 100' },
-    { label: 'Not empty', template: ". != ''" },
-    { label: 'Min length', template: 'string-length(.) >= 3' },
-    { label: 'Regex pattern', template: "regex(., '[A-Z][0-9]{3}')" },
-  ] : [];
+  // Focus value input when wizard reaches value step
+  useEffect(() => {
+    if (wizard?.step === 'value') {
+      requestAnimationFrame(() => valueInputRef.current?.focus());
+    }
+  }, [wizard?.step]);
 
-  // Get type badge color for field list
+  // ---- Wizard Logic ----
+
+  const startWizard = (template: WizardTemplate) => {
+    // If no fields needed and no value needed, apply immediately
+    if (template.fieldCount === 0 && !template.needsValue) {
+      onChange(template.build([], ''));
+      return;
+    }
+    // If no fields needed but value needed, jump to value step
+    if (template.fieldCount === 0) {
+      setWizard({
+        template,
+        step: 'value',
+        fields: [],
+        value: '',
+        fieldSearch: '',
+      });
+      return;
+    }
+    // Otherwise start at first field
+    setWizard({
+      template,
+      step: 'field_0',
+      fields: [],
+      value: '',
+      fieldSearch: '',
+    });
+  };
+
+  const wizardPickField = (fieldName: string) => {
+    if (!wizard) return;
+    const newFields = [...wizard.fields, fieldName];
+    const currentFieldIndex = parseInt(wizard.step.split('_')[1]);
+    const nextFieldIndex = currentFieldIndex + 1;
+
+    if (nextFieldIndex < wizard.template.fieldCount) {
+      // More fields to pick
+      setWizard({ ...wizard, fields: newFields, step: `field_${nextFieldIndex}`, fieldSearch: '' });
+    } else if (wizard.template.needsValue) {
+      // Move to value step
+      setWizard({ ...wizard, fields: newFields, step: 'value', fieldSearch: '' });
+    } else {
+      // Done! Build and apply
+      const expr = wizard.template.build(newFields, '');
+      onChange(expr);
+      setWizard(null);
+    }
+  };
+
+  const wizardSetValue = (val: string) => {
+    if (!wizard) return;
+    setWizard({ ...wizard, value: val });
+  };
+
+  const wizardApply = () => {
+    if (!wizard) return;
+    const expr = wizard.template.build(wizard.fields, wizard.value);
+    onChange(expr);
+    setWizard(null);
+  };
+
+  const wizardCancel = () => {
+    setWizard(null);
+  };
+
+  const wizardBack = () => {
+    if (!wizard) return;
+    if (wizard.step === 'value') {
+      if (wizard.template.fieldCount > 0) {
+        const lastIdx = wizard.template.fieldCount - 1;
+        setWizard({ ...wizard, step: `field_${lastIdx}`, fields: wizard.fields.slice(0, lastIdx), fieldSearch: '' });
+      } else {
+        setWizard(null);
+      }
+    } else if (wizard.step.startsWith('field_')) {
+      const idx = parseInt(wizard.step.split('_')[1]);
+      if (idx === 0) {
+        setWizard(null);
+      } else {
+        setWizard({ ...wizard, step: `field_${idx - 1}`, fields: wizard.fields.slice(0, idx - 1), fieldSearch: '' });
+      }
+    }
+  };
+
+  // Get choices for a field (for choice-type value input)
+  const getChoicesForField = (fieldName: string) => {
+    const row = form.survey.find(r => r.name === fieldName);
+    if (!row?.listName) return [];
+    const list = form.choiceLists.find(cl => cl.list_name === row.listName);
+    return list?.choices || [];
+  };
+
   const getTypeColor = (type: string) => {
     if (type.startsWith('select_')) return 'bg-blue-50 text-blue-600 border-blue-200';
     if (['integer', 'decimal', 'range'].includes(type)) return 'bg-amber-50 text-amber-600 border-amber-200';
@@ -219,6 +508,87 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     return 'bg-gray-50 text-gray-500 border-gray-200';
   };
 
+  // Compute wizard progress
+  const getWizardProgress = () => {
+    if (!wizard) return { current: 0, total: 0 };
+    const total = wizard.template.fieldCount + (wizard.template.needsValue ? 1 : 0);
+    let current = wizard.fields.length;
+    if (wizard.step === 'value') current = wizard.template.fieldCount;
+    return { current, total };
+  };
+
+  // Get live preview of what the expression will look like
+  const getWizardPreview = () => {
+    if (!wizard) return '';
+    const filledFields = [...wizard.fields];
+    // Fill remaining fields with placeholder
+    while (filledFields.length < wizard.template.fieldCount) {
+      filledFields.push('___');
+    }
+    return wizard.template.build(filledFields, wizard.value || '___');
+  };
+
+  // ---- Field Picker subcomponent (shared by wizard and fields tab) ----
+
+  const renderFieldPicker = (
+    fields: SurveyRow[],
+    search: string,
+    onSearchChange: (v: string) => void,
+    onPick: (name: string) => void,
+    headerLabel?: string
+  ) => (
+    <div style={{ padding: 8 }}>
+      {headerLabel && (
+        <p className="text-[#007a62]" style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, padding: '0 4px' }}>
+          {headerLabel}
+        </p>
+      )}
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
+        placeholder="Search fields..."
+        style={{ padding: '6px 10px', fontSize: 12, marginBottom: 6 }}
+        className="w-full border border-gray-200 rounded-md bg-gray-50 focus:border-[#00856a] transition-fast placeholder-gray-300"
+      />
+      {fields.length === 0 ? (
+        <p className="text-gray-400 text-center" style={{ padding: '16px 0', fontSize: 12 }}>
+          {search ? 'No matching fields' : 'No fields in the form yet'}
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {fields.map((field) => (
+            <button
+              key={field.id}
+              onClick={() => onPick(field.name)}
+              className="flex items-center text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
+              style={{ padding: '6px 8px', gap: 8 }}
+            >
+              <span
+                className={`inline-block rounded border ${getTypeColor(field.type)} shrink-0`}
+                style={{ padding: '1px 6px', fontSize: 10, fontWeight: 600 }}
+              >
+                {field.type.replace(/_/g, ' ')}
+              </span>
+              <span className="font-mono text-gray-700 truncate" style={{ fontSize: 12 }}>
+                {field.name}
+              </span>
+              {field.label && field.label !== field.name && (
+                <span className="text-gray-400 truncate" style={{ fontSize: 11 }}>
+                  {field.label}
+                </span>
+              )}
+              <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
+                style={{ fontSize: 10, fontWeight: 600 }}>
+                + Pick
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div ref={builderRef} style={{ marginBottom: 14 }}>
       {/* Label row with builder toggle */}
@@ -227,7 +597,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
           {label}
         </label>
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => { setIsOpen(!isOpen); if (isOpen) setWizard(null); }}
           className={`flex items-center rounded transition-fast ${
             isOpen
               ? 'text-[#007a62] bg-[#f0faf7]'
@@ -284,246 +654,367 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
         <div className="border border-[#00856a]/30 rounded-lg bg-white shadow-sm overflow-hidden"
           style={{ marginTop: 8 }}>
 
-          {/* Quick Templates */}
-          {quickTemplates.length > 0 && (
-            <div className="bg-[#fafafa] border-b border-gray-100"
-              style={{ padding: '10px 12px' }}>
-              <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Quick Start
-              </p>
-              <div className="flex flex-wrap" style={{ gap: 4 }}>
-                {quickTemplates.map((qt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      onChange(qt.template);
-                      textareaRef.current?.focus();
-                    }}
-                    className="text-gray-500 bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:text-[#007a62] hover:bg-[#f0faf7] transition-fast"
-                    style={{ padding: '4px 10px', fontSize: 11 }}
-                  >
-                    {qt.label}
+          {/* ===================== WIZARD MODE ===================== */}
+          {wizard ? (
+            <div>
+              {/* Wizard Header */}
+              <div className="bg-[#f0faf7] border-b border-[#00856a]/10"
+                style={{ padding: '10px 12px' }}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 4 }}>
+                  <span className="text-[#007a62]" style={{ fontSize: 12, fontWeight: 700 }}>
+                    {wizard.template.label}
+                  </span>
+                  <button onClick={wizardCancel}
+                    className="text-gray-400 hover:text-gray-600 transition-fast"
+                    style={{ padding: 2 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
                   </button>
-                ))}
+                </div>
+                <p className="text-gray-500" style={{ fontSize: 11, lineHeight: 1.3 }}>
+                  {wizard.template.description}
+                </p>
+
+                {/* Progress dots */}
+                {(() => {
+                  const { current, total } = getWizardProgress();
+                  if (total <= 1) return null;
+                  return (
+                    <div className="flex items-center" style={{ gap: 4, marginTop: 8 }}>
+                      {Array.from({ length: total }, (_, i) => (
+                        <div key={i} className="flex items-center" style={{ gap: 4 }}>
+                          <div
+                            className={`rounded-full transition-fast ${
+                              i < current
+                                ? 'bg-[#007a62]'
+                                : i === current
+                                ? 'bg-[#007a62] ring-2 ring-[#007a62]/20'
+                                : 'bg-gray-200'
+                            }`}
+                            style={{ width: i === current ? 8 : 6, height: i === current ? 8 : 6 }}
+                          />
+                          {i < total - 1 && (
+                            <div className={`${i < current ? 'bg-[#007a62]' : 'bg-gray-200'}`}
+                              style={{ width: 16, height: 2, borderRadius: 1 }} />
+                          )}
+                        </div>
+                      ))}
+                      <span className="text-gray-400 ml-2" style={{ fontSize: 10 }}>
+                        Step {current + 1} of {total}
+                      </span>
+                    </div>
+                  );
+                })()}
+
+                {/* Live preview */}
+                <div className="bg-white rounded border border-gray-200 font-mono"
+                  style={{ padding: '6px 10px', marginTop: 8, fontSize: 11, color: '#555' }}>
+                  <span className="text-gray-400" style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Preview:{' '}
+                  </span>
+                  {getWizardPreview()}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Tab Bar */}
-          <div className="flex border-b border-gray-100 bg-[#fafafa]"
-            style={{ padding: '0 4px' }}>
-            {(['fields', 'operators', 'functions'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`transition-fast relative ${
-                  activeTab === tab
-                    ? 'text-[#007a62] bg-white border-b-2 border-[#007a62]'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                style={{ padding: '8px 14px', fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}
-              >
-                {tab === 'fields' ? `Fields (${availableFields.length})` : tab}
-              </button>
-            ))}
-          </div>
+              {/* Wizard step content */}
+              <div style={{ maxHeight: 240, overflowY: 'auto' }}>
 
-          {/* Tab Content */}
-          <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                {/* Field picker step */}
+                {wizard.step.startsWith('field_') && (
+                  <>
+                    {/* Show already-picked fields */}
+                    {wizard.fields.length > 0 && (
+                      <div className="bg-gray-50 border-b border-gray-100"
+                        style={{ padding: '8px 12px' }}>
+                        {wizard.fields.map((f, i) => (
+                          <div key={i} className="flex items-center" style={{ gap: 6, marginBottom: 2 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#007a62" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span className="text-gray-500" style={{ fontSize: 11 }}>
+                              {wizard.template.fieldLabels?.[i] || `Field ${i + 1}`}:
+                            </span>
+                            <span className="font-mono text-[#007a62]" style={{ fontSize: 11, fontWeight: 600 }}>
+                              {'${' + f + '}'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-            {/* Fields Tab */}
-            {activeTab === 'fields' && (
-              <div style={{ padding: 8 }}>
-                {/* Search */}
-                <input
-                  type="text"
-                  value={fieldSearch}
-                  onChange={(e) => setFieldSearch(e.target.value)}
-                  placeholder="Search fields..."
-                  style={{ padding: '6px 10px', fontSize: 12, marginBottom: 6 }}
-                  className="w-full border border-gray-200 rounded-md bg-gray-50 focus:border-[#00856a] transition-fast placeholder-gray-300"
-                />
+                    {renderFieldPicker(
+                      wizardFilteredFields,
+                      wizard.fieldSearch,
+                      (v) => setWizard({ ...wizard, fieldSearch: v }),
+                      wizardPickField,
+                      wizard.template.fieldLabels?.[parseInt(wizard.step.split('_')[1])] || 'Choose a field'
+                    )}
+                  </>
+                )}
 
-                {filteredFields.length === 0 ? (
-                  <p className="text-gray-400 text-center" style={{ padding: '16px 0', fontSize: 12 }}>
-                    {fieldSearch ? 'No matching fields' : 'No fields in the form yet'}
-                  </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {filteredFields.map((field) => (
+                {/* Value input step */}
+                {wizard.step === 'value' && (
+                  <div style={{ padding: 12 }}>
+                    {/* Show picked fields */}
+                    {wizard.fields.length > 0 && (
+                      <div className="bg-gray-50 rounded-md border border-gray-100"
+                        style={{ padding: '8px 12px', marginBottom: 12 }}>
+                        {wizard.fields.map((f, i) => (
+                          <div key={i} className="flex items-center" style={{ gap: 6, marginBottom: 2 }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#007a62" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span className="text-gray-500" style={{ fontSize: 11 }}>
+                              {wizard.template.fieldLabels?.[i] || `Field ${i + 1}`}:
+                            </span>
+                            <span className="font-mono text-[#007a62]" style={{ fontSize: 11, fontWeight: 600 }}>
+                              {'${' + f + '}'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-[#007a62]" style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
+                      {wizard.template.valueLabel || 'Enter a value'}
+                    </p>
+
+                    {/* If the template value type is 'choice' and we have a select field, show choice buttons */}
+                    {wizard.template.valueType === 'choice' && wizard.fields.length > 0 && (() => {
+                      const choices = getChoicesForField(wizard.fields[wizard.fields.length - 1]);
+                      if (choices.length > 0) {
+                        return (
+                          <div style={{ marginBottom: 8 }}>
+                            <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              Available Choices
+                            </p>
+                            <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8 }}>
+                              {choices.map((c) => (
+                                <button
+                                  key={c.name}
+                                  onClick={() => {
+                                    setWizard({ ...wizard, value: c.name });
+                                  }}
+                                  className={`border rounded-md transition-fast ${
+                                    wizard.value === c.name
+                                      ? 'bg-[#f0faf7] border-[#007a62] text-[#007a62]'
+                                      : 'bg-white border-gray-200 text-gray-600 hover:border-[#007a62] hover:bg-[#f0faf7]'
+                                  }`}
+                                  style={{ padding: '4px 10px', fontSize: 11 }}
+                                >
+                                  <span className="font-mono" style={{ fontWeight: 600 }}>{c.name}</span>
+                                  {c.label !== c.name && (
+                                    <span className="text-gray-400 ml-1">{c.label}</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    <input
+                      ref={valueInputRef}
+                      type={wizard.template.valueType === 'number' ? 'number' : 'text'}
+                      value={wizard.value}
+                      onChange={(e) => wizardSetValue(e.target.value)}
+                      placeholder={wizard.template.valuePlaceholder}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && wizard.value) {
+                          e.preventDefault();
+                          wizardApply();
+                        }
+                      }}
+                      style={{ padding: '8px 12px', fontSize: 13, marginBottom: 10 }}
+                      className="w-full border border-gray-200 rounded-lg bg-white
+                        focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+                    />
+
+                    <div className="flex items-center justify-between">
                       <button
-                        key={field.id}
-                        onClick={() => insertFieldRef(field.name)}
-                        className="flex items-center text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
-                        style={{ padding: '6px 8px', gap: 8 }}
+                        onClick={wizardBack}
+                        className="text-gray-400 hover:text-gray-600 transition-fast"
+                        style={{ padding: '6px 12px', fontSize: 12, fontWeight: 500 }}
                       >
-                        <span
-                          className={`inline-block rounded border ${getTypeColor(field.type)} shrink-0`}
-                          style={{ padding: '1px 6px', fontSize: 10, fontWeight: 600 }}
-                        >
-                          {field.type.replace(/_/g, ' ')}
-                        </span>
-                        <span className="font-mono text-gray-700 truncate" style={{ fontSize: 12 }}>
-                          {field.name}
-                        </span>
-                        {field.label && field.label !== field.name && (
-                          <span className="text-gray-400 truncate" style={{ fontSize: 11 }}>
-                            {field.label}
-                          </span>
-                        )}
-                        <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
-                          style={{ fontSize: 10, fontWeight: 600 }}>
-                          + Insert
-                        </span>
+                        Back
                       </button>
-                    ))}
+                      <button
+                        onClick={wizardApply}
+                        disabled={!wizard.value}
+                        className="bg-[#007a62] text-white rounded-lg hover:bg-[#006652] transition-fast
+                          disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97]"
+                        style={{ padding: '6px 16px', fontSize: 12, fontWeight: 600 }}
+                      >
+                        Apply Expression
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Operators Tab */}
-            {activeTab === 'operators' && (
-              <div style={{ padding: 12 }}>
-                {/* Comparison */}
-                <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Comparison
-                </p>
-                <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 12 }}>
-                  {COMPARISON_OPS.map((op) => (
-                    <button
-                      key={op.label}
-                      onClick={() => insertAtCursor(op.insert)}
-                      className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
-                      style={{ padding: '5px 12px', fontSize: 13, fontWeight: 600, minWidth: 36, textAlign: 'center' }}
-                      title={op.description}
-                    >
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Logical */}
-                <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Logical
-                </p>
-                <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 12 }}>
-                  {LOGICAL_OPS.map((op) => (
-                    <button
-                      key={op.label}
-                      onClick={() => insertAtCursor(op.insert)}
-                      className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
-                      style={{ padding: '5px 12px', fontSize: 12, fontWeight: 600 }}
-                      title={op.description}
-                    >
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Math */}
-                <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Arithmetic
-                </p>
-                <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 12 }}>
-                  {[
-                    { label: '+', insert: ' + ', description: 'Add' },
-                    { label: '-', insert: ' - ', description: 'Subtract' },
-                    { label: '*', insert: ' * ', description: 'Multiply' },
-                    { label: 'div', insert: ' div ', description: 'Divide' },
-                    { label: 'mod', insert: ' mod ', description: 'Remainder' },
-                    { label: '( )', insert: '()', description: 'Parentheses' },
-                  ].map((op) => (
-                    <button
-                      key={op.label}
-                      onClick={() => insertAtCursor(op.insert)}
-                      className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
-                      style={{ padding: '5px 12px', fontSize: 13, fontWeight: 600, minWidth: 36, textAlign: 'center' }}
-                      title={op.description}
-                    >
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Common Values */}
-                <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Common Values
-                </p>
-                <div className="flex flex-wrap" style={{ gap: 4 }}>
-                  {COMMON_VALUES.map((v) => (
-                    <button
-                      key={v.label}
-                      onClick={() => insertAtCursor(v.insert)}
-                      className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
-                      style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500 }}
-                      title={v.description}
-                    >
-                      {v.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Self-reference hint */}
-                <div className="bg-blue-50 border border-blue-100 rounded-md" style={{ padding: '8px 10px', marginTop: 12 }}>
-                  <p className="text-blue-600" style={{ fontSize: 11, lineHeight: 1.4 }}>
-                    <strong>Tip:</strong> Use <code className="bg-blue-100 rounded px-1">.</code> (a dot) to reference the current field's own value. This is common in constraint expressions like <code className="bg-blue-100 rounded px-1">. &gt; 0</code>
+            </div>
+          ) : (
+            /* ===================== NORMAL MODE ===================== */
+            <>
+              {/* Quick Templates */}
+              {quickTemplates.length > 0 && (
+                <div className="bg-[#fafafa] border-b border-gray-100"
+                  style={{ padding: '10px 12px' }}>
+                  <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Quick Start — Guided
                   </p>
+                  <div className="flex flex-wrap" style={{ gap: 4 }}>
+                    {quickTemplates.map((qt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => startWizard(qt)}
+                        className="text-gray-500 bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:text-[#007a62] hover:bg-[#f0faf7] transition-fast flex items-center"
+                        style={{ padding: '4px 10px', gap: 4, fontSize: 11 }}
+                      >
+                        {qt.label}
+                        {(qt.fieldCount > 0 || qt.needsValue) && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-300">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Functions Tab */}
-            {activeTab === 'functions' && (
-              <div style={{ padding: 8 }}>
-                {/* Category filter pills */}
-                <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8, padding: '0 4px' }}>
-                  {funcCategories.map((cat) => (
-                    <button
-                      key={cat.value}
-                      onClick={() => setFuncCategory(cat.value)}
-                      className={`rounded-full transition-fast ${
-                        funcCategory === cat.value
-                          ? 'bg-[#007a62] text-white'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
-                      style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}
-                    >
-                      {cat.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {relevantFunctions.map((fn) => (
-                    <button
-                      key={fn.label}
-                      onClick={() => insertFunction(fn.template)}
-                      className="flex flex-col text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
-                      style={{ padding: '8px 10px' }}
-                    >
-                      <div className="flex items-center" style={{ gap: 6 }}>
-                        <span className="font-mono text-[#007a62]" style={{ fontSize: 12, fontWeight: 600 }}>
-                          {fn.label}()
-                        </span>
-                        <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
-                          style={{ fontSize: 10, fontWeight: 600 }}>
-                          + Insert
-                        </span>
-                      </div>
-                      <span className="text-gray-400" style={{ fontSize: 11, marginTop: 2 }}>
-                        {fn.description}
-                      </span>
-                      <code className="text-gray-500 bg-gray-50 rounded border border-gray-100 mt-1 block"
-                        style={{ padding: '3px 6px', fontSize: 10, lineHeight: 1.4, fontFamily: 'monospace' }}>
-                        {fn.template}
-                      </code>
-                    </button>
-                  ))}
-                </div>
+              {/* Tab Bar */}
+              <div className="flex border-b border-gray-100 bg-[#fafafa]"
+                style={{ padding: '0 4px' }}>
+                {(['fields', 'operators', 'functions'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`transition-fast relative ${
+                      activeTab === tab
+                        ? 'text-[#007a62] bg-white border-b-2 border-[#007a62]'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    style={{ padding: '8px 14px', fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}
+                  >
+                    {tab === 'fields' ? `Fields (${availableFields.length})` : tab}
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
+
+              {/* Tab Content */}
+              <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                {activeTab === 'fields' && renderFieldPicker(
+                  filteredFields,
+                  fieldSearch,
+                  setFieldSearch,
+                  insertFieldRef
+                )}
+
+                {activeTab === 'operators' && (
+                  <div style={{ padding: 12 }}>
+                    <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Comparison
+                    </p>
+                    <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 12 }}>
+                      {COMPARISON_OPS.map((op) => (
+                        <button key={op.label} onClick={() => insertAtCursor(op.insert)}
+                          className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
+                          style={{ padding: '5px 12px', fontSize: 13, fontWeight: 600, minWidth: 36, textAlign: 'center' }}
+                          title={op.description}>{op.label}</button>
+                      ))}
+                    </div>
+
+                    <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Logical
+                    </p>
+                    <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 12 }}>
+                      {LOGICAL_OPS.map((op) => (
+                        <button key={op.label} onClick={() => insertAtCursor(op.insert)}
+                          className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
+                          style={{ padding: '5px 12px', fontSize: 12, fontWeight: 600 }}
+                          title={op.description}>{op.label}</button>
+                      ))}
+                    </div>
+
+                    <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Arithmetic
+                    </p>
+                    <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 12 }}>
+                      {[
+                        { label: '+', insert: ' + ', description: 'Add' },
+                        { label: '-', insert: ' - ', description: 'Subtract' },
+                        { label: '*', insert: ' * ', description: 'Multiply' },
+                        { label: 'div', insert: ' div ', description: 'Divide' },
+                        { label: 'mod', insert: ' mod ', description: 'Remainder' },
+                        { label: '( )', insert: '()', description: 'Parentheses' },
+                      ].map((op) => (
+                        <button key={op.label} onClick={() => insertAtCursor(op.insert)}
+                          className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
+                          style={{ padding: '5px 12px', fontSize: 13, fontWeight: 600, minWidth: 36, textAlign: 'center' }}
+                          title={op.description}>{op.label}</button>
+                      ))}
+                    </div>
+
+                    <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Common Values
+                    </p>
+                    <div className="flex flex-wrap" style={{ gap: 4 }}>
+                      {COMMON_VALUES.map((v) => (
+                        <button key={v.label} onClick={() => insertAtCursor(v.insert)}
+                          className="font-mono bg-white border border-gray-200 rounded-md hover:border-[#007a62] hover:bg-[#f0faf7] transition-fast text-gray-700 hover:text-[#007a62]"
+                          style={{ padding: '5px 10px', fontSize: 12, fontWeight: 500 }}
+                          title={v.description}>{v.label}</button>
+                      ))}
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-100 rounded-md" style={{ padding: '8px 10px', marginTop: 12 }}>
+                      <p className="text-blue-600" style={{ fontSize: 11, lineHeight: 1.4 }}>
+                        <strong>Tip:</strong> Use <code className="bg-blue-100 rounded px-1">.</code> (a dot) to reference the current field's own value. Common in constraints like <code className="bg-blue-100 rounded px-1">. &gt; 0</code>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'functions' && (
+                  <div style={{ padding: 8 }}>
+                    <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8, padding: '0 4px' }}>
+                      {funcCategories.map((cat) => (
+                        <button key={cat.value} onClick={() => setFuncCategory(cat.value)}
+                          className={`rounded-full transition-fast ${
+                            funcCategory === cat.value
+                              ? 'bg-[#007a62] text-white'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                          style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{cat.label}</button>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {relevantFunctions.map((fn) => (
+                        <button key={fn.label} onClick={() => insertFunction(fn.template)}
+                          className="flex flex-col text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
+                          style={{ padding: '8px 10px' }}>
+                          <div className="flex items-center" style={{ gap: 6 }}>
+                            <span className="font-mono text-[#007a62]" style={{ fontSize: 12, fontWeight: 600 }}>
+                              {fn.label}()
+                            </span>
+                            <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
+                              style={{ fontSize: 10, fontWeight: 600 }}>+ Insert</span>
+                          </div>
+                          <span className="text-gray-400" style={{ fontSize: 11, marginTop: 2 }}>{fn.description}</span>
+                          <code className="text-gray-500 bg-gray-50 rounded border border-gray-100 mt-1 block"
+                            style={{ padding: '3px 6px', fontSize: 10, lineHeight: 1.4, fontFamily: 'monospace' }}>{fn.template}</code>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
