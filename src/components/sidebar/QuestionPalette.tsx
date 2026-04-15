@@ -1,19 +1,25 @@
 /**
  * Question Palette — Card-based grid layout like Survey123 web designer
- * Includes appearance variant cards for easy drag-and-drop
+ * Includes appearance variant cards and platform filter (Field App / Web App)
  */
 
 import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { questionCategories } from '../../data/questionTypes';
-import { DragItem, QuestionCategory } from '../../types/survey';
+import { DragItem, QuestionCategory, PlatformSupport } from '../../types/survey';
 import { getIcon, X } from '../../utils/icons';
+
+// ============================================================
+// Platform filter type
+// ============================================================
+
+type PlatformFilter = 'all' | 'field' | 'web';
 
 // ============================================================
 // Draggable Question Card
 // ============================================================
 
-function DraggableCard({ item }: { item: DragItem }) {
+function DraggableCard({ item, dimmed }: { item: DragItem; dimmed?: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `palette-${item.id}`,
     data: { type: item.type, fromPalette: true, defaultAppearance: item.defaultAppearance },
@@ -32,6 +38,7 @@ function DraggableCard({ item }: { item: DragItem }) {
         border border-gray-200 bg-white hover:border-[#00856a] hover:bg-[#f0faf7]
         transition-fast group
         ${isDragging ? 'opacity-40 scale-95' : ''}
+        ${dimmed ? 'opacity-40' : ''}
       `}
     >
       <Icon
@@ -39,6 +46,20 @@ function DraggableCard({ item }: { item: DragItem }) {
         className="text-[#00856a] shrink-0 group-hover:scale-110 transition-fast"
       />
       <span className="text-[13px] text-gray-700 font-medium leading-snug">{item.label}</span>
+
+      {/* Platform-only badge */}
+      {item.platform === 'field' && (
+        <span className="ml-auto shrink-0 rounded bg-amber-50 border border-amber-200 text-amber-600"
+          style={{ padding: '0px 4px', fontSize: 9, fontWeight: 600, lineHeight: '16px' }}>
+          FIELD
+        </span>
+      )}
+      {item.platform === 'web' && (
+        <span className="ml-auto shrink-0 rounded bg-blue-50 border border-blue-200 text-blue-600"
+          style={{ padding: '0px 4px', fontSize: 9, fontWeight: 600, lineHeight: '16px' }}>
+          WEB
+        </span>
+      )}
     </div>
   );
 }
@@ -47,7 +68,22 @@ function DraggableCard({ item }: { item: DragItem }) {
 // Category Group
 // ============================================================
 
-function CategoryGroup({ category }: { category: QuestionCategory }) {
+function CategoryGroup({
+  category,
+  platformFilter,
+}: {
+  category: QuestionCategory;
+  platformFilter: PlatformFilter;
+}) {
+  // Filter items based on platform
+  const filteredItems = category.items.filter((item) => {
+    if (platformFilter === 'all') return true;
+    const itemPlatform = item.platform || 'both';
+    return itemPlatform === 'both' || itemPlatform === platformFilter;
+  });
+
+  if (filteredItems.length === 0) return null;
+
   return (
     <div style={{ marginBottom: 20 }}>
       <h3 style={{ padding: '0 4px', marginBottom: 8 }}
@@ -55,10 +91,72 @@ function CategoryGroup({ category }: { category: QuestionCategory }) {
         {category.label}
       </h3>
       <div className="grid grid-cols-2" style={{ gap: 6 }}>
-        {category.items.map((item) => (
+        {filteredItems.map((item) => (
           <DraggableCard key={item.id} item={item} />
         ))}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Platform Toggle
+// ============================================================
+
+function PlatformToggle({
+  value,
+  onChange,
+}: {
+  value: PlatformFilter;
+  onChange: (v: PlatformFilter) => void;
+}) {
+  const options: { value: PlatformFilter; label: string; icon: React.ReactNode }[] = [
+    {
+      value: 'all',
+      label: 'All',
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+        </svg>
+      ),
+    },
+    {
+      value: 'field',
+      label: 'Field App',
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12.01" y2="18" />
+        </svg>
+      ),
+    },
+    {
+      value: 'web',
+      label: 'Web App',
+      icon: (
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <div className="bg-gray-100 rounded-lg flex" style={{ padding: 2, gap: 2 }}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`flex-1 flex items-center justify-center rounded-md transition-fast ${
+            value === opt.value
+              ? 'bg-white text-[#007a62] shadow-sm'
+              : 'text-gray-400 hover:text-gray-600'
+          }`}
+          style={{ padding: '5px 6px', gap: 4, fontSize: 11, fontWeight: 600 }}
+        >
+          {opt.icon}
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -69,8 +167,10 @@ function CategoryGroup({ category }: { category: QuestionCategory }) {
 
 export function QuestionPalette() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
 
-  const filteredCategories = searchTerm
+  // First filter by search, then by platform (platform filtering is done in CategoryGroup)
+  const searchFilteredCategories = searchTerm
     ? questionCategories
         .map((cat) => ({
           ...cat,
@@ -81,13 +181,24 @@ export function QuestionPalette() {
         .filter((cat) => cat.items.length > 0)
     : questionCategories;
 
+  // Count how many items are visible with current platform filter
+  const visibleCount = searchFilteredCategories.reduce((acc, cat) => {
+    return acc + cat.items.filter((item) => {
+      if (platformFilter === 'all') return true;
+      const p = item.platform || 'both';
+      return p === 'both' || p === platformFilter;
+    }).length;
+  }, 0);
+
+  const totalCount = searchFilteredCategories.reduce((acc, cat) => acc + cat.items.length, 0);
+
   return (
     <div className="bg-[#fafafa] border-r border-gray-200 flex flex-col h-full"
       style={{ width: 300 }}>
       {/* Header */}
       <div className="border-b border-gray-200 bg-white"
         style={{ padding: '16px 16px 12px 16px' }}>
-        <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+        <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
           <h2 className="text-[15px] font-bold text-gray-900">Add</h2>
           {searchTerm && (
             <button
@@ -99,12 +210,29 @@ export function QuestionPalette() {
             </button>
           )}
         </div>
+
+        {/* Platform Toggle */}
+        <PlatformToggle value={platformFilter} onChange={setPlatformFilter} />
+
+        {/* Info line */}
+        {platformFilter !== 'all' && (
+          <p className="text-center" style={{ fontSize: 10, marginTop: 6, lineHeight: 1.3 }}>
+            <span className={platformFilter === 'web' ? 'text-blue-500' : 'text-amber-600'}>
+              {platformFilter === 'web' ? 'Web app' : 'Field app'} questions
+            </span>
+            <span className="text-gray-400">
+              {' '}— {visibleCount} of {totalCount} types
+            </span>
+          </p>
+        )}
+
+        {/* Search */}
         <input
           type="text"
           placeholder="Search question types..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{ padding: '8px 12px' }}
+          style={{ padding: '8px 12px', marginTop: 10 }}
           className="w-full text-[13px] bg-gray-50 border border-gray-200 rounded-lg
             text-gray-700 placeholder-gray-400 transition-fast"
         />
@@ -113,10 +241,14 @@ export function QuestionPalette() {
       {/* Scrollable question list */}
       <div className="flex-1 overflow-y-auto"
         style={{ padding: '16px 12px 24px 12px' }}>
-        {filteredCategories.map((category) => (
-          <CategoryGroup key={category.id} category={category} />
+        {searchFilteredCategories.map((category) => (
+          <CategoryGroup
+            key={category.id}
+            category={category}
+            platformFilter={platformFilter}
+          />
         ))}
-        {filteredCategories.length === 0 && (
+        {visibleCount === 0 && (
           <p className="text-sm text-gray-400 text-center" style={{ padding: '32px 0' }}>
             No matching types
           </p>

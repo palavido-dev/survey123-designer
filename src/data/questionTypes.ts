@@ -6,12 +6,25 @@
  * Includes appearance variants as separate draggable cards for ease of use.
  */
 
-import { QuestionCategory, QuestionType, SurveyRow } from '../types/survey';
+import { QuestionCategory, QuestionType, SurveyRow, PlatformSupport } from '../types/survey';
 import { v4 as uuid } from 'uuid';
 
 // ============================================================
 // Question Categories for the Sidebar
 // ============================================================
+
+/**
+ * Platform support key:
+ *   'both'  = Field App + Web App (default if omitted)
+ *   'field' = Field App only (not available in web forms)
+ *   'web'   = Web App only (not available in field app)
+ *
+ * Based on ArcGIS Survey123 documentation:
+ * Web app does NOT support: geotrace, geoshape, barcode, audio recording,
+ * file upload, draw, annotate, spike appearances, distress, spinner,
+ * calculator appearances, rank, select from file, year/month-year dates,
+ * range slider, and deviceid metadata.
+ */
 
 export const questionCategories: QuestionCategory[] = [
   {
@@ -22,7 +35,7 @@ export const questionCategories: QuestionCategory[] = [
       { id: 'text', type: 'text', label: 'Text', icon: 'Type' },
       { id: 'text-multiline', type: 'text', label: 'Multiline Text', icon: 'AlignLeft', defaultAppearance: 'multiline' },
       { id: 'email', type: 'email', label: 'Email', icon: 'Mail' },
-      { id: 'password', type: 'password', label: 'Password', icon: 'Lock' },
+      { id: 'password', type: 'password', label: 'Password', icon: 'Lock', platform: 'field' },
     ],
   },
   {
@@ -31,10 +44,10 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'Hash',
     items: [
       { id: 'integer', type: 'integer', label: 'Integer', icon: 'Hash' },
-      { id: 'integer-spinner', type: 'integer', label: 'Spinner', icon: 'Hash', defaultAppearance: 'spinner' },
-      { id: 'integer-calculator', type: 'integer', label: 'Calculator', icon: 'Calculator', defaultAppearance: 'calculator' },
+      { id: 'integer-spinner', type: 'integer', label: 'Spinner', icon: 'Hash', defaultAppearance: 'spinner', platform: 'field' },
+      { id: 'integer-calculator', type: 'integer', label: 'Calculator', icon: 'Calculator', defaultAppearance: 'calculator', platform: 'field' },
       { id: 'decimal', type: 'decimal', label: 'Decimal', icon: 'Percent' },
-      { id: 'range', type: 'range', label: 'Range / Slider', icon: 'SlidersHorizontal' },
+      { id: 'range', type: 'range', label: 'Range / Slider', icon: 'SlidersHorizontal', platform: 'field' },
     ],
   },
   {
@@ -47,9 +60,9 @@ export const questionCategories: QuestionCategory[] = [
       { id: 'select_one-autocomplete', type: 'select_one', label: 'Autocomplete', icon: 'Search', defaultAppearance: 'autocomplete' },
       { id: 'select_one-likert', type: 'select_one', label: 'Likert Scale', icon: 'SlidersHorizontal', defaultAppearance: 'likert' },
       { id: 'select_multiple', type: 'select_multiple', label: 'Select Multiple', icon: 'CheckSquare' },
-      { id: 'rank', type: 'rank', label: 'Rank', icon: 'ArrowUpDown' },
-      { id: 'select_one_from_file', type: 'select_one_from_file', label: 'Select One (CSV)', icon: 'FileSpreadsheet' },
-      { id: 'select_multiple_from_file', type: 'select_multiple_from_file', label: 'Select Multiple (CSV)', icon: 'FileSpreadsheet' },
+      { id: 'rank', type: 'rank', label: 'Rank', icon: 'ArrowUpDown', platform: 'field' },
+      { id: 'select_one_from_file', type: 'select_one_from_file', label: 'Select One (CSV)', icon: 'FileSpreadsheet', platform: 'field' },
+      { id: 'select_multiple_from_file', type: 'select_multiple_from_file', label: 'Select Multiple (CSV)', icon: 'FileSpreadsheet', platform: 'field' },
     ],
   },
   {
@@ -58,8 +71,8 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'MapPin',
     items: [
       { id: 'geopoint', type: 'geopoint', label: 'Geopoint', icon: 'MapPin' },
-      { id: 'geotrace', type: 'geotrace', label: 'Geotrace', icon: 'Route' },
-      { id: 'geoshape', type: 'geoshape', label: 'Geoshape', icon: 'Pentagon' },
+      { id: 'geotrace', type: 'geotrace', label: 'Geotrace', icon: 'Route', platform: 'field' },
+      { id: 'geoshape', type: 'geoshape', label: 'Geoshape', icon: 'Pentagon', platform: 'field' },
     ],
   },
   {
@@ -68,8 +81,8 @@ export const questionCategories: QuestionCategory[] = [
     icon: 'Calendar',
     items: [
       { id: 'date', type: 'date', label: 'Date', icon: 'Calendar' },
-      { id: 'date-year', type: 'date', label: 'Year Only', icon: 'Calendar', defaultAppearance: 'year' },
-      { id: 'date-month-year', type: 'date', label: 'Month-Year', icon: 'Calendar', defaultAppearance: 'month-year' },
+      { id: 'date-year', type: 'date', label: 'Year Only', icon: 'Calendar', defaultAppearance: 'year', platform: 'field' },
+      { id: 'date-month-year', type: 'date', label: 'Month-Year', icon: 'Calendar', defaultAppearance: 'month-year', platform: 'field' },
       { id: 'time', type: 'time', label: 'Time', icon: 'Clock' },
       { id: 'datetime', type: 'datetime', label: 'Date & Time', icon: 'CalendarClock' },
     ],
@@ -81,11 +94,11 @@ export const questionCategories: QuestionCategory[] = [
     items: [
       { id: 'image', type: 'image', label: 'Photo', icon: 'Camera' },
       { id: 'image-signature', type: 'image', label: 'Signature', icon: 'Pen', defaultAppearance: 'signature' },
-      { id: 'image-draw', type: 'image', label: 'Draw', icon: 'Pen', defaultAppearance: 'draw' },
-      { id: 'image-annotate', type: 'image', label: 'Annotate', icon: 'Camera', defaultAppearance: 'annotate' },
-      { id: 'audio', type: 'audio', label: 'Audio', icon: 'Mic' },
-      { id: 'file', type: 'file', label: 'File Upload', icon: 'Paperclip' },
-      { id: 'barcode', type: 'barcode', label: 'Barcode / QR', icon: 'ScanLine' },
+      { id: 'image-draw', type: 'image', label: 'Draw', icon: 'Pen', defaultAppearance: 'draw', platform: 'field' },
+      { id: 'image-annotate', type: 'image', label: 'Annotate', icon: 'Camera', defaultAppearance: 'annotate', platform: 'field' },
+      { id: 'audio', type: 'audio', label: 'Audio', icon: 'Mic', platform: 'field' },
+      { id: 'file', type: 'file', label: 'File Upload', icon: 'Paperclip', platform: 'field' },
+      { id: 'barcode', type: 'barcode', label: 'Barcode / QR', icon: 'ScanLine', platform: 'field' },
     ],
   },
   {
@@ -115,7 +128,7 @@ export const questionCategories: QuestionCategory[] = [
       { id: 'start', type: 'start', label: 'Start Time', icon: 'Play' },
       { id: 'end', type: 'end', label: 'End Time', icon: 'Square' },
       { id: 'username', type: 'username', label: 'Username', icon: 'User' },
-      { id: 'deviceid', type: 'deviceid', label: 'Device ID', icon: 'Smartphone' },
+      { id: 'deviceid', type: 'deviceid', label: 'Device ID', icon: 'Smartphone', platform: 'field' },
     ],
   },
 ];

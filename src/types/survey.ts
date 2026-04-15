@@ -252,6 +252,9 @@ export interface SurveyForm {
 // Drag & Drop Types
 // ============================================================
 
+/** Which platforms support this question type/appearance */
+export type PlatformSupport = 'both' | 'field' | 'web';
+
 export interface DragItem {
   id: string;
   type: QuestionType;
@@ -259,6 +262,8 @@ export interface DragItem {
   icon: string;
   /** Pre-set appearance when dragged onto canvas (e.g. 'multiline', 'signature') */
   defaultAppearance?: string;
+  /** Platform availability: 'both' (default), 'field' only, or 'web' only */
+  platform?: PlatformSupport;
 }
 
 // ============================================================
