@@ -2,7 +2,7 @@
 
 A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file — no XLSForm syntax knowledge required.
 
-![Survey123 Designer](docs/screenshots/hero.png)
+<!-- Screenshots: run the app locally with `npm run dev` and see it in action -->
 
 ## Why This Exists
 
@@ -32,12 +32,8 @@ Key pain points it solves:
 - **Choice-aware values** — for select fields, pick from the actual choice list options
 - **Syntax-highlighted preview** — color-coded tokens showing fields, operators, functions, strings, numbers
 
-![Expression Builder](docs/screenshots/expression-builder.png)
-
 ### Platform Filter
 Toggle between **All**, **Field App**, and **Web App** to filter the question palette. Web App mode hides field-only types (barcode, geotrace, audio recording, file upload, etc.) so you only see what your target platform supports.
-
-![Platform Filter](docs/screenshots/platform-filter.png)
 
 ### Full Property Editor
 - **Basic** — name, label, hint, guidance hint, choice list selection
