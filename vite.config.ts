@@ -6,4 +6,17 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: process.env.BASE_URL || '/',
+  define: {
+    // html-to-docx uses Buffer internally — polyfill for browser
+    'global': 'globalThis',
+  },
+  resolve: {
+    alias: {
+      // Polyfill Node.js buffer for browser use (html-to-docx dependency)
+      buffer: 'buffer/',
+    },
+  },
+  optimizeDeps: {
+    include: ['buffer'],
+  },
 })

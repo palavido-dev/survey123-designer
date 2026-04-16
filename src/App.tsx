@@ -21,11 +21,15 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { useSurveyStore } from './store/surveyStore';
+import { useReportStore } from './store/reportStore';
 import { QuestionType } from './types/survey';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { QuestionPalette } from './components/sidebar/QuestionPalette';
 import { FormCanvas } from './components/canvas/FormCanvas';
 import { PropertiesPanel } from './components/properties/PropertiesPanel';
+import { ReportFieldPalette } from './components/report/ReportFieldPalette';
+import { ReportCanvas } from './components/report/ReportCanvas';
+import { ReportPropertiesPanel } from './components/report/ReportPropertiesPanel';
 
 // ============================================================
 // Error Boundary — prevents blank white screen on React crashes
@@ -77,6 +81,7 @@ class ErrorBoundary extends React.Component<
 
 export default function App() {
   const { form, addRow, moveRow, setDragging } = useSurveyStore();
+  const mode = useReportStore((s) => s.mode);
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
   const sensors = useSensors(
@@ -139,28 +144,39 @@ export default function App() {
     <ErrorBoundary>
       <div className="h-screen flex flex-col bg-gray-100">
         <Toolbar />
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex-1 flex overflow-hidden">
-            <QuestionPalette />
-            <FormCanvas />
-            <PropertiesPanel />
-          </div>
 
-          {/* Drag Overlay */}
-          <DragOverlay>
-            {activeId ? (
-              <div className="bg-white border border-[#00856a] rounded-lg px-4 py-2.5
-                shadow-[0_4px_20px_rgba(0,0,0,0.12)] text-[13px] text-[#007a62] font-medium">
-                Drop on canvas
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        {mode === 'form' ? (
+          /* ===== Form Builder Mode ===== */
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex-1 flex overflow-hidden">
+              <QuestionPalette />
+              <FormCanvas />
+              <PropertiesPanel />
+            </div>
+
+            {/* Drag Overlay */}
+            <DragOverlay>
+              {activeId ? (
+                <div className="bg-white border border-[#00856a] rounded-lg px-4 py-2.5
+                  shadow-[0_4px_20px_rgba(0,0,0,0.12)] text-[13px] text-[#007a62] font-medium">
+                  Drop on canvas
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        ) : (
+          /* ===== Report Template Builder Mode ===== */
+          <div className="flex-1 flex overflow-hidden">
+            <ReportFieldPalette />
+            <ReportCanvas />
+            <ReportPropertiesPanel />
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
