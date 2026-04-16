@@ -260,6 +260,8 @@ export interface DragItem {
   type: QuestionType;
   label: string;
   icon: string;
+  /** Brief description shown on hover */
+  description?: string;
   /** Pre-set appearance when dragged onto canvas (e.g. 'multiline', 'signature') */
   defaultAppearance?: string;
   /** Platform availability: 'both' (default), 'field' only, or 'web' only */

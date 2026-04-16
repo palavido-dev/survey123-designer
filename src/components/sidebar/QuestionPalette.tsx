@@ -39,6 +39,7 @@ function DraggableCard({ item }: { item: DragItem }) {
         transition-fast group
         ${isDragging ? 'opacity-40 scale-95' : ''}
       `}
+      title={item.description || item.label}
     >
       <Icon
         size={18}
