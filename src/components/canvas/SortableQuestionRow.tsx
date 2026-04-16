@@ -21,6 +21,39 @@ interface Props {
   onSelect: () => void;
 }
 
+/** Format XLSForm type names into human-readable labels */
+function formatTypeName(type: string): string {
+  const map: Record<string, string> = {
+    text: 'Text',
+    integer: 'Integer',
+    decimal: 'Decimal',
+    select_one: 'Select One',
+    select_multiple: 'Select Multiple',
+    select_one_from_file: 'Select One (CSV)',
+    select_multiple_from_file: 'Select Multiple (CSV)',
+    date: 'Date',
+    time: 'Time',
+    datetime: 'Date & Time',
+    geopoint: 'Geopoint',
+    geotrace: 'Geotrace',
+    geoshape: 'Geoshape',
+    image: 'Image',
+    audio: 'Audio',
+    file: 'File',
+    barcode: 'Barcode',
+    note: 'Note',
+    calculate: 'Calculate',
+    hidden: 'Hidden',
+    range: 'Range',
+    rank: 'Rank',
+    email: 'Email',
+    password: 'Password',
+    begin_group: 'Group',
+    begin_repeat: 'Repeat',
+  };
+  return map[type] || type;
+}
+
 // ============================================================
 // Inline Editable Text — swaps to input on double-click
 // ============================================================
@@ -301,6 +334,9 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
                 placeholder={row.name}
               />
             </span>
+            <span className="text-[10px] text-gray-400 italic font-normal ml-1 font-mono" style={{ opacity: 0.6 }}>
+              {row.name}
+            </span>
             {isCollapsed && (
               <span className="text-[11px] text-gray-400 ml-1">
                 ({childCount} {childCount === 1 ? 'question' : 'questions'})
@@ -364,6 +400,13 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
           className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white rounded transition-fast">
           <X size={14} />
         </button>
+      </div>
+
+      {/* Question type + field name indicator */}
+      <div className="mb-1.5 pr-16 flex items-center gap-1.5 text-[10px] text-gray-400 italic font-normal" style={{ letterSpacing: '0.01em' }}>
+        <span>{formatTypeName(row.type)}</span>
+        <span className="text-gray-300">·</span>
+        <span className="font-mono not-italic">{row.name}</span>
       </div>
 
       {/* Question label + hint (inline editable) */}
