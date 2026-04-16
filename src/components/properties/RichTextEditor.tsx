@@ -4,8 +4,8 @@
  * Supports: bold, italic, underline, text color, alignment, links, font size.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
