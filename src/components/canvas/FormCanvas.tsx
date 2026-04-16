@@ -199,14 +199,9 @@ export function FormCanvas() {
     >
       <div style={{ width: '100%', maxWidth: 720, padding: '32px 24px' }}>
 
-        {/* Question Search Bar */}
+        {/* Question Search Bar — styled to match the question type search in the sidebar */}
         {searchOpen && (
-          <div className="mb-3 flex items-center gap-2 bg-white border border-gray-200 rounded-lg shadow-sm"
-            style={{ padding: '6px 12px' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+          <div className="mb-3 flex items-center gap-2">
             <input
               ref={searchInputRef}
               type="text"
@@ -217,7 +212,10 @@ export function FormCanvas() {
                 if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
               }}
               placeholder="Search questions by name, label, or type..."
-              className="flex-1 text-sm text-gray-700 outline-none bg-transparent"
+              style={{ padding: '8px 12px' }}
+              className="flex-1 text-[13px] bg-gray-50 border border-gray-200 rounded-lg
+                text-gray-700 placeholder-gray-400 transition-fast outline-none
+                focus:border-[#00856a] focus:ring-1 focus:ring-[#00856a]/20"
               autoFocus
             />
             {searchQuery && (
@@ -232,7 +230,7 @@ export function FormCanvas() {
                 type="button"
                 onClick={searchPrev}
                 disabled={searchResults.length === 0}
-                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
+                className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
                 title="Previous (Shift+Enter)"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -243,7 +241,7 @@ export function FormCanvas() {
                 type="button"
                 onClick={searchNext}
                 disabled={searchResults.length === 0}
-                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
+                className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
                 title="Next (Enter)"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -254,7 +252,7 @@ export function FormCanvas() {
             <button
               type="button"
               onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
-              className="p-1 text-gray-400 hover:text-gray-600 rounded transition-fast"
+              className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-fast"
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

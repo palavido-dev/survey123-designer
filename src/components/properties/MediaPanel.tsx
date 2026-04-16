@@ -283,7 +283,7 @@ export function MediaPanel() {
             >
               {/* File header */}
               <div
-                className={`flex items-center gap-2 px-3 py-2.5 ${
+                className={`flex items-center gap-2 px-4 py-3 ${
                   ref.isUploaded ? 'cursor-pointer hover:bg-gray-50' : ''
                 }`}
                 onClick={() => {
@@ -348,7 +348,7 @@ export function MediaPanel() {
 
               {/* Referenced by */}
               {ref.referencedByQuestions.length > 0 && (
-                <div className="border-t border-gray-100 px-3 py-1.5 bg-gray-50/50">
+                <div className="border-t border-gray-100 px-4 py-2 bg-gray-50/50">
                   <span className="text-[9px] text-gray-400 uppercase tracking-wide font-semibold">
                     Used by
                   </span>
@@ -373,12 +373,12 @@ export function MediaPanel() {
 
               {/* Column preview for uploaded files */}
               {ref.isUploaded && ref.mediaFile && ref.mediaFile.columns.length > 0 && (
-                <div className="border-t border-gray-100 px-3 py-1.5">
+                <div className="border-t border-gray-100 px-4 py-2">
                   <div className="flex flex-wrap gap-1">
                     {ref.mediaFile.columns.slice(0, 8).map((col) => (
                       <span
                         key={col}
-                        className="inline-block bg-gray-50 border border-gray-200 rounded text-[9px] font-mono text-gray-500 px-1 py-0.5"
+                        className="inline-block bg-gray-50 border border-gray-200 rounded text-[10px] font-mono text-gray-500 px-1.5 py-0.5"
                       >
                         {col}
                       </span>
@@ -400,7 +400,7 @@ export function MediaPanel() {
       <button
         type="button"
         onClick={() => { setUploadTarget(null); fileInputRef.current?.click(); }}
-        className="w-full mt-4 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium text-[#007a62] border border-dashed border-emerald-300 rounded-lg hover:bg-emerald-50 transition-fast"
+        className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 text-xs font-medium text-[#007a62] border border-dashed border-emerald-300 rounded-lg hover:bg-emerald-50 transition-fast"
       >
         <UploadIcon size={14} />
         Upload CSV File

@@ -469,11 +469,11 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                           if (e.key === 'Enter') renameColumn(ci, headerValue);
                           if (e.key === 'Escape') setEditingHeader(null);
                         }}
-                        className="w-full bg-white border-2 border-[#007a62] font-mono text-xs px-2.5 py-2 outline-none"
+                        className="w-full bg-white border-2 border-[#007a62] font-mono text-xs px-3 py-2.5 outline-none"
                       />
                     ) : (
                       <div
-                        className="flex items-center justify-between px-2.5 py-2 cursor-pointer hover:bg-gray-100 group"
+                        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-gray-100 group"
                         onClick={() => toggleSort(col)}
                         onDoubleClick={(e) => { e.stopPropagation(); setEditingHeader(ci); setHeaderValue(col); }}
                       >
@@ -510,7 +510,7 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                 <tr key={originalIndex} className={`group/row ${di % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
                   <td
                     className="border border-gray-200 bg-gray-50 text-center text-[10px] text-gray-400 font-mono"
-                    style={{ padding: '4px 6px' }}
+                    style={{ padding: '8px 8px' }}
                   >
                     {originalIndex + 1}
                   </td>
@@ -525,7 +525,7 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                         onFocus={() => setActiveCell({ row: di, col: ci })}
                         onKeyDown={(e) => handleCellKeyDown(e, di, ci)}
                         className="w-full bg-transparent text-xs text-gray-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 font-mono"
-                        style={{ padding: '6px 10px', border: 'none' }}
+                        style={{ padding: '8px 12px', border: 'none' }}
                       />
                     </td>
                   ))}
