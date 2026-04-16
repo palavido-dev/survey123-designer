@@ -12,6 +12,7 @@ import { validAppearances } from '../../data/questionTypes';
 import { ChevronDown } from '../../utils/icons';
 import { ExpressionBuilder } from './ExpressionBuilder';
 import { ParameterBuilder } from './ParameterBuilder';
+import { RichTextEditor, containsHtml } from './RichTextEditor';
 
 interface Props {
   row: SurveyRow;
@@ -204,12 +205,21 @@ export function QuestionProperties({ row }: Props) {
         />
 
         {!isMetadata && !isCalcOrHidden && (
-          <TextField
-            label="Label"
-            value={row.label}
-            onChange={(v) => update('label', v)}
-            placeholder="Question text..."
-          />
+          row.type === 'note' || containsHtml(row.label) ? (
+            <RichTextEditor
+              label="Label"
+              value={row.label}
+              onChange={(v) => update('label', v)}
+              placeholder="Question text with formatting..."
+            />
+          ) : (
+            <TextField
+              label="Label"
+              value={row.label}
+              onChange={(v) => update('label', v)}
+              placeholder="Question text..."
+            />
+          )
         )}
 
         {!isMetadata && !isStructural && !isCalcOrHidden && (

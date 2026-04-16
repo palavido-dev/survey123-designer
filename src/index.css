@@ -75,3 +75,38 @@ input:focus, textarea:focus, select:focus {
   border-color: #00856a;
   box-shadow: 0 0 0 3px rgba(0,133,106,0.12);
 }
+
+/* ============================================================
+   Rich text / HTML label rendering on canvas
+   ============================================================ */
+
+/* Note HTML content on canvas — inherit Survey123 formatting */
+.note-html-content center { text-align: center; display: block; }
+.note-html-content font { /* font tag attributes handled inline */ }
+.note-html-content small { font-size: 0.85em; }
+.note-html-content big { font-size: 1.15em; }
+.note-html-content h1 { font-size: 1.5em; font-weight: 700; margin: 0.4em 0; }
+.note-html-content h2 { font-size: 1.3em; font-weight: 600; margin: 0.3em 0; }
+.note-html-content h3 { font-size: 1.1em; font-weight: 600; margin: 0.2em 0; }
+.note-html-content a { color: #007a62; text-decoration: underline; }
+.note-html-content table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+.note-html-content td, .note-html-content th { border: 1px solid #e5e7eb; padding: 4px 8px; font-size: 0.9em; }
+.note-html-content ul, .note-html-content ol { padding-left: 1.5em; margin: 0.3em 0; }
+.note-html-content img { max-width: 100%; height: auto; }
+
+/* Also handle HTML in regular question labels */
+.html-label-preview center { text-align: center; display: block; }
+.html-label-preview small { font-size: 0.85em; }
+.html-label-preview a { color: #007a62; text-decoration: underline; }
+
+/* TipTap editor styles */
+.tiptap { outline: none; }
+.tiptap p { margin: 0.2em 0; }
+.tiptap a { color: #007a62; text-decoration: underline; cursor: pointer; }
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #cbd5e1;
+  pointer-events: none;
+  height: 0;
+}

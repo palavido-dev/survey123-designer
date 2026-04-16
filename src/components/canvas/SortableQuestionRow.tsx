@@ -11,6 +11,7 @@ import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
 import { X, Copy, ChevronDown, ChevronRight, Eye, Calculator, AlertCircle } from '../../utils/icons';
 import { validateRow, sanitizeFieldName, type RowValidationResult } from '../../utils/validation';
+import { RichTextEditor, sanitizeHtml, containsHtml } from '../properties/RichTextEditor';
 
 interface Props {
   row: SurveyRow;
@@ -101,6 +102,85 @@ function InlineEdit({
     >
       {value || <span className="text-gray-400 italic">{placeholder || 'Untitled'}</span>}
     </span>
+  );
+}
+
+// ============================================================
+// HTML Label — renders sanitized HTML content (read-only on canvas)
+// ============================================================
+
+function HtmlLabel({ html }: { html: string }) {
+  const safe = React.useMemo(() => sanitizeHtml(html), [html]);
+  return (
+    <span
+      className="html-label-preview"
+      dangerouslySetInnerHTML={{ __html: safe }}
+    />
+  );
+}
+
+// ============================================================
+// Note Label — renders HTML with inline rich text editing
+// ============================================================
+
+function NoteLabel({ row }: { row: SurveyRow }) {
+  const { updateRow } = useSurveyStore();
+  const [editing, setEditing] = useState(false);
+  const hasHtml = containsHtml(row.label);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Block dnd-kit events while editing
+  const stopDrag = {
+    onPointerDown: (e: React.PointerEvent) => { if (editing) e.stopPropagation(); },
+    onMouseDown: (e: React.MouseEvent) => { if (editing) e.stopPropagation(); },
+  };
+
+  if (editing) {
+    return (
+      <div
+        {...stopDrag}
+        ref={wrapperRef}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <RichTextEditor
+          value={row.label || ''}
+          onChange={(html) => updateRow(row.id, { label: html })}
+          compact
+          autoFocus
+          onBlur={() => setEditing(false)}
+        />
+      </div>
+    );
+  }
+
+  // Display mode — render HTML or plain text
+  return (
+    <div
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setEditing(true);
+      }}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      className="cursor-text hover:bg-[#e6f5f0] hover:outline hover:outline-1 hover:outline-[#00856a]/30 rounded px-1 -mx-1 transition-colors"
+      title="Double-click to edit with rich text"
+      style={{ minHeight: 24 }}
+    >
+      {hasHtml ? (
+        <div
+          className="note-html-content text-[14px] text-gray-700 leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(row.label) }}
+        />
+      ) : (
+        <div className="text-[14px] text-gray-500 italic">
+          {row.label || 'Information note — double-click to edit'}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -287,14 +367,22 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
 
       {/* Question label + hint (inline editable) */}
       <div className="mb-3 pr-16">
-        <label className="text-[14px] text-gray-800 font-medium leading-relaxed">
-          <InlineEdit
-            value={row.label || ''}
-            onChange={(v) => updateRow(row.id, { label: v })}
-            placeholder="Untitled question"
-          />
-          {row.required === 'yes' && <span className="text-red-500 ml-1">*</span>}
-        </label>
+        {row.type === 'note' ? (
+          <NoteLabel row={row} />
+        ) : (
+          <label className="text-[14px] text-gray-800 font-medium leading-relaxed">
+            {containsHtml(row.label) ? (
+              <HtmlLabel html={row.label} />
+            ) : (
+              <InlineEdit
+                value={row.label || ''}
+                onChange={(v) => updateRow(row.id, { label: v })}
+                placeholder="Untitled question"
+              />
+            )}
+            {row.required === 'yes' && <span className="text-red-500 ml-1">*</span>}
+          </label>
+        )}
         {row.hint && (
           <p className="text-[12px] text-gray-400 mt-1">{row.hint}</p>
         )}
@@ -701,11 +789,9 @@ function QuestionWidget({ row }: { row: SurveyRow }) {
       );
 
     case 'note':
-      return (
-        <div className="text-[13px] text-gray-500 italic py-1">
-          {row.label || 'Information note'}
-        </div>
-      );
+      // Note label is rendered above with full HTML support via NoteLabel
+      // No input widget needed — notes are display-only
+      return null;
 
     default:
       return null;
