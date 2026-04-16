@@ -597,7 +597,7 @@ function parseWorkbook(wb: XLSX.WorkBook): SurveyForm {
     }
   }
 
-  return { settings, survey, choiceLists };
+  return { settings, survey, choiceLists, mediaFiles: [] };
 }
 
 function parseTypeColumn(typeStr: string): {

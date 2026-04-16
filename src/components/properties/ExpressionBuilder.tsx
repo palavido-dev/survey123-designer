@@ -1618,6 +1618,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                           funcWizard={funcWizard}
                           funcWizardFields={funcWizardFields}
                           funcWizardChoices={funcWizardChoices}
+                          csvFiles={csvFiles}
                           onNext={funcWizardNext}
                           onBack={funcWizardBack}
                           onSkip={funcWizardSkip}
