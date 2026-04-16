@@ -10,6 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
 import { X, Copy, ChevronDown, ChevronRight, Eye, Calculator, AlertCircle } from '../../utils/icons';
+import { validateRow, sanitizeFieldName, type RowValidationResult } from '../../utils/validation';
 
 interface Props {
   row: SurveyRow;
@@ -108,7 +109,7 @@ function InlineEdit({
 // ============================================================
 
 export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }: Props) {
-  const { removeRow, duplicateRow, updateRow, collapsedGroups, toggleGroupCollapse } = useSurveyStore();
+  const { form, removeRow, duplicateRow, updateRow, collapsedGroups, toggleGroupCollapse } = useSurveyStore();
 
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
@@ -241,6 +242,16 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
     );
   }
 
+  // Compute validation state for border styling
+  const allFieldNames = React.useMemo(
+    () => new Set(form.survey.map((r: SurveyRow) => r.name)),
+    [form.survey]
+  );
+  const rowValidation = React.useMemo(
+    () => validateRow(row, allFieldNames),
+    [row, allFieldNames]
+  );
+
   // Standard question — live form preview
   return (
     <div
@@ -254,7 +265,11 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
         ${isDragging ? 'opacity-40 shadow-card-hover z-50' : ''}
         ${isSelected
           ? 'bg-[#f0faf7] selected-glow'
-          : 'bg-transparent hover:bg-gray-50 border border-transparent hover:border-gray-200'}
+          : rowValidation.hasErrors
+            ? 'bg-red-50/30 border border-red-200 hover:border-red-300'
+            : rowValidation.hasWarnings
+              ? 'bg-yellow-50/20 border border-yellow-200 hover:border-yellow-300'
+              : 'bg-transparent hover:bg-gray-50 border border-transparent hover:border-gray-200'}
       `}
     >
       {/* Action buttons (top right) */}
@@ -303,48 +318,184 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
 // ============================================================
 
 function LogicBadges({ row }: { row: SurveyRow }) {
-  const badges: { icon: React.ReactNode; label: string; color: string; tooltip: string }[] = [];
+  const { form, updateRow, openExpressionEditor } = useSurveyStore();
 
-  if (row.relevant) {
-    badges.push({
+  // Build set of all field names for expression validation
+  const allFieldNames = React.useMemo(
+    () => new Set(form.survey.map((r) => r.name)),
+    [form.survey]
+  );
+
+  // Run full validation
+  const validation = React.useMemo(
+    () => validateRow(row, allFieldNames),
+    [row, allFieldNames]
+  );
+
+  const hasIssues = validation.hasErrors || validation.hasWarnings;
+
+  // All three badge definitions — always present, styled based on whether expression exists
+  type BadgeMode = 'relevant' | 'calculation' | 'constraint';
+  interface BadgeDef {
+    icon: React.ReactNode;
+    label: string;
+    mode: BadgeMode;
+    hasValue: boolean;
+    activeColor: string;
+    activeHover: string;
+    tooltip: string;
+  }
+
+  const allBadges: BadgeDef[] = [
+    {
       icon: <Eye size={10} />,
       label: 'Visibility',
-      color: 'bg-blue-50 text-blue-500 border-blue-200',
-      tooltip: row.relevant,
-    });
-  }
-  if (row.calculation) {
-    badges.push({
+      mode: 'relevant',
+      hasValue: !!row.relevant,
+      activeColor: 'bg-blue-50 text-blue-500 border-blue-200',
+      activeHover: 'hover:bg-blue-100 hover:border-blue-300',
+      tooltip: row.relevant || 'Add visibility condition',
+    },
+    {
       icon: <Calculator size={10} />,
       label: 'Calculated',
-      color: 'bg-amber-50 text-amber-600 border-amber-200',
-      tooltip: row.calculation,
-    });
-  }
-  if (row.constraint) {
-    badges.push({
+      mode: 'calculation',
+      hasValue: !!row.calculation,
+      activeColor: 'bg-amber-50 text-amber-600 border-amber-200',
+      activeHover: 'hover:bg-amber-100 hover:border-amber-300',
+      tooltip: row.calculation || 'Add calculation',
+    },
+    {
       icon: <AlertCircle size={10} />,
       label: 'Constraint',
-      color: 'bg-orange-50 text-orange-500 border-orange-200',
-      tooltip: row.constraint,
-    });
-  }
+      mode: 'constraint',
+      hasValue: !!row.constraint,
+      activeColor: 'bg-orange-50 text-orange-500 border-orange-200',
+      activeHover: 'hover:bg-orange-100 hover:border-orange-300',
+      tooltip: row.constraint || 'Add validation constraint',
+    },
+  ];
 
-  if (badges.length === 0) return null;
+  // IMPORTANT: All hooks must be called before any conditional returns (React rules of hooks)
+  const badgeRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  useEffect(() => {
+    const handlers: Array<{ el: HTMLSpanElement; handler: (e: MouseEvent) => void }> = [];
+    allBadges.forEach((b, i) => {
+      const el = badgeRefs.current[i];
+      if (!el) return;
+      const handler = (e: MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openExpressionEditor(row.id, b.mode);
+      };
+      el.addEventListener('click', handler, true);
+      handlers.push({ el, handler });
+    });
+    return () => {
+      handlers.forEach(({ el, handler }) => el.removeEventListener('click', handler, true));
+    };
+  }, [row.id, row.relevant, row.calculation, row.constraint, openExpressionEditor]);
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5" style={{ marginTop: 8 }}>
-      {badges.map((b, i) => (
-        <span
-          key={i}
-          className={`inline-flex items-center gap-1 border rounded-full ${b.color}`}
-          style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
-          title={b.tooltip}
-        >
-          {b.icon}
-          {b.label}
-        </span>
-      ))}
+    <div style={{ marginTop: 8 }}>
+      {/* Logic badges — always visible, muted when empty */}
+      <div className="flex flex-wrap items-center gap-1.5"
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {allBadges.map((b, i) => (
+          <span
+            key={b.mode}
+            ref={(el) => { badgeRefs.current[i] = el; }}
+            className={`inline-flex items-center gap-1 border rounded-full cursor-pointer select-none transition-fast ${
+              b.hasValue
+                ? `${b.activeColor} ${b.activeHover}`
+                : 'bg-transparent text-gray-300 border-gray-200/60 hover:bg-gray-50 hover:text-gray-400 hover:border-gray-300'
+            }`}
+            style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+            title={b.hasValue ? `${b.tooltip} — Click to edit` : b.tooltip}
+          >
+            {b.icon}
+            {b.label}
+            {!b.hasValue && (
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            )}
+          </span>
+        ))}
+      </div>
+
+      {/* Validation error/warning indicators */}
+      {hasIssues && (
+        <div className="flex flex-wrap items-center gap-1.5" style={{ marginTop: 6 }}>
+          {/* Field name issues */}
+          {validation.fieldNameIssues.map((issue, i) => (
+            <span
+              key={`fn-${i}`}
+              className={`inline-flex items-center gap-1 border rounded-full cursor-default ${
+                issue.level === 'error'
+                  ? 'bg-red-50 text-red-600 border-red-200'
+                  : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+              }`}
+              style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+              title={issue.autoFix ? `${issue.message}. Click to fix → "${issue.autoFix}"` : issue.message}
+            >
+              {issue.level === 'error' ? (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                </svg>
+              ) : (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              )}
+              {issue.message}
+              {issue.autoFix && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateRow(row.id, { name: sanitizeFieldName(row.name) });
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="ml-0.5 underline hover:no-underline"
+                  style={{ fontSize: 10 }}
+                >
+                  Fix
+                </button>
+              )}
+            </span>
+          ))}
+
+          {/* Expression issues */}
+          {validation.expressionIssues.map((ei) =>
+            ei.issues.map((issue, i) => (
+              <span
+                key={`${ei.field}-${i}`}
+                className={`inline-flex items-center gap-1 border rounded-full ${
+                  issue.level === 'error'
+                    ? 'bg-red-50 text-red-600 border-red-200'
+                    : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                }`}
+                style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+                title={`${ei.field}: ${issue.message}`}
+              >
+                {issue.level === 'error' ? (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
+                ) : (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                )}
+                {ei.field}: {issue.message}
+              </span>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

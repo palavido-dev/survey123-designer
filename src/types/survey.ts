@@ -231,6 +231,7 @@ export interface ChoiceList {
 export interface FormSettings {
   form_title: string;
   form_id: string;
+  description?: string;
   instance_name?: string;
   version?: string;
   style?: string;

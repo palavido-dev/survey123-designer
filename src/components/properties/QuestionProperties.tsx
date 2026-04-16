@@ -11,6 +11,7 @@ import { useSurveyStore } from '../../store/surveyStore';
 import { validAppearances } from '../../data/questionTypes';
 import { ChevronDown } from '../../utils/icons';
 import { ExpressionBuilder } from './ExpressionBuilder';
+import { ParameterBuilder } from './ParameterBuilder';
 
 interface Props {
   row: SurveyRow;
@@ -165,6 +166,7 @@ export function QuestionProperties({ row }: Props) {
 
   const isStructural = ['begin_group', 'end_group', 'begin_repeat', 'end_repeat'].includes(row.type);
   const isSelectType = ['select_one', 'select_multiple', 'rank'].includes(row.type);
+  const isSelectFromFile = ['select_one_from_file', 'select_multiple_from_file'].includes(row.type);
   const isRepeat = row.type === 'begin_repeat';
   const isGroup = row.type === 'begin_group';
   const isMetadata = ['start', 'end', 'username', 'deviceid'].includes(row.type);
@@ -233,6 +235,16 @@ export function QuestionProperties({ row }: Props) {
             value={row.listName || ''}
             onChange={(v) => update('listName', v)}
             options={availableLists}
+          />
+        )}
+
+        {isSelectFromFile && (
+          <TextField
+            label="Source File"
+            value={row.fileName || ''}
+            onChange={(v) => update('fileName', v)}
+            placeholder="data.csv"
+            mono
           />
         )}
 
@@ -347,14 +359,13 @@ export function QuestionProperties({ row }: Props) {
       )}
 
       {/* Parameters */}
-      {!isStructural && !isMetadata && (
+      {!isMetadata && (
         <Section title="Parameters">
-          <TextField
-            label="Parameters"
+          <ParameterBuilder
             value={row.parameters || ''}
             onChange={(v) => update('parameters', v)}
-            placeholder="max-pixels=800 codec=aac"
-            mono
+            questionType={row.type}
+            appearance={row.appearance}
           />
         </Section>
       )}

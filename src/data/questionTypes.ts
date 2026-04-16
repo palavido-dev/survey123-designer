@@ -28,6 +28,21 @@ import { v4 as uuid } from 'uuid';
 
 export const questionCategories: QuestionCategory[] = [
   {
+    id: 'structure',
+    label: 'Structure',
+    icon: 'Layers',
+    items: [
+      { id: 'note', type: 'note', label: 'Note', icon: 'StickyNote', description: 'Display read-only text on screen, takes no input' },
+      { id: 'begin_group', type: 'begin_group', label: 'Group', icon: 'FolderOpen', description: 'Group related questions together' },
+      { id: 'begin_group-compact', type: 'begin_group', label: 'Compact Group', icon: 'FolderOpen', defaultAppearance: 'compact', description: 'Group that starts collapsed, expandable by user' },
+      { id: 'begin_group-fieldlist', type: 'begin_group', label: 'Field List', icon: 'FolderOpen', defaultAppearance: 'field-list', description: 'Group displayed on a separate page (with pages style)' },
+      { id: 'begin_group-tablelist', type: 'begin_group', label: 'Table List', icon: 'FolderOpen', defaultAppearance: 'table-list', description: 'Formats select_one questions inside as a table' },
+      { id: 'begin_repeat', type: 'begin_repeat', label: 'Repeat', icon: 'Repeat', description: 'Repeating set of questions (add multiple entries)' },
+      { id: 'begin_repeat-compact', type: 'begin_repeat', label: 'Compact Repeat', icon: 'Repeat', defaultAppearance: 'compact', description: 'Repeat that starts collapsed, expandable by user' },
+      { id: 'begin_repeat-fieldlist', type: 'begin_repeat', label: 'Field List Repeat', icon: 'Repeat', defaultAppearance: 'field-list', description: 'Each repeat entry displays on a separate page' },
+    ],
+  },
+  {
     id: 'text-input',
     label: 'Text Input',
     icon: 'Type',
@@ -136,21 +151,6 @@ export const questionCategories: QuestionCategory[] = [
       { id: 'file', type: 'file', label: 'File Upload', icon: 'Paperclip', platform: 'field', description: 'Upload a file from the device' },
       { id: 'barcode', type: 'barcode', label: 'Barcode / QR', icon: 'ScanLine', platform: 'field', description: 'Scan a barcode or QR code using the camera' },
       { id: 'barcode-minimal', type: 'barcode', label: 'Barcode Minimal', icon: 'ScanLine', defaultAppearance: 'minimal', platform: 'field', description: 'Single scan button without visible text box' },
-    ],
-  },
-  {
-    id: 'structure',
-    label: 'Structure',
-    icon: 'Layers',
-    items: [
-      { id: 'note', type: 'note', label: 'Note', icon: 'StickyNote', description: 'Display read-only text on screen, takes no input' },
-      { id: 'begin_group', type: 'begin_group', label: 'Group', icon: 'FolderOpen', description: 'Group related questions together' },
-      { id: 'begin_group-compact', type: 'begin_group', label: 'Compact Group', icon: 'FolderOpen', defaultAppearance: 'compact', description: 'Group that starts collapsed, expandable by user' },
-      { id: 'begin_group-fieldlist', type: 'begin_group', label: 'Field List', icon: 'FolderOpen', defaultAppearance: 'field-list', description: 'Group displayed on a separate page (with pages style)' },
-      { id: 'begin_group-tablelist', type: 'begin_group', label: 'Table List', icon: 'FolderOpen', defaultAppearance: 'table-list', description: 'Formats select_one questions inside as a table' },
-      { id: 'begin_repeat', type: 'begin_repeat', label: 'Repeat', icon: 'Repeat', description: 'Repeating set of questions (add multiple entries)' },
-      { id: 'begin_repeat-compact', type: 'begin_repeat', label: 'Compact Repeat', icon: 'Repeat', defaultAppearance: 'compact', description: 'Repeat that starts collapsed, expandable by user' },
-      { id: 'begin_repeat-fieldlist', type: 'begin_repeat', label: 'Field List Repeat', icon: 'Repeat', defaultAppearance: 'field-list', description: 'Each repeat entry displays on a separate page' },
     ],
   },
   {

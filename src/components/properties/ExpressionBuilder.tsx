@@ -21,6 +21,10 @@ interface Props {
   label: string;
   placeholder?: string;
   mode?: 'relevant' | 'calculation' | 'constraint' | 'general';
+  /** If true, opens directly in expanded modal view */
+  initialExpanded?: boolean;
+  /** Called when the expanded modal is closed (useful when rendering standalone) */
+  onCloseExpanded?: () => void;
 }
 
 // ============================================================
@@ -57,36 +61,275 @@ const COMMON_VALUES: OperatorItem[] = [
   { label: 'null', insert: "'' ", description: 'Check for empty/null' },
 ];
 
+// ============================================================
+// Function Slot System — guided function insertion
+// ============================================================
+
+type SlotType = 'field' | 'value' | 'number' | 'text' | 'format';
+
+interface FunctionSlot {
+  type: SlotType;
+  label: string;
+  placeholder?: string;
+  /** For field slots: only show fields matching this filter */
+  fieldFilter?: 'select' | 'numeric' | 'text' | 'date' | 'any';
+  /** For value slots: derive choices from a previous field slot by index */
+  choicesFromField?: number;
+  /** Preset options for text/format slots */
+  options?: { label: string; value: string }[];
+  /** Default value if user skips or for optional params */
+  defaultValue?: string;
+}
+
 interface FunctionTemplate {
   label: string;
+  /** Fallback template for raw insert (used when no slots or user skips wizard) */
   template: string;
   description: string;
   category: 'selection' | 'text' | 'math' | 'date' | 'logic';
+  /** Guided slots — if present, clicking the function opens a mini-wizard */
+  slots?: FunctionSlot[];
+  /** Build expression from slot values. If omitted, uses template fallback. */
+  build?: (values: string[]) => string;
 }
 
+/** Field type filters for slot fieldFilter */
+const FIELD_FILTERS: Record<string, (r: SurveyRow) => boolean> = {
+  select: (r) => ['select_one', 'select_multiple', 'rank'].includes(r.type),
+  numeric: (r) => ['integer', 'decimal', 'range', 'calculate'].includes(r.type),
+  text: (r) => ['text', 'email', 'barcode', 'calculate', 'hidden'].includes(r.type),
+  date: (r) => ['date', 'time', 'datetime'].includes(r.type),
+  any: () => true,
+};
+
 const FUNCTIONS: FunctionTemplate[] = [
-  { label: 'selected', template: "selected(${field}, 'value')", description: 'Check if value is selected in multi-select', category: 'selection' },
-  { label: 'count-selected', template: 'count-selected(${field})', description: 'Count how many options are selected', category: 'selection' },
-  { label: 'selected-at', template: 'selected-at(${field}, 0)', description: 'Get the nth selected value', category: 'selection' },
-  { label: 'concat', template: "concat(${field}, ' ', ${field})", description: 'Join text values together', category: 'text' },
-  { label: 'string-length', template: 'string-length(${field})', description: 'Length of text value', category: 'text' },
-  { label: 'substr', template: 'substr(${field}, 0, 5)', description: 'Extract part of text', category: 'text' },
-  { label: 'contains', template: "contains(${field}, 'text')", description: 'Check if text contains a substring', category: 'text' },
-  { label: 'regex', template: "regex(${field}, '[0-9]+')", description: 'Test text against a pattern', category: 'text' },
-  { label: 'sum', template: 'sum(${field})', description: 'Sum of repeat values', category: 'math' },
-  { label: 'count', template: 'count(${field})', description: 'Count of repeat instances', category: 'math' },
-  { label: 'min', template: 'min(${field})', description: 'Minimum value', category: 'math' },
-  { label: 'max', template: 'max(${field})', description: 'Maximum value', category: 'math' },
-  { label: 'round', template: 'round(${field}, 2)', description: 'Round to decimal places', category: 'math' },
-  { label: 'int', template: 'int(${field})', description: 'Convert to integer', category: 'math' },
+  // ---- Selection ----
+  {
+    label: 'selected',
+    template: "selected(${field}, 'value')",
+    description: 'Check if value is selected in multi-select',
+    category: 'selection',
+    slots: [
+      { type: 'field', label: 'Which select field?', fieldFilter: 'select' },
+      { type: 'value', label: 'Which option?', choicesFromField: 0, placeholder: 'option_1' },
+    ],
+    build: (v) => `selected(\${${v[0]}}, '${v[1]}')`,
+  },
+  {
+    label: 'count-selected',
+    template: 'count-selected(${field})',
+    description: 'Count how many options are selected',
+    category: 'selection',
+    slots: [
+      { type: 'field', label: 'Which select field?', fieldFilter: 'select' },
+    ],
+    build: (v) => `count-selected(\${${v[0]}})`,
+  },
+  {
+    label: 'selected-at',
+    template: 'selected-at(${field}, 0)',
+    description: 'Get the nth selected value',
+    category: 'selection',
+    slots: [
+      { type: 'field', label: 'Which select field?', fieldFilter: 'select' },
+      { type: 'number', label: 'Which index? (0 = first)', placeholder: '0', defaultValue: '0' },
+    ],
+    build: (v) => `selected-at(\${${v[0]}}, ${v[1]})`,
+  },
+  // ---- Text ----
+  {
+    label: 'concat',
+    template: "concat(${field}, ' ', ${field})",
+    description: 'Join text values together',
+    category: 'text',
+    slots: [
+      { type: 'field', label: 'First field', fieldFilter: 'any' },
+      { type: 'text', label: 'Separator', placeholder: ' ', defaultValue: ' ' },
+      { type: 'field', label: 'Second field', fieldFilter: 'any' },
+    ],
+    build: (v) => `concat(\${${v[0]}}, '${v[1]}', \${${v[2]}})`,
+  },
+  {
+    label: 'string-length',
+    template: 'string-length(${field})',
+    description: 'Length of text value',
+    category: 'text',
+    slots: [
+      { type: 'field', label: 'Which field?', fieldFilter: 'any' },
+    ],
+    build: (v) => `string-length(\${${v[0]}})`,
+  },
+  {
+    label: 'substr',
+    template: 'substr(${field}, 0, 5)',
+    description: 'Extract part of text',
+    category: 'text',
+    slots: [
+      { type: 'field', label: 'Which field?', fieldFilter: 'any' },
+      { type: 'number', label: 'Start position', placeholder: '0', defaultValue: '0' },
+      { type: 'number', label: 'Length', placeholder: '5', defaultValue: '5' },
+    ],
+    build: (v) => `substr(\${${v[0]}}, ${v[1]}, ${v[2]})`,
+  },
+  {
+    label: 'contains',
+    template: "contains(${field}, 'text')",
+    description: 'Check if text contains a substring',
+    category: 'text',
+    slots: [
+      { type: 'field', label: 'Which field?', fieldFilter: 'any' },
+      { type: 'text', label: 'Text to search for', placeholder: 'search text' },
+    ],
+    build: (v) => `contains(\${${v[0]}}, '${v[1]}')`,
+  },
+  {
+    label: 'regex',
+    template: "regex(${field}, '[0-9]+')",
+    description: 'Test text against a pattern',
+    category: 'text',
+    slots: [
+      { type: 'field', label: 'Which field?', fieldFilter: 'any' },
+      { type: 'text', label: 'Regex pattern', placeholder: '[0-9]+' },
+    ],
+    build: (v) => `regex(\${${v[0]}}, '${v[1]}')`,
+  },
+  // ---- Math ----
+  {
+    label: 'sum',
+    template: 'sum(${field})',
+    description: 'Sum of repeat values',
+    category: 'math',
+    slots: [{ type: 'field', label: 'Which field?', fieldFilter: 'numeric' }],
+    build: (v) => `sum(\${${v[0]}})`,
+  },
+  {
+    label: 'count',
+    template: 'count(${field})',
+    description: 'Count of repeat instances',
+    category: 'math',
+    slots: [{ type: 'field', label: 'Which field?', fieldFilter: 'any' }],
+    build: (v) => `count(\${${v[0]}})`,
+  },
+  {
+    label: 'min',
+    template: 'min(${field})',
+    description: 'Minimum value',
+    category: 'math',
+    slots: [{ type: 'field', label: 'Which field?', fieldFilter: 'numeric' }],
+    build: (v) => `min(\${${v[0]}})`,
+  },
+  {
+    label: 'max',
+    template: 'max(${field})',
+    description: 'Maximum value',
+    category: 'math',
+    slots: [{ type: 'field', label: 'Which field?', fieldFilter: 'numeric' }],
+    build: (v) => `max(\${${v[0]}})`,
+  },
+  {
+    label: 'round',
+    template: 'round(${field}, 2)',
+    description: 'Round to decimal places',
+    category: 'math',
+    slots: [
+      { type: 'field', label: 'Which numeric field?', fieldFilter: 'numeric' },
+      { type: 'number', label: 'Decimal places', placeholder: '2', defaultValue: '2' },
+    ],
+    build: (v) => `round(\${${v[0]}}, ${v[1]})`,
+  },
+  {
+    label: 'int',
+    template: 'int(${field})',
+    description: 'Convert to integer',
+    category: 'math',
+    slots: [{ type: 'field', label: 'Which field?', fieldFilter: 'numeric' }],
+    build: (v) => `int(\${${v[0]}})`,
+  },
+  // ---- Date (no slots for today/now) ----
   { label: 'today', template: 'today()', description: "Today's date", category: 'date' },
   { label: 'now', template: 'now()', description: 'Current date and time', category: 'date' },
-  { label: 'format-date', template: "format-date(${field}, '%Y-%m-%d')", description: 'Format a date value', category: 'date' },
-  { label: 'if', template: "if(condition, 'yes_value', 'no_value')", description: 'Conditional value', category: 'logic' },
-  { label: 'coalesce', template: 'coalesce(${field}, ${field})', description: 'First non-empty value', category: 'logic' },
-  { label: 'once', template: 'once(${field})', description: 'Calculate only on first entry', category: 'logic' },
-  { label: 'pulldata', template: "pulldata('filename', 'return_col', 'lookup_col', ${field})", description: 'Look up value from CSV', category: 'logic' },
+  {
+    label: 'format-date',
+    template: "format-date(${field}, '%Y-%m-%d')",
+    description: 'Format a date value',
+    category: 'date',
+    slots: [
+      { type: 'field', label: 'Which date field?', fieldFilter: 'date' },
+      {
+        type: 'format', label: 'Date format',
+        options: [
+          { label: 'YYYY-MM-DD', value: '%Y-%m-%d' },
+          { label: 'MM/DD/YYYY', value: '%m/%d/%Y' },
+          { label: 'DD/MM/YYYY', value: '%d/%m/%Y' },
+          { label: 'Month D, YYYY', value: '%b %e, %Y' },
+          { label: 'YYYY', value: '%Y' },
+        ],
+        defaultValue: '%Y-%m-%d',
+      },
+    ],
+    build: (v) => `format-date(\${${v[0]}}, '${v[1]}')`,
+  },
+  // ---- Logic ----
+  {
+    label: 'if',
+    template: "if(condition, 'yes_value', 'no_value')",
+    description: 'Conditional value',
+    category: 'logic',
+    slots: [
+      { type: 'field', label: 'Which field to check?', fieldFilter: 'any' },
+      { type: 'value', label: 'Equals what value?', choicesFromField: 0, placeholder: 'yes' },
+      { type: 'text', label: 'Result when true', placeholder: 'Result A' },
+      { type: 'text', label: 'Result when false', placeholder: 'Result B' },
+    ],
+    build: (v) => `if(\${${v[0]}} = '${v[1]}', '${v[2]}', '${v[3]}')`,
+  },
+  {
+    label: 'coalesce',
+    template: 'coalesce(${field}, ${field})',
+    description: 'First non-empty value',
+    category: 'logic',
+    slots: [
+      { type: 'field', label: 'Primary field', fieldFilter: 'any' },
+      { type: 'field', label: 'Fallback field', fieldFilter: 'any' },
+    ],
+    build: (v) => `coalesce(\${${v[0]}}, \${${v[1]}})`,
+  },
+  {
+    label: 'once',
+    template: 'once(${field})',
+    description: 'Calculate only on first entry',
+    category: 'logic',
+    slots: [{ type: 'field', label: 'Which field?', fieldFilter: 'any' }],
+    build: (v) => `once(\${${v[0]}})`,
+  },
+  {
+    label: 'pulldata',
+    template: "pulldata('filename', 'return_col', 'lookup_col', ${field})",
+    description: 'Look up value from CSV',
+    category: 'logic',
+    slots: [
+      { type: 'text', label: 'CSV filename (without .csv)', placeholder: 'my_data' },
+      { type: 'text', label: 'Return column name', placeholder: 'result_column' },
+      { type: 'text', label: 'Lookup column name', placeholder: 'key_column' },
+      { type: 'field', label: 'Lookup value field', fieldFilter: 'any' },
+    ],
+    build: (v) => `pulldata('${v[0]}', '${v[1]}', '${v[2]}', \${${v[3]}})`,
+  },
 ];
+
+// ============================================================
+// Function Wizard State
+// ============================================================
+
+interface FuncWizardState {
+  func: FunctionTemplate;
+  /** Current slot index */
+  slotIndex: number;
+  /** Collected values for each slot */
+  values: string[];
+  /** Search term for field picker */
+  fieldSearch: string;
+}
 
 // ============================================================
 // Quick Start Wizard Templates
@@ -307,18 +550,20 @@ interface WizardState {
 // Expression Builder Component
 // ============================================================
 
-export function ExpressionBuilder({ value, onChange, currentRowId, label, placeholder, mode = 'general' }: Props) {
+export function ExpressionBuilder({ value, onChange, currentRowId, label, placeholder, mode = 'general', initialExpanded, onCloseExpanded }: Props) {
   const { form } = useSurveyStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isOpen, setIsOpen] = useState(!!initialExpanded);
+  const [isExpanded, setIsExpanded] = useState(!!initialExpanded);
   const [activeTab, setActiveTab] = useState<'fields' | 'operators' | 'functions'>('fields');
   const [fieldSearch, setFieldSearch] = useState('');
   const [funcCategory, setFuncCategory] = useState<string>('all');
   const [wizard, setWizard] = useState<WizardState | null>(null);
+  const [funcWizard, setFuncWizard] = useState<FuncWizardState | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const expandedTextareaRef = useRef<HTMLTextAreaElement>(null);
   const builderRef = useRef<HTMLDivElement>(null);
   const valueInputRef = useRef<HTMLInputElement>(null);
+  const funcValueInputRef = useRef<HTMLInputElement>(null);
 
   const availableFields = form.survey.filter(
     (r) =>
@@ -344,6 +589,33 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       )
     : availableFields;
 
+  // Function wizard: filtered fields for current slot
+  const funcWizardFields = React.useMemo(() => {
+    if (!funcWizard) return availableFields;
+    const slot = funcWizard.func.slots?.[funcWizard.slotIndex];
+    if (!slot || slot.type !== 'field') return availableFields;
+    const filterFn = FIELD_FILTERS[slot.fieldFilter || 'any'];
+    const filtered = filterFn ? availableFields.filter(filterFn) : availableFields;
+    if (!funcWizard.fieldSearch) return filtered;
+    const search = funcWizard.fieldSearch.toLowerCase();
+    return filtered.filter(
+      (r) => r.name.toLowerCase().includes(search) || r.label.toLowerCase().includes(search)
+    );
+  }, [funcWizard, availableFields]);
+
+  // Function wizard: get choices for a value slot that references a field slot
+  const funcWizardChoices = React.useMemo(() => {
+    if (!funcWizard) return [];
+    const slot = funcWizard.func.slots?.[funcWizard.slotIndex];
+    if (!slot || slot.type !== 'value' || slot.choicesFromField === undefined) return [];
+    const fieldName = funcWizard.values[slot.choicesFromField];
+    if (!fieldName) return [];
+    const row = form.survey.find((r) => r.name === fieldName);
+    if (!row?.listName) return [];
+    const list = form.choiceLists.find((cl) => cl.list_name === row.listName);
+    return list?.choices || [];
+  }, [funcWizard, form.survey, form.choiceLists]);
+
   const relevantFunctions = FUNCTIONS.filter((f) => {
     if (funcCategory !== 'all') return f.category === funcCategory;
     if (mode === 'relevant') return ['selection', 'logic', 'text'].includes(f.category);
@@ -364,20 +636,31 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
   const quickTemplates = getWizardTemplates(mode);
 
   const insertAtCursor = (text: string) => {
-    const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
-    if (!textarea) {
-      onChange(value + text);
-      return;
+    try {
+      const textarea = isExpanded ? expandedTextareaRef.current : textareaRef.current;
+      if (!textarea) {
+        onChange((value || '') + text);
+        return;
+      }
+      const start = textarea.selectionStart ?? 0;
+      const end = textarea.selectionEnd ?? 0;
+      const currentValue = value || '';
+      const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+      onChange(newValue);
+      requestAnimationFrame(() => {
+        try {
+          if (textarea && textarea.isConnected) {
+            textarea.focus();
+            const cursorPos = start + text.length;
+            textarea.setSelectionRange(cursorPos, cursorPos);
+          }
+        } catch (_) { /* textarea may have been unmounted */ }
+      });
+    } catch (err) {
+      // Fallback: just append the text
+      console.error('insertAtCursor error:', err);
+      onChange((value || '') + text);
     }
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const newValue = value.substring(0, start) + text + value.substring(end);
-    onChange(newValue);
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const cursorPos = start + text.length;
-      textarea.setSelectionRange(cursorPos, cursorPos);
-    });
   };
 
   const insertFieldRef = (fieldName: string) => {
@@ -388,6 +671,65 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     insertAtCursor(template);
   };
 
+  /** Start guided function wizard (or raw-insert if no slots) */
+  const startFuncWizard = (func: FunctionTemplate) => {
+    if (!func.slots || func.slots.length === 0) {
+      // No slots — insert template directly (e.g. today(), now())
+      insertAtCursor(func.template);
+      return;
+    }
+    setFuncWizard({ func, slotIndex: 0, values: [], fieldSearch: '' });
+  };
+
+  /** Advance to next slot or complete */
+  const funcWizardNext = (slotValue: string) => {
+    if (!funcWizard) return;
+    const newValues = [...funcWizard.values, slotValue];
+    const nextIndex = funcWizard.slotIndex + 1;
+    const totalSlots = funcWizard.func.slots!.length;
+
+    if (nextIndex >= totalSlots) {
+      // All slots filled — build and insert
+      const expr = funcWizard.func.build
+        ? funcWizard.func.build(newValues)
+        : funcWizard.func.template;
+      insertAtCursor(expr);
+      setFuncWizard(null);
+    } else {
+      setFuncWizard({ ...funcWizard, slotIndex: nextIndex, values: newValues, fieldSearch: '' });
+    }
+  };
+
+  const funcWizardBack = () => {
+    if (!funcWizard) return;
+    if (funcWizard.slotIndex === 0) {
+      setFuncWizard(null); // Cancel back to function list
+    } else {
+      setFuncWizard({
+        ...funcWizard,
+        slotIndex: funcWizard.slotIndex - 1,
+        values: funcWizard.values.slice(0, -1),
+        fieldSearch: '',
+      });
+    }
+  };
+
+  /** Skip wizard and insert raw template */
+  const funcWizardSkip = () => {
+    if (!funcWizard) return;
+    insertAtCursor(funcWizard.func.template);
+    setFuncWizard(null);
+  };
+
+  // Focus the value input when entering a text/number/format slot
+  useEffect(() => {
+    if (!funcWizard) return;
+    const slot = funcWizard.func.slots?.[funcWizard.slotIndex];
+    if (slot && ['text', 'number', 'format', 'value'].includes(slot.type)) {
+      requestAnimationFrame(() => funcValueInputRef.current?.focus());
+    }
+  }, [funcWizard?.slotIndex]);
+
   // Close builder when clicking outside
   useEffect(() => {
     if (!isOpen) return;
@@ -395,6 +737,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       if (builderRef.current && !builderRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         setWizard(null);
+        setFuncWizard(null);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -592,28 +935,26 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
   );
 
   return (
-    <div ref={builderRef} style={{ marginBottom: 14 }}>
+    <div ref={builderRef} style={initialExpanded ? { display: 'contents' } : { marginBottom: 14 }}>
       {/* Label row with builder toggle */}
-      <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+      <div className="flex items-center justify-between" style={{ marginBottom: 6, display: initialExpanded ? 'none' : undefined }}>
         <label className="block text-gray-500" style={{ fontSize: 12, fontWeight: 500 }}>
           {label}
         </label>
         <div className="flex items-center" style={{ gap: 4 }}>
-          {(isOpen || value) && (
-            <button
-              onClick={() => { setIsExpanded(true); setIsOpen(true); }}
-              className="flex items-center rounded text-gray-400 hover:text-[#007a62] hover:bg-[#f0faf7] transition-fast"
-              style={{ padding: '2px 6px', fontSize: 11, fontWeight: 600 }}
-              title="Expand to full editor"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
-                <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
-              </svg>
-            </button>
-          )}
           <button
-            onClick={() => { setIsOpen(!isOpen); if (isOpen) { setWizard(null); setIsExpanded(false); } }}
+            onClick={() => { setIsExpanded(true); setIsOpen(true); }}
+            className="flex items-center gap-1 rounded text-gray-400 hover:text-[#007a62] hover:bg-[#f0faf7] transition-fast"
+            style={{ padding: '2px 6px', fontSize: 11, fontWeight: 600 }}
+            title="Open full-screen expression editor"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
+              <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+          </button>
+          <button
+            onClick={() => { setIsOpen(!isOpen); if (isOpen) { setWizard(null); setFuncWizard(null); setIsExpanded(false); } }}
             className={`flex items-center rounded transition-fast ${
               isOpen
                 ? 'text-[#007a62] bg-[#f0faf7]'
@@ -630,19 +971,21 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       </div>
 
       {/* Expression textarea */}
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        rows={value.length > 60 ? 3 : 2}
-        style={{ padding: '8px 12px', fontSize: 12, lineHeight: 1.6 }}
-        className="w-full font-mono border border-gray-200 rounded-lg bg-white
-          focus:border-[#00856a] transition-fast placeholder-gray-300 resize-y"
-      />
+      {!initialExpanded && (
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={value.length > 60 ? 3 : 2}
+          style={{ padding: '8px 12px', fontSize: 12, lineHeight: 1.6 }}
+          className="w-full font-mono border border-gray-200 rounded-lg bg-white
+            focus:border-[#00856a] transition-fast placeholder-gray-300 resize-y"
+        />
+      )}
 
       {/* Expression tokens preview */}
-      {value && !isOpen && (
+      {value && !isOpen && !initialExpanded && (
         <div className="flex flex-wrap items-center" style={{ gap: 4, marginTop: 6 }}>
           {tokenizeExpression(value).map((token, i) => (
             <span
@@ -667,12 +1010,12 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       )}
 
       {/* Inline validation */}
-      {value && !isOpen && (
+      {value && !isOpen && !initialExpanded && (
         <ExpressionValidator value={value} fields={availableFields} />
       )}
 
       {/* Builder Panel */}
-      {isOpen && (
+      {isOpen && !initialExpanded && (
         <div className="border border-[#00856a]/30 rounded-lg bg-white shadow-sm overflow-hidden"
           style={{ marginTop: 8 }}>
 
@@ -913,7 +1256,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                 {(['fields', 'operators', 'functions'] as const).map((tab) => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => { setActiveTab(tab); if (tab !== 'functions') setFuncWizard(null); }}
                     className={`transition-fast relative ${
                       activeTab === tab
                         ? 'text-[#007a62] bg-white border-b-2 border-[#007a62]'
@@ -1002,36 +1345,62 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
 
                 {activeTab === 'functions' && (
                   <div style={{ padding: 8 }}>
-                    <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8, padding: '0 4px' }}>
-                      {funcCategories.map((cat) => (
-                        <button key={cat.value} onClick={() => setFuncCategory(cat.value)}
-                          className={`rounded-full transition-fast ${
-                            funcCategory === cat.value
-                              ? 'bg-[#007a62] text-white'
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                          }`}
-                          style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{cat.label}</button>
-                      ))}
-                    </div>
+                    {funcWizard ? (
+                      <FuncWizardPanel
+                        funcWizard={funcWizard}
+                        funcWizardFields={funcWizardFields}
+                        funcWizardChoices={funcWizardChoices}
+                        onNext={funcWizardNext}
+                        onBack={funcWizardBack}
+                        onSkip={funcWizardSkip}
+                        onSearchChange={(v) => setFuncWizard({ ...funcWizard, fieldSearch: v })}
+                        valueInputRef={funcValueInputRef}
+                        getTypeColor={getTypeColor}
+                      />
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8, padding: '0 4px' }}>
+                          {funcCategories.map((cat) => (
+                            <button key={cat.value} onClick={() => setFuncCategory(cat.value)}
+                              className={`rounded-full transition-fast ${
+                                funcCategory === cat.value
+                                  ? 'bg-[#007a62] text-white'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                              style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{cat.label}</button>
+                          ))}
+                        </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {relevantFunctions.map((fn) => (
-                        <button key={fn.label} onClick={() => insertFunction(fn.template)}
-                          className="flex flex-col text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
-                          style={{ padding: '8px 10px' }}>
-                          <div className="flex items-center" style={{ gap: 6 }}>
-                            <span className="font-mono text-[#007a62]" style={{ fontSize: 12, fontWeight: 600 }}>
-                              {fn.label}()
-                            </span>
-                            <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
-                              style={{ fontSize: 10, fontWeight: 600 }}>+ Insert</span>
-                          </div>
-                          <span className="text-gray-400" style={{ fontSize: 11, marginTop: 2 }}>{fn.description}</span>
-                          <code className="text-gray-500 bg-gray-50 rounded border border-gray-100 mt-1 block"
-                            style={{ padding: '3px 6px', fontSize: 10, lineHeight: 1.4, fontFamily: 'monospace' }}>{fn.template}</code>
-                        </button>
-                      ))}
-                    </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {relevantFunctions.map((fn) => (
+                            <button key={fn.label} onClick={() => startFuncWizard(fn)}
+                              className="flex flex-col text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
+                              style={{ padding: '8px 10px' }}>
+                              <div className="flex items-center" style={{ gap: 6 }}>
+                                <span className="font-mono text-[#007a62]" style={{ fontSize: 12, fontWeight: 600 }}>
+                                  {fn.label}()
+                                </span>
+                                {fn.slots && fn.slots.length > 0 ? (
+                                  <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
+                                    style={{ fontSize: 10, fontWeight: 600 }}>
+                                    Guided
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                      style={{ display: 'inline', marginLeft: 3, verticalAlign: 'middle' }}>
+                                      <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                  </span>
+                                ) : (
+                                  <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
+                                    style={{ fontSize: 10, fontWeight: 600 }}>+ Insert</span>
+                                )}
+                              </div>
+                              <span className="text-gray-400" style={{ fontSize: 11, marginTop: 2 }}>{fn.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1041,11 +1410,11 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       )}
 
       {/* ===================== EXPANDED MODAL ===================== */}
-      {isExpanded && (
+      {(isExpanded || initialExpanded) && (
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center"
           style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setIsExpanded(false); }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setIsExpanded(false); onCloseExpanded?.(); } }}
         >
           <div className="bg-white rounded-xl shadow-2xl flex flex-col"
             style={{ width: '90vw', maxWidth: 1000, height: '80vh', maxHeight: 700 }}>
@@ -1061,7 +1430,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                 </p>
               </div>
               <button
-                onClick={() => setIsExpanded(false)}
+                onClick={() => { setIsExpanded(false); onCloseExpanded?.(); }}
                 className="text-gray-400 hover:text-gray-600 transition-fast rounded-lg hover:bg-gray-100"
                 style={{ padding: 8 }}
               >
@@ -1127,7 +1496,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                   {(['fields', 'operators', 'functions'] as const).map((tab) => (
                     <button
                       key={tab}
-                      onClick={() => setActiveTab(tab)}
+                      onClick={() => { setActiveTab(tab); if (tab !== 'functions') setFuncWizard(null); }}
                       className={`transition-fast capitalize ${
                         activeTab === tab
                           ? 'text-[#007a62] border-b-2 border-[#007a62]'
@@ -1204,35 +1573,66 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
 
                   {activeTab === 'functions' && (
                     <div>
-                      <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8 }}>
-                        {funcCategories.map((cat) => (
-                          <button
-                            key={cat.value}
-                            onClick={() => setFuncCategory(cat.value)}
-                            className={`rounded-full transition-fast ${
-                              funcCategory === cat.value
-                                ? 'bg-[#007a62] text-white'
-                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                            style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}
-                          >
-                            {cat.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="space-y-1">
-                        {relevantFunctions.map((fn) => (
-                          <button
-                            key={fn.label}
-                            onClick={() => insertFunction(fn.template)}
-                            className="w-full text-left rounded-lg hover:bg-[#f0faf7] transition-fast"
-                            style={{ padding: '6px 10px' }}
-                          >
-                            <span className="font-mono text-[#007a62]" style={{ fontSize: 12 }}>{fn.label}()</span>
-                            <p className="text-gray-400" style={{ fontSize: 10, marginTop: 1 }}>{fn.description}</p>
-                          </button>
-                        ))}
-                      </div>
+                      {funcWizard ? (
+                        /* ===== GUIDED FUNCTION WIZARD ===== */
+                        <FuncWizardPanel
+                          funcWizard={funcWizard}
+                          funcWizardFields={funcWizardFields}
+                          funcWizardChoices={funcWizardChoices}
+                          onNext={funcWizardNext}
+                          onBack={funcWizardBack}
+                          onSkip={funcWizardSkip}
+                          onSearchChange={(v) => setFuncWizard({ ...funcWizard, fieldSearch: v })}
+                          valueInputRef={funcValueInputRef}
+                          getTypeColor={getTypeColor}
+                        />
+                      ) : (
+                        /* ===== FUNCTION LIST ===== */
+                        <>
+                          <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8 }}>
+                            {funcCategories.map((cat) => (
+                              <button
+                                key={cat.value}
+                                onClick={() => setFuncCategory(cat.value)}
+                                className={`rounded-full transition-fast ${
+                                  funcCategory === cat.value
+                                    ? 'bg-[#007a62] text-white'
+                                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                }`}
+                                style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}
+                              >
+                                {cat.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {relevantFunctions.map((fn) => (
+                              <button
+                                key={fn.label}
+                                onClick={() => startFuncWizard(fn)}
+                                className="w-full text-left rounded-lg hover:bg-[#f0faf7] transition-fast group"
+                                style={{ padding: '6px 10px' }}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="font-mono text-[#007a62]" style={{ fontSize: 12 }}>{fn.label}()</span>
+                                  {fn.slots && fn.slots.length > 0 && (
+                                    <span className="text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast"
+                                      style={{ fontSize: 10, fontWeight: 600 }}>
+                                      Guided
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                        style={{ display: 'inline', marginLeft: 3, verticalAlign: 'middle' }}>
+                                        <polyline points="9 18 15 12 9 6" />
+                                      </svg>
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-400" style={{ fontSize: 10, marginTop: 1 }}>{fn.description}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1241,6 +1641,329 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// Guided Function Wizard Panel
+// ============================================================
+
+function FuncWizardPanel({
+  funcWizard,
+  funcWizardFields,
+  funcWizardChoices,
+  onNext,
+  onBack,
+  onSkip,
+  onSearchChange,
+  valueInputRef,
+  getTypeColor,
+}: {
+  funcWizard: FuncWizardState;
+  funcWizardFields: SurveyRow[];
+  funcWizardChoices: { id: string; name: string; label: string }[];
+  onNext: (value: string) => void;
+  onBack: () => void;
+  onSkip: () => void;
+  onSearchChange: (v: string) => void;
+  valueInputRef: React.RefObject<HTMLInputElement | null>;
+  getTypeColor: (type: string) => string;
+}) {
+  const [inputValue, setInputValue] = React.useState('');
+  const slot = funcWizard.func.slots![funcWizard.slotIndex];
+  const totalSlots = funcWizard.func.slots!.length;
+  const isLastSlot = funcWizard.slotIndex === totalSlots - 1;
+
+  // Reset input value when slot changes
+  React.useEffect(() => {
+    setInputValue(slot.defaultValue || '');
+  }, [funcWizard.slotIndex]);
+
+  // Build a live preview of the expression
+  const getPreview = () => {
+    const previewValues = [...funcWizard.values];
+    // Fill remaining slots with placeholders
+    while (previewValues.length < totalSlots) {
+      previewValues.push('___');
+    }
+    if (funcWizard.func.build) {
+      try { return funcWizard.func.build(previewValues); }
+      catch { return funcWizard.func.template; }
+    }
+    return funcWizard.func.template;
+  };
+
+  return (
+    <div>
+      {/* Header with function name and back button */}
+      <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
+        <button
+          onClick={onBack}
+          className="flex items-center text-gray-400 hover:text-gray-600 transition-fast"
+          style={{ gap: 4, fontSize: 11, fontWeight: 500 }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Back
+        </button>
+        <button
+          onClick={onSkip}
+          className="text-gray-400 hover:text-gray-600 transition-fast"
+          style={{ fontSize: 10, fontWeight: 500, padding: '2px 6px' }}
+          title="Insert raw template instead"
+        >
+          Skip wizard
+        </button>
+      </div>
+
+      {/* Function name and description */}
+      <div className="bg-[#f0faf7] rounded-lg border border-[#007a62]/10" style={{ padding: '10px 12px', marginBottom: 10 }}>
+        <div className="flex items-center" style={{ gap: 6, marginBottom: 4 }}>
+          <span className="font-mono text-[#007a62]" style={{ fontSize: 13, fontWeight: 700 }}>
+            {funcWizard.func.label}()
+          </span>
+          <span className="text-gray-400" style={{ fontSize: 10 }}>
+            Step {funcWizard.slotIndex + 1} of {totalSlots}
+          </span>
+        </div>
+        <p className="text-gray-500" style={{ fontSize: 11 }}>{funcWizard.func.description}</p>
+      </div>
+
+      {/* Progress dots */}
+      {totalSlots > 1 && (
+        <div className="flex items-center" style={{ gap: 4, marginBottom: 10 }}>
+          {Array.from({ length: totalSlots }, (_, i) => (
+            <React.Fragment key={i}>
+              <div
+                className={`rounded-full transition-fast ${
+                  i < funcWizard.slotIndex
+                    ? 'bg-[#007a62]'
+                    : i === funcWizard.slotIndex
+                    ? 'bg-[#007a62] ring-2 ring-[#007a62]/20'
+                    : 'bg-gray-200'
+                }`}
+                style={{ width: i === funcWizard.slotIndex ? 8 : 6, height: i === funcWizard.slotIndex ? 8 : 6 }}
+              />
+              {i < totalSlots - 1 && (
+                <div className={`${i < funcWizard.slotIndex ? 'bg-[#007a62]' : 'bg-gray-200'}`}
+                  style={{ width: 12, height: 2, borderRadius: 1 }} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      {/* Completed slot values */}
+      {funcWizard.values.length > 0 && (
+        <div className="bg-gray-50 rounded-md border border-gray-100" style={{ padding: '6px 10px', marginBottom: 10 }}>
+          {funcWizard.values.map((v, i) => (
+            <div key={i} className="flex items-center" style={{ gap: 6, marginBottom: 2 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#007a62" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span className="text-gray-400" style={{ fontSize: 10 }}>{funcWizard.func.slots![i].label}:</span>
+              <span className="font-mono text-[#007a62]" style={{ fontSize: 11, fontWeight: 600 }}>
+                {funcWizard.func.slots![i].type === 'field' ? '${' + v + '}' : v}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Current slot label */}
+      <p className="text-[#007a62]" style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+        {slot.label}
+      </p>
+
+      {/* === FIELD SLOT === */}
+      {slot.type === 'field' && (
+        <div>
+          <input
+            type="text"
+            value={funcWizard.fieldSearch}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search fields..."
+            className="w-full border border-gray-200 rounded-md bg-gray-50 focus:border-[#00856a] transition-fast placeholder-gray-300"
+            style={{ padding: '6px 10px', fontSize: 12, marginBottom: 6 }}
+          />
+          {funcWizardFields.length === 0 ? (
+            <p className="text-gray-400 text-center" style={{ padding: '16px 0', fontSize: 11 }}>
+              {funcWizard.fieldSearch ? 'No matching fields' : `No ${slot.fieldFilter !== 'any' ? slot.fieldFilter + ' ' : ''}fields in the form`}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, maxHeight: 220, overflowY: 'auto' }}>
+              {funcWizardFields.map((field) => (
+                <button
+                  key={field.id}
+                  onClick={() => onNext(field.name)}
+                  className="flex items-center text-left rounded-md hover:bg-[#f0faf7] transition-fast group"
+                  style={{ padding: '5px 8px', gap: 6 }}
+                >
+                  <span
+                    className={`inline-block rounded border ${getTypeColor(field.type)} shrink-0`}
+                    style={{ padding: '1px 5px', fontSize: 9, fontWeight: 600 }}
+                  >
+                    {field.type.replace(/_/g, ' ')}
+                  </span>
+                  <span className="font-mono text-gray-700 truncate" style={{ fontSize: 11 }}>
+                    {field.name}
+                  </span>
+                  {field.label && field.label !== field.name && (
+                    <span className="text-gray-400 truncate" style={{ fontSize: 10 }}>
+                      {field.label}
+                    </span>
+                  )}
+                  <span className="ml-auto text-[#007a62] opacity-0 group-hover:opacity-100 transition-fast shrink-0"
+                    style={{ fontSize: 10, fontWeight: 600 }}>Pick</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* === VALUE SLOT (with choices from a field) === */}
+      {slot.type === 'value' && (
+        <div>
+          {funcWizardChoices.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Available Choices
+              </p>
+              <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 6 }}>
+                {funcWizardChoices.map((c) => (
+                  <button
+                    key={c.name}
+                    onClick={() => onNext(c.name)}
+                    className="border rounded-md bg-white border-gray-200 text-gray-600 hover:border-[#007a62] hover:bg-[#f0faf7] hover:text-[#007a62] transition-fast"
+                    style={{ padding: '4px 10px', fontSize: 11 }}
+                  >
+                    <span className="font-mono" style={{ fontWeight: 600 }}>{c.name}</span>
+                    {c.label !== c.name && (
+                      <span className="text-gray-400 ml-1">{c.label}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex items-center" style={{ gap: 6 }}>
+            <input
+              ref={valueInputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={slot.placeholder || 'Enter value...'}
+              onKeyDown={(e) => { if (e.key === 'Enter' && inputValue) { e.preventDefault(); onNext(inputValue); } }}
+              className="flex-1 border border-gray-200 rounded-md bg-white focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+              style={{ padding: '6px 10px', fontSize: 12 }}
+            />
+            <button
+              onClick={() => onNext(inputValue || slot.placeholder || '')}
+              disabled={!inputValue && !slot.placeholder}
+              className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast disabled:opacity-40 shrink-0"
+              style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
+            >
+              {isLastSlot ? 'Done' : 'Next'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* === TEXT SLOT === */}
+      {slot.type === 'text' && (
+        <div className="flex items-center" style={{ gap: 6 }}>
+          <input
+            ref={valueInputRef}
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={slot.placeholder || 'Enter text...'}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onNext(inputValue || slot.defaultValue || ''); } }}
+            className="flex-1 border border-gray-200 rounded-md bg-white focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+            style={{ padding: '6px 10px', fontSize: 12 }}
+          />
+          <button
+            onClick={() => onNext(inputValue || slot.defaultValue || slot.placeholder || '')}
+            className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast shrink-0"
+            style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
+          >
+            {isLastSlot ? 'Done' : 'Next'}
+          </button>
+        </div>
+      )}
+
+      {/* === NUMBER SLOT === */}
+      {slot.type === 'number' && (
+        <div className="flex items-center" style={{ gap: 6 }}>
+          <input
+            ref={valueInputRef}
+            type="number"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={slot.placeholder || '0'}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onNext(inputValue || slot.defaultValue || '0'); } }}
+            className="flex-1 border border-gray-200 rounded-md bg-white focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+            style={{ padding: '6px 10px', fontSize: 12 }}
+          />
+          <button
+            onClick={() => onNext(inputValue || slot.defaultValue || slot.placeholder || '0')}
+            className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast shrink-0"
+            style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
+          >
+            {isLastSlot ? 'Done' : 'Next'}
+          </button>
+        </div>
+      )}
+
+      {/* === FORMAT SLOT (dropdown with preset options) === */}
+      {slot.type === 'format' && slot.options && (
+        <div>
+          <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8 }}>
+            {slot.options.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => onNext(opt.value)}
+                className="border rounded-md bg-white border-gray-200 text-gray-600 hover:border-[#007a62] hover:bg-[#f0faf7] hover:text-[#007a62] transition-fast"
+                style={{ padding: '5px 10px', fontSize: 11 }}
+              >
+                <span className="font-mono" style={{ fontWeight: 600 }}>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center" style={{ gap: 6 }}>
+            <input
+              ref={valueInputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={slot.defaultValue || 'Custom format...'}
+              onKeyDown={(e) => { if (e.key === 'Enter' && inputValue) { e.preventDefault(); onNext(inputValue); } }}
+              className="flex-1 border border-gray-200 rounded-md bg-white focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+              style={{ padding: '6px 10px', fontSize: 12 }}
+            />
+            <button
+              onClick={() => onNext(inputValue || slot.defaultValue || '')}
+              disabled={!inputValue && !slot.defaultValue}
+              className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast disabled:opacity-40 shrink-0"
+              style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
+            >
+              {isLastSlot ? 'Done' : 'Next'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Live preview */}
+      <div className="bg-white rounded border border-gray-200 font-mono"
+        style={{ padding: '6px 10px', marginTop: 10, fontSize: 10, color: '#555' }}>
+        <span className="text-gray-400" style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Preview:{' '}
+        </span>
+        {getPreview()}
+      </div>
     </div>
   );
 }
@@ -1298,7 +2021,8 @@ function ExpressionValidator({ value, fields }: { value: string; fields: SurveyR
     'pi', 'random', 'indexed-repeat', 'position', 'instance', 'current',
     'jr:choice-name', 'join', 'distance', 'area', 'normalize-space',
     'translate', 'upper-case', 'lower-case', 'starts-with', 'ends-with',
-    'uuid', 'property', 'version', 'decimal-date-time', 'date',
+    'uuid', 'property', 'version', 'decimal-date-time', 'decimal-time',
+    'date', 'date-time', 'boolean-from-string', 'mod',
   ]);
   for (const call of funcCalls) {
     const funcName = call.replace(/\s*\($/, '').toLowerCase();
@@ -1330,7 +2054,7 @@ function ExpressionValidator({ value, fields }: { value: string; fields: SurveyR
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
             stroke={issue.level === 'error' ? '#dc2626' : '#d97706'}
             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            style={{ marginTop: 1, shrinkShrink: 0 }}>
+            style={{ marginTop: 1, flexShrink: 0 }}>
             {issue.level === 'error' ? (
               <><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></>
             ) : (

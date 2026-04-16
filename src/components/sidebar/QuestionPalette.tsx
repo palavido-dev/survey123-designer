@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { questionCategories } from '../../data/questionTypes';
 import { DragItem, QuestionCategory, PlatformSupport } from '../../types/survey';
-import { getIcon, X } from '../../utils/icons';
+import { getIcon, X, ChevronDown, ChevronRight } from '../../utils/icons';
 
 // ============================================================
 // Platform filter type
@@ -57,9 +57,13 @@ function DraggableCard({ item }: { item: DragItem }) {
 function CategoryGroup({
   category,
   platformFilter,
+  isCollapsed,
+  onToggle,
 }: {
   category: QuestionCategory;
   platformFilter: PlatformFilter;
+  isCollapsed: boolean;
+  onToggle: () => void;
 }) {
   // Filter items based on platform
   const filteredItems = category.items.filter((item) => {
@@ -70,17 +74,32 @@ function CategoryGroup({
 
   if (filteredItems.length === 0) return null;
 
+  const CollapseIcon = isCollapsed ? ChevronRight : ChevronDown;
+
   return (
-    <div style={{ marginBottom: 20 }}>
-      <h3 style={{ padding: '0 4px', marginBottom: 8 }}
-        className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-        {category.label}
-      </h3>
-      <div className="grid grid-cols-2" style={{ gap: 6 }}>
-        {filteredItems.map((item) => (
-          <DraggableCard key={item.id} item={item} />
-        ))}
-      </div>
+    <div style={{ marginBottom: isCollapsed ? 12 : 20 }}>
+      <button
+        onClick={onToggle}
+        className="flex items-center w-full text-left hover:text-gray-700 transition-fast"
+        style={{ padding: '0 4px', marginBottom: isCollapsed ? 0 : 8, gap: 4 }}
+      >
+        <CollapseIcon size={12} className="text-gray-400 shrink-0" />
+        <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+          {category.label}
+        </h3>
+        {isCollapsed && (
+          <span className="text-[10px] text-gray-400 font-normal normal-case ml-1">
+            ({filteredItems.length})
+          </span>
+        )}
+      </button>
+      {!isCollapsed && (
+        <div className="grid grid-cols-2" style={{ gap: 6 }}>
+          {filteredItems.map((item) => (
+            <DraggableCard key={item.id} item={item} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -154,6 +173,16 @@ function PlatformToggle({
 export function QuestionPalette() {
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategory = (id: string) => {
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // First filter by search, then by platform (platform filtering is done in CategoryGroup)
   const searchFilteredCategories = searchTerm
@@ -232,6 +261,8 @@ export function QuestionPalette() {
             key={category.id}
             category={category}
             platformFilter={platformFilter}
+            isCollapsed={!searchTerm && collapsedCategories.has(category.id)}
+            onToggle={() => toggleCategory(category.id)}
           />
         ))}
         {visibleCount === 0 && (

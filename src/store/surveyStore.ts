@@ -34,6 +34,9 @@ interface SurveyStore {
   undoStack: SurveyForm[];
   redoStack: SurveyForm[];
 
+  // === Expression Editor Modal ===
+  expressionEditor: { rowId: string; mode: 'relevant' | 'calculation' | 'constraint' } | null;
+
   // === Survey Row Actions ===
   addRow: (type: QuestionType, index?: number, appearance?: string) => void;
   removeRow: (id: string) => void;
@@ -57,6 +60,8 @@ interface SurveyStore {
   setPanelView: (view: PanelView) => void;
   setDragging: (isDragging: boolean) => void;
   toggleGroupCollapse: (id: string) => void;
+  openExpressionEditor: (rowId: string, mode: 'relevant' | 'calculation' | 'constraint') => void;
+  closeExpressionEditor: () => void;
 
   // === History ===
   undo: () => void;
@@ -94,6 +99,7 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   panelView: 'properties',
   isDragging: false,
   collapsedGroups: new Set<string>(),
+  expressionEditor: null,
   undoStack: [],
   redoStack: [],
 
@@ -408,6 +414,8 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   selectRow: (id) => set({ selectedRowId: id }),
   setPanelView: (view) => set({ panelView: view }),
   setDragging: (isDragging) => set({ isDragging }),
+  openExpressionEditor: (rowId, mode) => set({ expressionEditor: { rowId, mode } }),
+  closeExpressionEditor: () => set({ expressionEditor: null }),
   toggleGroupCollapse: (id) => {
     const state = get();
     const next = new Set(state.collapsedGroups);
