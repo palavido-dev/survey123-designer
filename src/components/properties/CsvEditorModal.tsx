@@ -110,6 +110,12 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
   const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
+  // Search & sort
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortCol, setSortCol] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   // Initialize from media file
   useEffect(() => {
     if (!mediaFile) return;
@@ -133,6 +139,47 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
   }, [editingHeader]);
 
   const markDirty = () => { if (!dirty) setDirty(true); };
+
+  // ---- Search & Sort computed rows ----
+  // We maintain a mapping from display index → actual row index so edits go to the right row
+  const displayRows = React.useMemo(() => {
+    // Build indexed rows
+    let indexed = rows.map((row, i) => ({ row, originalIndex: i }));
+
+    // Filter by search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      indexed = indexed.filter(({ row }) =>
+        columns.some((col) => (row[col] || '').toLowerCase().includes(q))
+      );
+    }
+
+    // Sort
+    if (sortCol && columns.includes(sortCol)) {
+      const col = sortCol;
+      const dir = sortDir === 'asc' ? 1 : -1;
+      indexed.sort((a, b) => {
+        const va = (a.row[col] || '').toLowerCase();
+        const vb = (b.row[col] || '').toLowerCase();
+        // Try numeric comparison first
+        const na = Number(va), nb = Number(vb);
+        if (!isNaN(na) && !isNaN(nb)) return (na - nb) * dir;
+        return va < vb ? -dir : va > vb ? dir : 0;
+      });
+    }
+
+    return indexed;
+  }, [rows, columns, searchQuery, sortCol, sortDir]);
+
+  const toggleSort = (colName: string) => {
+    if (sortCol === colName) {
+      if (sortDir === 'asc') setSortDir('desc');
+      else { setSortCol(null); setSortDir('asc'); } // Third click clears sort
+    } else {
+      setSortCol(colName);
+      setSortDir('asc');
+    }
+  };
 
   // ---- Cell editing ----
   const updateCell = (rowIndex: number, colName: string, value: string) => {
@@ -247,17 +294,17 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
         const nextCol = e.shiftKey ? colIdx - 1 : colIdx + 1;
         if (nextCol >= 0 && nextCol < columns.length) {
           setActiveCell({ row: rowIdx, col: nextCol });
-        } else if (!e.shiftKey && nextCol >= columns.length && rowIdx + 1 < rows.length) {
+        } else if (!e.shiftKey && nextCol >= columns.length && rowIdx + 1 < displayRows.length) {
           setActiveCell({ row: rowIdx + 1, col: 0 });
         }
       } else if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (rowIdx + 1 < rows.length) {
+        if (rowIdx + 1 < displayRows.length) {
           setActiveCell({ row: rowIdx + 1, col: colIdx });
         }
       }
     },
-    [columns.length, rows.length]
+    [columns.length, displayRows.length]
   );
 
   // Focus active cell
@@ -362,10 +409,37 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
             </svg>
             Add Column
           </button>
-          <div className="flex-1" />
-          <span className="text-[10px] text-gray-400">
-            Tab to navigate cells • Double-click headers to rename
-          </span>
+          {/* Search */}
+          <div className="flex-1 flex justify-end">
+            <div className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-md px-2 py-0.5" style={{ maxWidth: 220 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search values..."
+                className="flex-1 text-xs text-gray-600 outline-none bg-transparent"
+                style={{ minWidth: 0 }}
+              />
+              {searchQuery && (
+                <>
+                  <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                    {displayRows.length}/{rows.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={10} />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Table */}
@@ -400,9 +474,19 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                     ) : (
                       <div
                         className="flex items-center justify-between px-2.5 py-2 cursor-pointer hover:bg-gray-100 group"
-                        onDoubleClick={() => { setEditingHeader(ci); setHeaderValue(col); }}
+                        onClick={() => toggleSort(col)}
+                        onDoubleClick={(e) => { e.stopPropagation(); setEditingHeader(ci); setHeaderValue(col); }}
                       >
-                        <span className="font-mono text-xs">{col}</span>
+                        <span className="font-mono text-xs flex items-center gap-1">
+                          {col}
+                          {sortCol === col && (
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              {sortDir === 'asc'
+                                ? <polyline points="18 15 12 9 6 15" />
+                                : <polyline points="6 9 12 15 18 9" />}
+                            </svg>
+                          )}
+                        </span>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); removeColumn(ci); }}
@@ -422,24 +506,24 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri} className={`group/row ${ri % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
+              {displayRows.map(({ row, originalIndex }, di) => (
+                <tr key={originalIndex} className={`group/row ${di % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
                   <td
                     className="border border-gray-200 bg-gray-50 text-center text-[10px] text-gray-400 font-mono"
                     style={{ padding: '4px 6px' }}
                   >
-                    {ri + 1}
+                    {originalIndex + 1}
                   </td>
                   {columns.map((col, ci) => (
                     <td key={ci} className="border border-gray-200 p-0">
                       <input
                         type="text"
-                        data-row={ri}
+                        data-row={di}
                         data-col={ci}
                         value={row[col] || ''}
-                        onChange={(e) => updateCell(ri, col, e.target.value)}
-                        onFocus={() => setActiveCell({ row: ri, col: ci })}
-                        onKeyDown={(e) => handleCellKeyDown(e, ri, ci)}
+                        onChange={(e) => updateCell(originalIndex, col, e.target.value)}
+                        onFocus={() => setActiveCell({ row: di, col: ci })}
+                        onKeyDown={(e) => handleCellKeyDown(e, di, ci)}
                         className="w-full bg-transparent text-xs text-gray-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 font-mono"
                         style={{ padding: '6px 10px', border: 'none' }}
                       />
@@ -448,7 +532,7 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                   <td className="border border-gray-200 bg-gray-50 text-center" style={{ padding: '2px 4px' }}>
                     <button
                       type="button"
-                      onClick={() => removeRow(ri)}
+                      onClick={() => removeRow(originalIndex)}
                       className="opacity-0 group-hover/row:opacity-100 text-gray-300 hover:text-red-400 transition-fast p-0.5"
                       title="Delete row"
                     >
@@ -460,9 +544,11 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
             </tbody>
           </table>
 
-          {rows.length === 0 && (
+          {displayRows.length === 0 && (
             <div className="text-center py-12 text-gray-400 text-sm">
-              No data rows. Click "Add Row" to start adding values.
+              {searchQuery
+                ? `No rows match "${searchQuery}"`
+                : 'No data rows. Click "Add Row" to start adding values.'}
             </div>
           )}
         </div>

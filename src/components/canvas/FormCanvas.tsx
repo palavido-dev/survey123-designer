@@ -3,7 +3,7 @@
  * Centered on screen with generous padding throughout
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -110,19 +110,175 @@ function HeaderInlineEdit({
 export function FormCanvas() {
   const { form, selectedRowId, selectRow, collapsedGroups, expressionEditor, csvEditor, updateRow, updateSettings, closeExpressionEditor, closeCsvEditor } = useSurveyStore();
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop-zone' });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const items = form.survey.map((row) => row.id);
   const depths = calculateDepths(form.survey);
   const hiddenSet = calculateHiddenRows(form.survey, collapsedGroups);
 
+  // ---- Question Search ----
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ id: string; name: string; label: string; type: string }[]>([]);
+  const [searchIndex, setSearchIndex] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchIndex(0);
+      return;
+    }
+    const q = searchQuery.toLowerCase();
+    const matches = form.survey
+      .filter((r) => !['end_group', 'end_repeat'].includes(r.type))
+      .filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          (r.label || '').toLowerCase().includes(q) ||
+          r.type.toLowerCase().includes(q)
+      )
+      .map((r) => ({ id: r.id, name: r.name, label: r.label || r.name, type: r.type }));
+    setSearchResults(matches);
+    setSearchIndex(0);
+  }, [searchQuery, form.survey]);
+
+  // Scroll to and select the current search result
+  const jumpToResult = useCallback((index: number) => {
+    const result = searchResults[index];
+    if (!result) return;
+    selectRow(result.id);
+    // Scroll the element into view
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-question-id="${result.id}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }, [searchResults, selectRow]);
+
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      jumpToResult(searchIndex);
+    }
+  }, [searchIndex, searchResults, jumpToResult]);
+
+  // Keyboard shortcut: Ctrl/Cmd+F to open search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setSearchOpen(true);
+        requestAnimationFrame(() => searchInputRef.current?.focus());
+      }
+      if (e.key === 'Escape' && searchOpen) {
+        setSearchOpen(false);
+        setSearchQuery('');
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [searchOpen]);
+
+  const searchNext = () => {
+    if (searchResults.length === 0) return;
+    setSearchIndex((prev) => (prev + 1) % searchResults.length);
+  };
+  const searchPrev = () => {
+    if (searchResults.length === 0) return;
+    setSearchIndex((prev) => (prev - 1 + searchResults.length) % searchResults.length);
+  };
+
   return (
     <div
+      ref={scrollContainerRef}
       className="flex-1 overflow-y-auto canvas-bg flex justify-center"
       onClick={(e) => {
         if (e.target === e.currentTarget) selectRow(null);
       }}
     >
       <div style={{ width: '100%', maxWidth: 720, padding: '32px 24px' }}>
+
+        {/* Question Search Bar */}
+        {searchOpen && (
+          <div className="mb-3 flex items-center gap-2 bg-white border border-gray-200 rounded-lg shadow-sm"
+            style={{ padding: '6px 12px' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.shiftKey ? searchPrev() : searchNext(); }
+                if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
+              }}
+              placeholder="Search questions by name, label, or type..."
+              className="flex-1 text-sm text-gray-700 outline-none bg-transparent"
+              autoFocus
+            />
+            {searchQuery && (
+              <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                {searchResults.length === 0
+                  ? 'No matches'
+                  : `${searchIndex + 1} of ${searchResults.length}`}
+              </span>
+            )}
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={searchPrev}
+                disabled={searchResults.length === 0}
+                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
+                title="Previous (Shift+Enter)"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={searchNext}
+                disabled={searchResults.length === 0}
+                className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
+                title="Next (Enter)"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded transition-fast"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Search toggle button (when search is closed) */}
+        {!searchOpen && items.length > 5 && (
+          <div className="flex justify-end mb-2">
+            <button
+              type="button"
+              onClick={() => { setSearchOpen(true); requestAnimationFrame(() => searchInputRef.current?.focus()); }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-gray-400 hover:text-gray-600 bg-white/80 border border-gray-200/80 rounded-md hover:bg-white hover:border-gray-300 transition-fast"
+              title="Search questions (Ctrl+F)"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              Search
+            </button>
+          </div>
+        )}
         {/* Survey Card */}
         <div className="bg-white rounded-xl shadow-card" style={{ overflow: 'hidden' }}>
           {/* Green header bar — inline editable */}

@@ -211,7 +211,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   if (isEndStructural) {
     const isEndGroup = row.type === 'end_group';
     return (
-      <div ref={setNodeRef} style={style}
+      <div ref={setNodeRef} style={style} data-question-id={row.id}
         className={`rounded-lg ${isEndGroup
           ? 'bg-[#f7f3ff] border border-purple-200'
           : 'bg-[#f0faf7] border border-teal-200'}`}>
@@ -228,7 +228,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
   // Metadata & hidden fields are compact
   if (isMetadata || isHidden) {
     return (
-      <div ref={setNodeRef} style={style}
+      <div ref={setNodeRef} style={style} data-question-id={row.id}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
         className={`flex items-center gap-3 py-4 px-10 rounded-lg text-[12px] cursor-pointer transition-fast
           ${isSelected ? 'bg-[#f0faf7] selected-glow' : 'bg-gray-50 hover:bg-gray-100'}`}>
@@ -268,7 +268,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
     })();
 
     return (
-      <div ref={setNodeRef} style={style}
+      <div ref={setNodeRef} style={style} data-question-id={row.id}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
         className={`rounded-lg cursor-pointer transition-fast
           ${isSelected ? 'selected-glow' : ''}
@@ -337,6 +337,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
     <div
       ref={setNodeRef}
       style={{ ...style, padding: '10px 14px' }}
+      data-question-id={row.id}
       {...attributes}
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
