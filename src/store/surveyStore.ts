@@ -38,6 +38,9 @@ interface SurveyStore {
   // === Expression Editor Modal ===
   expressionEditor: { rowId: string; mode: 'relevant' | 'calculation' | 'constraint' } | null;
 
+  // === CSV Editor Modal ===
+  csvEditor: { rowId: string; fileName: string } | null;
+
   // === Survey Row Actions ===
   addRow: (type: QuestionType, index?: number, appearance?: string) => void;
   removeRow: (id: string) => void;
@@ -56,6 +59,7 @@ interface SurveyStore {
   // === Media File Actions ===
   addMediaFile: (file: MediaFile) => void;
   removeMediaFile: (fileId: string) => void;
+  updateMediaFile: (fileName: string, updates: Partial<MediaFile>) => void;
   linkMediaFileToQuestion: (fileName: string, questionId: string) => void;
   unlinkMediaFileFromQuestion: (fileName: string, questionId: string) => void;
 
@@ -69,6 +73,8 @@ interface SurveyStore {
   toggleGroupCollapse: (id: string) => void;
   openExpressionEditor: (rowId: string, mode: 'relevant' | 'calculation' | 'constraint') => void;
   closeExpressionEditor: () => void;
+  openCsvEditor: (rowId: string, fileName: string) => void;
+  closeCsvEditor: () => void;
 
   // === History ===
   undo: () => void;
@@ -108,6 +114,7 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   isDragging: false,
   collapsedGroups: new Set<string>(),
   expressionEditor: null,
+  csvEditor: null,
   undoStack: [],
   redoStack: [],
 
@@ -407,12 +414,13 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
     // Check for duplicate filename
     const existing = state.form.mediaFiles.find((f) => f.fileName === file.fileName);
     if (existing) {
-      // Merge references
+      // Merge references and update data
       const merged = {
         ...existing,
         columns: file.columns,
         sampleData: file.sampleData,
         totalRows: file.totalRows,
+        rawContent: file.rawContent || existing.rawContent,
         referencedBy: [...new Set([...existing.referencedBy, ...file.referencedBy])],
       };
       set({
@@ -440,6 +448,20 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
         ...state.form,
         mediaFiles: state.form.mediaFiles.filter((f) => f.id !== fileId),
       },
+    });
+  },
+
+  updateMediaFile: (fileName, updates) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        mediaFiles: state.form.mediaFiles.map((f) =>
+          f.fileName === fileName ? { ...f, ...updates } : f
+        ),
+      },
+      redoStack: [],
     });
   },
 
@@ -497,6 +519,8 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   setDragging: (isDragging) => set({ isDragging }),
   openExpressionEditor: (rowId, mode) => set({ expressionEditor: { rowId, mode } }),
   closeExpressionEditor: () => set({ expressionEditor: null }),
+  openCsvEditor: (rowId, fileName) => set({ csvEditor: { rowId, fileName } }),
+  closeCsvEditor: () => set({ csvEditor: null }),
   toggleGroupCollapse: (id) => {
     const state = get();
     const next = new Set(state.collapsedGroups);

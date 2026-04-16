@@ -12,6 +12,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { useSurveyStore } from '../../store/surveyStore';
 import { SortableQuestionRow } from './SortableQuestionRow';
 import { ExpressionBuilder } from '../properties/ExpressionBuilder';
+import { CsvEditorModal } from '../properties/CsvEditorModal';
 import { Plus } from '../../utils/icons';
 import { SurveyRow } from '../../types/survey';
 
@@ -107,7 +108,7 @@ function HeaderInlineEdit({
 }
 
 export function FormCanvas() {
-  const { form, selectedRowId, selectRow, collapsedGroups, expressionEditor, updateRow, updateSettings, closeExpressionEditor } = useSurveyStore();
+  const { form, selectedRowId, selectRow, collapsedGroups, expressionEditor, csvEditor, updateRow, updateSettings, closeExpressionEditor, closeCsvEditor } = useSurveyStore();
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop-zone' });
 
   const items = form.survey.map((row) => row.id);
@@ -216,6 +217,14 @@ export function FormCanvas() {
           />
         );
       })()}
+
+      {/* CSV Editor Modal */}
+      {csvEditor && (
+        <CsvEditorModal
+          fileName={csvEditor.fileName}
+          onClose={closeCsvEditor}
+        />
+      )}
     </div>
   );
 }

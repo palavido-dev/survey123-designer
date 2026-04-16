@@ -148,6 +148,7 @@ export function CsvFilePicker({ value, onChange, questionId }: CsvFilePickerProp
         sampleData: rows,
         totalRows: rows.length,
         referencedBy: [...new Set([...(existing?.referencedBy || []), questionId])],
+        rawContent: text,
       };
 
       // Unlink from old file if changing

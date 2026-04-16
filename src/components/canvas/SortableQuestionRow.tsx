@@ -406,7 +406,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
 // ============================================================
 
 function LogicBadges({ row }: { row: SurveyRow }) {
-  const { form, updateRow, openExpressionEditor } = useSurveyStore();
+  const { form, updateRow, openExpressionEditor, openCsvEditor } = useSurveyStore();
 
   // Build set of all field names for expression validation
   const allFieldNames = React.useMemo(
@@ -513,6 +513,46 @@ function LogicBadges({ row }: { row: SurveyRow }) {
             )}
           </span>
         ))}
+
+        {/* CSV File badge — for select_*_from_file questions */}
+        {['select_one_from_file', 'select_multiple_from_file'].includes(row.type) && (() => {
+          const csvFile = row.fileName
+            ? (form.mediaFiles || []).find((f) => f.fileName === row.fileName)
+            : null;
+          const hasCsv = !!csvFile;
+          return (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (hasCsv) {
+                  openCsvEditor(row.id, row.fileName!);
+                }
+              }}
+              className={`inline-flex items-center gap-1 border rounded-full cursor-pointer select-none transition-fast ${
+                hasCsv
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                  : 'bg-transparent text-gray-300 border-gray-200/60 hover:bg-gray-50 hover:text-gray-400 hover:border-gray-300'
+              }`}
+              style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+              title={hasCsv
+                ? `${csvFile!.fileName} — ${csvFile!.columns.length} cols, ${csvFile!.totalRows} rows — Click to edit`
+                : 'No CSV file attached. Upload one in the properties panel.'
+              }
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              {hasCsv ? csvFile!.fileName : 'CSV File'}
+              {!hasCsv && (
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              )}
+            </span>
+          );
+        })()}
       </div>
 
       {/* Validation error/warning indicators */}

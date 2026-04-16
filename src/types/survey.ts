@@ -256,6 +256,8 @@ export interface MediaFile {
   totalRows: number;
   /** Which question IDs reference this file */
   referencedBy: string[];
+  /** Raw CSV text content — stored for editing and export */
+  rawContent?: string;
 }
 
 // ============================================================
