@@ -306,7 +306,7 @@ export interface QuestionCategory {
 // UI State Types
 // ============================================================
 
-export type PanelView = 'properties' | 'choices' | 'settings' | 'preview';
+export type PanelView = 'properties' | 'choices' | 'settings' | 'media' | 'preview';
 
 export interface EditorState {
   selectedRowId: string | null;

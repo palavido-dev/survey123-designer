@@ -7,6 +7,7 @@ import { useSurveyStore } from '../../store/surveyStore';
 import { QuestionProperties } from './QuestionProperties';
 import { ChoiceListEditor } from './ChoiceListEditor';
 import { FormSettingsEditor } from './FormSettingsEditor';
+import { MediaPanel } from './MediaPanel';
 import { Settings, MousePointerClick } from '../../utils/icons';
 
 export function PropertiesPanel() {
@@ -19,6 +20,20 @@ export function PropertiesPanel() {
   const isSelectType =
     selectedRow &&
     ['select_one', 'select_multiple', 'rank'].includes(selectedRow.type);
+
+  // Count media files for the tab badge
+  const mediaFileCount = (form.mediaFiles || []).length;
+  // Check for missing references (select_from_file with no uploaded CSV)
+  const missingMediaCount = React.useMemo(() => {
+    const uploaded = new Set((form.mediaFiles || []).map((f) => f.fileName));
+    return form.survey.filter(
+      (r) =>
+        ['select_one_from_file', 'select_multiple_from_file'].includes(r.type) &&
+        r.fileName &&
+        !uploaded.has(r.fileName)
+    ).length;
+  }, [form.survey, form.mediaFiles]);
+  const mediaBadge = missingMediaCount > 0 ? 'warn' : mediaFileCount > 0 ? 'count' : undefined;
 
   return (
     <div className="bg-white border-l border-gray-200 flex flex-col h-full"
@@ -39,6 +54,13 @@ export function PropertiesPanel() {
           />
         )}
         <TabButton
+          active={panelView === 'media'}
+          onClick={() => setPanelView('media')}
+          label="Media"
+          icon={<MediaTabIcon size={13} />}
+          badge={mediaBadge}
+        />
+        <TabButton
           active={panelView === 'settings'}
           onClick={() => setPanelView('settings')}
           label="Settings"
@@ -48,7 +70,9 @@ export function PropertiesPanel() {
 
       {/* Panel Content */}
       <div className="flex-1 overflow-y-auto">
-        {panelView === 'settings' ? (
+        {panelView === 'media' ? (
+          <MediaPanel />
+        ) : panelView === 'settings' ? (
           <FormSettingsEditor />
         ) : panelView === 'choices' && selectedRow && isSelectType ? (
           <ChoiceListEditor listName={selectedRow.listName!} />
@@ -76,11 +100,13 @@ function TabButton({
   onClick,
   label,
   icon,
+  badge,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   icon?: React.ReactNode;
+  badge?: 'count' | 'warn';
 }) {
   return (
     <button
@@ -94,6 +120,21 @@ function TabButton({
     >
       {icon}
       {label}
+      {badge === 'warn' && (
+        <span className="w-2 h-2 rounded-full bg-amber-400" style={{ marginLeft: 2 }} />
+      )}
+      {badge === 'count' && (
+        <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ marginLeft: 2 }} />
+      )}
     </button>
+  );
+}
+
+function MediaTabIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
   );
 }
