@@ -10,7 +10,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
 import { X, Copy, ChevronDown, ChevronRight, Eye, Calculator, AlertCircle } from '../../utils/icons';
-import { validateRow, sanitizeFieldName, type RowValidationResult } from '../../utils/validation';
+import { validateRow, validateFieldName, sanitizeFieldName, type RowValidationResult } from '../../utils/validation';
 import { RichTextEditor, sanitizeHtml, containsHtml } from '../properties/RichTextEditor';
 
 interface Props {
@@ -137,6 +137,123 @@ function InlineEdit({
       title="Double-click to edit"
     >
       {value || <span className="text-gray-400 italic">{placeholder || 'Untitled'}</span>}
+    </span>
+  );
+}
+
+// ============================================================
+// Inline Editable Field Name — with rename propagation
+// ============================================================
+
+function InlineFieldNameEdit({
+  row,
+}: {
+  row: SurveyRow;
+}) {
+  const { form, renameField } = useSurveyStore();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(row.name);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing) { setDraft(row.name); setError(null); }
+  }, [row.name, editing]);
+
+  // Live validation as user types
+  useEffect(() => {
+    if (!editing) return;
+    if (draft === row.name) { setError(null); return; }
+    if (!draft.trim()) { setError('Name cannot be empty'); return; }
+
+    // Check for duplicates
+    const isDuplicate = form.survey.some(
+      (r) => r.id !== row.id && r.name === draft.trim()
+    );
+    if (isDuplicate) { setError(`"${draft}" already exists`); return; }
+
+    // Run field name validation
+    const issues = validateFieldName(draft.trim());
+    const firstError = issues.find((i) => i.level === 'error');
+    if (firstError) { setError(firstError.message); return; }
+
+    setError(null);
+  }, [draft, editing, form.survey, row.id, row.name]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    setEditing(false);
+
+    if (!trimmed || trimmed === row.name || error) {
+      setDraft(row.name);
+      return;
+    }
+
+    const result = renameField(row.name, trimmed);
+    // The result includes which rows were updated (for potential toast notification later)
+    if (result.updatedRows.length > 1) {
+      // More than just the renamed field itself — references were updated
+      const refCount = result.updatedRows.length - 1;
+      console.log(`Renamed "${row.name}" → "${trimmed}" and updated ${refCount} reference${refCount > 1 ? 's' : ''}`);
+    }
+  };
+
+  const stopDrag = {
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+  };
+
+  if (editing) {
+    return (
+      <span className="relative inline-flex items-center" {...stopDrag}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value.replace(/\s/g, '_'))}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') { setDraft(row.name); setEditing(false); }
+          }}
+          className={`font-mono bg-white border rounded px-1.5 py-0.5 outline-none text-[10px] ${
+            error
+              ? 'border-red-400 text-red-700 ring-1 ring-red-200'
+              : 'border-[#00856a] text-gray-700 ring-1 ring-[#00856a]/20'
+          }`}
+          style={{ minWidth: 60, maxWidth: 200 }}
+          spellCheck={false}
+        />
+        {error && (
+          <span className="absolute left-0 top-full mt-1 z-50 bg-red-50 border border-red-200 rounded px-2 py-1 text-[9px] text-red-600 whitespace-nowrap shadow-lg">
+            {error}
+          </span>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setEditing(true);
+      }}
+      {...stopDrag}
+      className="font-mono not-italic cursor-text hover:bg-[#e6f5f0] hover:outline hover:outline-1 hover:outline-[#00856a]/30 rounded px-0.5 -mx-0.5 transition-colors"
+      title="Double-click to rename field (updates all references)"
+    >
+      {row.name}
     </span>
   );
 }
@@ -269,7 +386,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
         className={`flex items-center gap-3 py-4 px-10 rounded-lg text-[12px] cursor-pointer transition-fast
           ${isSelected ? 'bg-[#f0faf7] selected-glow' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="text-gray-400 font-mono text-[11px]">{row.type}</span>
-        <span className="text-gray-500">{row.name}</span>
+        <span className="text-gray-500"><InlineFieldNameEdit row={row} /></span>
         {row.calculation && (
           <span className="text-[10px] text-gray-400 font-mono truncate flex-1">= {row.calculation}</span>
         )}
@@ -337,8 +454,8 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
                 placeholder={row.name}
               />
             </span>
-            <span className="text-[10px] text-gray-400 italic font-normal ml-1 font-mono" style={{ opacity: 0.6 }}>
-              {row.name}
+            <span className="text-[10px] text-gray-400 italic font-normal ml-1" style={{ opacity: 0.6 }}>
+              <InlineFieldNameEdit row={row} />
             </span>
             {isCollapsed && (
               <span className="text-[11px] text-gray-400 ml-1">
@@ -405,11 +522,11 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
         </button>
       </div>
 
-      {/* Question type + field name indicator */}
+      {/* Question type + field name indicator (inline editable) */}
       <div className="mb-1.5 pr-16 flex items-center gap-1.5 text-[10px] text-gray-400 italic font-normal" style={{ letterSpacing: '0.01em' }}>
         <span>{formatTypeName(row.type)}</span>
         <span className="text-gray-300">·</span>
-        <span className="font-mono not-italic">{row.name}</span>
+        <InlineFieldNameEdit row={row} />
       </div>
 
       {/* Question label + hint (inline editable) */}

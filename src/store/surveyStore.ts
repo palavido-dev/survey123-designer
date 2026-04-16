@@ -47,6 +47,8 @@ interface SurveyStore {
   updateRow: (id: string, updates: Partial<SurveyRow>) => void;
   moveRow: (fromIndex: number, toIndex: number) => void;
   duplicateRow: (id: string) => void;
+  /** Rename a field and update ALL references across the form (expressions, choice_filter, etc.) */
+  renameField: (oldName: string, newName: string) => { updatedRows: string[] };
 
   // === Choice List Actions ===
   addChoiceList: (listName: string) => void;
@@ -84,6 +86,14 @@ interface SurveyStore {
   // === Form Actions ===
   loadForm: (form: SurveyForm) => void;
   resetForm: () => void;
+}
+
+// ============================================================
+// Utility: Escape special regex characters in a string
+// ============================================================
+
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // ============================================================
@@ -282,6 +292,90 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
       selectedRowId: newRow.id,
       redoStack: [],
     });
+  },
+
+  renameField: (oldName, newName) => {
+    const state = get();
+    if (oldName === newName) return { updatedRows: [] };
+
+    state.pushUndo();
+
+    /**
+     * Replace references to a field name inside XLSForm expressions.
+     * Handles patterns like:
+     *   ${oldName}           → ${newName}
+     *   ${oldName}           in the middle of expressions
+     *   selected(${old},...) → selected(${new},...)
+     *   Bare references in choice_filter: name = ${old}
+     */
+    const replaceInExpression = (expr: string | undefined): string | undefined => {
+      if (!expr) return expr;
+      // Replace ${oldName} references (with optional whitespace)
+      let result = expr.replace(
+        new RegExp(`\\$\\{\\s*${escapeRegExp(oldName)}\\s*\\}`, 'g'),
+        `\${${newName}}`
+      );
+      // Replace bare field references as whole words (not inside ${})
+      // This catches patterns in choice_filter like: region = ${region}
+      // and pulldata expressions
+      result = result.replace(
+        new RegExp(`\\b${escapeRegExp(oldName)}\\b`, 'g'),
+        newName
+      );
+      return result;
+    };
+
+    // Expression fields to check on each row
+    const EXPR_FIELDS: (keyof SurveyRow)[] = [
+      'relevant', 'calculation', 'constraint', 'choice_filter',
+      'required', 'required_message', 'constraint_message',
+      'repeat_count', 'default', 'parameters',
+      'bind::esri:parameters',
+    ];
+
+    const updatedRowIds: string[] = [];
+
+    const newSurvey = state.form.survey.map((row) => {
+      let changed = false;
+      const updates: Partial<SurveyRow> = {};
+
+      // Update the field's own name
+      if (row.name === oldName) {
+        updates.name = newName;
+        changed = true;
+      }
+
+      // Update matching end_group/end_repeat name
+      if ((row.type === 'end_group' || row.type === 'end_repeat') && row.name === oldName) {
+        updates.name = newName;
+        changed = true;
+      }
+
+      // Update expression references in all relevant columns
+      for (const field of EXPR_FIELDS) {
+        const val = row[field as keyof SurveyRow] as string | undefined;
+        if (val && typeof val === 'string' && val.includes(oldName)) {
+          const newVal = replaceInExpression(val);
+          if (newVal !== val) {
+            (updates as any)[field] = newVal;
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        updatedRowIds.push(row.id);
+        return { ...row, ...updates };
+      }
+      return row;
+    });
+
+    set({
+      form: { ...state.form, survey: newSurvey },
+      redoStack: [],
+    });
+
+    return { updatedRows: updatedRowIds };
   },
 
   // ----------------------------------------------------------
