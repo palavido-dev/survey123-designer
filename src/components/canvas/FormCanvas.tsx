@@ -117,7 +117,6 @@ export function FormCanvas() {
   const hiddenSet = calculateHiddenRows(form.survey, collapsedGroups);
 
   // ---- Question Search ----
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ id: string; name: string; label: string; type: string }[]>([]);
   const [searchIndex, setSearchIndex] = useState(0);
@@ -163,22 +162,21 @@ export function FormCanvas() {
     }
   }, [searchIndex, searchResults, jumpToResult]);
 
-  // Keyboard shortcut: Ctrl/Cmd+F to open search
+  // Keyboard shortcut: Ctrl/Cmd+F to focus search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault();
-        setSearchOpen(true);
-        requestAnimationFrame(() => searchInputRef.current?.focus());
+        searchInputRef.current?.focus();
       }
-      if (e.key === 'Escape' && searchOpen) {
-        setSearchOpen(false);
+      if (e.key === 'Escape' && document.activeElement === searchInputRef.current) {
         setSearchQuery('');
+        searchInputRef.current?.blur();
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [searchOpen]);
+  }, []);
 
   const searchNext = () => {
     if (searchResults.length === 0) return;
@@ -197,11 +195,14 @@ export function FormCanvas() {
         if (e.target === e.currentTarget) selectRow(null);
       }}
     >
-      <div style={{ width: '100%', maxWidth: 720, padding: '32px 24px' }}>
+      <div style={{ width: '100%', maxWidth: 720, padding: '40px 24px 32px' }}>
 
-        {/* Question Search Bar — styled to match the question type search in the sidebar */}
-        {searchOpen && (
-          <div className="mb-3 flex items-center gap-2">
+        {/* Question Search Bar — always visible, centered above form */}
+        <div className="mb-5 flex items-center gap-2 max-w-lg mx-auto">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
             <input
               ref={searchInputRef}
               type="text"
@@ -209,74 +210,60 @@ export function FormCanvas() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') { e.shiftKey ? searchPrev() : searchNext(); }
-                if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
+                if (e.key === 'Escape') { setSearchQuery(''); searchInputRef.current?.blur(); }
               }}
               placeholder="Search questions by name, label, or type..."
-              style={{ padding: '8px 12px' }}
-              className="flex-1 text-[13px] bg-gray-50 border border-gray-200 rounded-lg
-                text-gray-700 placeholder-gray-400 transition-fast outline-none
+              style={{ padding: '8px 12px 8px 34px' }}
+              className="w-full text-[13px] bg-white border border-gray-200 rounded-lg
+                text-gray-700 placeholder-gray-400 transition-fast outline-none shadow-sm
                 focus:border-[#00856a] focus:ring-1 focus:ring-[#00856a]/20"
-              autoFocus
             />
-            {searchQuery && (
+          </div>
+          {searchQuery && (
+            <>
               <span className="text-[11px] text-gray-400 whitespace-nowrap">
                 {searchResults.length === 0
                   ? 'No matches'
                   : `${searchIndex + 1} of ${searchResults.length}`}
               </span>
-            )}
-            <div className="flex items-center gap-0.5">
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={searchPrev}
+                  disabled={searchResults.length === 0}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
+                  title="Previous (Shift+Enter)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={searchNext}
+                  disabled={searchResults.length === 0}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
+                  title="Next (Enter)"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+              </div>
               <button
                 type="button"
-                onClick={searchPrev}
-                disabled={searchResults.length === 0}
-                className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
-                title="Previous (Shift+Enter)"
+                onClick={() => setSearchQuery('')}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-fast"
+                title="Clear search"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="18 15 12 9 6 15" />
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
-              <button
-                type="button"
-                onClick={searchNext}
-                disabled={searchResults.length === 0}
-                className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded transition-fast"
-                title="Next (Enter)"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
-              className="p-1.5 text-gray-400 hover:text-gray-600 rounded transition-fast"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-        )}
+            </>
+          )}
+        </div>
 
-        {/* Search toggle button (when search is closed) */}
-        {!searchOpen && items.length > 5 && (
-          <div className="flex justify-end mb-2">
-            <button
-              type="button"
-              onClick={() => { setSearchOpen(true); requestAnimationFrame(() => searchInputRef.current?.focus()); }}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-gray-400 hover:text-gray-600 bg-white/80 border border-gray-200/80 rounded-md hover:bg-white hover:border-gray-300 transition-fast"
-              title="Search questions (Ctrl+F)"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-              </svg>
-              Search
-            </button>
-          </div>
-        )}
         {/* Survey Card */}
         <div className="bg-white rounded-xl shadow-card" style={{ overflow: 'hidden' }}>
           {/* Green header bar — inline editable */}
