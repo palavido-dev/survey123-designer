@@ -195,7 +195,7 @@ export function FormCanvas() {
 
           {/* Footer */}
           <div className="border-t border-gray-100 text-center" style={{ padding: '16px 48px' }}>
-            <p className="text-[11px] text-gray-400">Powered by ArcGIS Survey123</p>
+            <p className="text-[11px] text-gray-400">XLSForm Designer</p>
           </div>
         </div>
       </div>
