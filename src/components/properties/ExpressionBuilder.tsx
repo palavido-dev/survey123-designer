@@ -605,7 +605,9 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     );
   }, [funcWizard, availableFields]);
 
-  // Function wizard: get choices for a value slot that references a field slot
+  // Function wizard: get choices for a value slot that references a field slot.
+  // Handles both standard choice lists AND select_*_from_file questions
+  // whose values live in a CSV MediaFile rather than a choiceList.
   const funcWizardChoices = React.useMemo(() => {
     if (!funcWizard) return [];
     const slot = funcWizard.func.slots?.[funcWizard.slotIndex];
@@ -613,10 +615,41 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     const fieldName = funcWizard.values[slot.choicesFromField];
     if (!fieldName) return [];
     const row = form.survey.find((r) => r.name === fieldName);
-    if (!row?.listName) return [];
-    const list = form.choiceLists.find((cl) => cl.list_name === row.listName);
-    return list?.choices || [];
-  }, [funcWizard, form.survey, form.choiceLists]);
+    if (!row) return [];
+
+    // 1) Standard choice list (select_one / select_multiple)
+    if (row.listName) {
+      const list = form.choiceLists.find((cl) => cl.list_name === row.listName);
+      if (list?.choices?.length) return list.choices;
+    }
+
+    // 2) select_*_from_file — pull values from uploaded CSV's "name" column
+    if (
+      ['select_one_from_file', 'select_multiple_from_file'].includes(row.type) &&
+      row.fileName
+    ) {
+      const csvFileName = row.fileName;
+      const mediaFiles = form.mediaFiles || [];
+      const csv = mediaFiles.find((f) => f.fileName === csvFileName);
+      if (csv && csv.sampleData.length > 0) {
+        // Survey123 expects a "name" column for the choice value
+        // and an optional "label" column for display
+        const hasName = csv.columns.includes('name');
+        const hasLabel = csv.columns.includes('label');
+        if (hasName) {
+          return csv.sampleData
+            .filter((r) => r['name'])
+            .map((r, i) => ({
+              id: `csv_${i}`,
+              name: r['name'],
+              label: hasLabel && r['label'] ? r['label'] : r['name'],
+            }));
+        }
+      }
+    }
+
+    return [];
+  }, [funcWizard, form.survey, form.choiceLists, form.mediaFiles]);
 
   // CSV files available for expression builder
   const csvFiles = React.useMemo(() => form.mediaFiles || [], [form.mediaFiles]);
