@@ -1,82 +1,64 @@
 # Survey123 Designer
 
-A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file. No XLSForm syntax knowledge required.
+A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file — no XLSForm syntax knowledge required.
 
-<!-- Screenshots: run the app locally with `npm run dev` and see it in action -->
+**[Try it live](https://palavido-dev.github.io/survey123-designer/)** — runs entirely in the browser, no install needed.
+
+<!-- Screenshots: see docs/screenshots/ once captured -->
 
 ## Why This Exists
 
-ArcGIS Survey123 is powerful, but authoring surveys still means wrestling with XLSForm spreadsheets or using Esri's hosted designer (which requires an ArcGIS Online/Enterprise account). This project provides a **free, offline-capable** alternative that runs entirely in the browser.
+ArcGIS Survey123 is powerful, but authoring surveys still means wrestling with XLSForm spreadsheets or using Esri's hosted designer (which requires an ArcGIS Online/Enterprise account). This project provides a free, offline-capable alternative that runs entirely in the browser.
 
-Key pain points it solves:
+It solves a few key pain points: visual drag-and-drop instead of typing into Excel rows, a guided expression builder instead of hand-writing XPath, platform-aware question filtering (Field App vs. Web App), and instant preview of how questions will look as you build.
 
-- **No spreadsheet editing**: visual drag-and-drop instead of typing into Excel rows
-- **Expression building**: guided wizard and field picker for `relevant`, `constraint`, and `calculation` expressions instead of hand-writing XPath
-- **Platform awareness**: toggle between Field App and Web App to see only the question types each platform supports
-- **Instant preview**: see how questions will look as you build, with live property editing
-
-## Features
+## Features at a Glance
 
 ### Drag-and-Drop Form Builder
-- 41 question types across 9 categories (text, numeric, selection, location, date/time, media, structure, hidden/calculated, metadata)
-- Appearance variants as separate draggable cards (e.g., Multiline Text, Spinner, Signature, Likert Scale)
-- Reorder questions by dragging within the canvas
-- Group and repeat support with visual nesting
+
+41 question types across 9 categories — text, numeric, selection, location, date/time, media, structure, hidden/calculated, and metadata. Appearance variants show up as separate draggable cards (Multiline Text, Spinner, Signature, Likert Scale, etc.), so you always know what you're getting. Reorder questions by dragging within the canvas, and nest them inside groups and repeats.
 
 ### Visual Expression Builder
-- **Quick-start templates**: common patterns like "Show when equals", "Required if not empty", "Sum two fields" pre-built per expression type
-- **Guided wizard flow**: step-by-step field selection and value input with live preview
-- **Field picker**: browse all form fields with type badges, click to insert `${field}` references
-- **Operator palette**: comparison, logical, arithmetic operators and common values
-- **Function library**: categorized XLSForm functions (math, text, date, select, utility) with descriptions
-- **Choice-aware values**: for select fields, pick from the actual choice list options
-- **Syntax-highlighted preview**: color-coded tokens showing fields, operators, functions, strings, numbers
+
+Build `relevant`, `constraint`, and `calculation` expressions without memorizing XPath syntax. The expression builder provides a field picker (browse all form fields with type badges, click to insert `${field}` references), an operator palette (comparison, logical, arithmetic, and common values), and a categorized function library covering selection, text, math, date, and logic functions — each with a description of what it does.
 
 ### Platform Filter
-Toggle between **All**, **Field App**, and **Web App** to filter the question palette. Web App mode hides field-only types (barcode, geotrace, audio recording, file upload, etc.) so you only see what your target platform supports.
+
+Toggle between **All**, **Field App**, and **Web App** in the sidebar to filter the question palette. Web App mode hides field-only types (barcode, geotrace, audio recording, file upload, etc.) so you only see what your target platform actually supports.
 
 ### Full Property Editor
-- **Basic**: name, label, hint, guidance hint, choice list selection
-- **Validation**: required toggle, required message, constraint expression, constraint message
-- **Logic**: relevant (visibility) expression, calculation, default value, choice filter, read-only toggle
-- **Appearance**: type-appropriate appearance options from the Survey123 spec
-- **Parameters**: free-form parameters (max-pixels, codec, etc.)
-- **Media**: image and audio attachment fields
-- **Body (Esri)**: input masks, file type accept, visibility, style
-- **Bind (Esri)**: field type, field length, field alias, bind parameters, workflow, warnings
+
+Every XLSForm column is supported through collapsible sections in the right-side properties panel: Basic (name, label, hint, guidance hint, choice list), Validation (required, constraint), Logic (relevant, calculation, default, choice filter, read-only), Appearance, Parameters, Media, Body (Esri extensions like input masks and styles), and Bind (Esri field type, length, alias, and workflow settings).
+
+### CSV File Support
+
+For `select_one_from_file` and `select_multiple_from_file` questions, upload CSV files directly in the designer. A built-in CSV editor lets you modify data inline — edit cells, add or remove rows and columns, rename headers, search across all columns, and sort by clicking column headers. CSV badge indicators on question cards give quick access to the editor.
+
+### Media Panel
+
+A dedicated Media tab in the properties panel shows all file and CSV references across your form at a glance, with upload status indicators (green checkmark for uploaded, amber warning for missing). Click any uploaded file to open it in the CSV editor.
+
+### Question Search
+
+A persistent search bar at the top of the form canvas lets you find questions by name, label, or type. Results show a match count with previous/next navigation, and the canvas auto-scrolls to each match. Ctrl+F focuses the search bar from anywhere.
 
 ### Choice List Editor
-- Create and manage choice lists for select_one, select_multiple, and rank questions
-- Add/remove/reorder choices with inline editing
-- Choice lists are shared across questions via list_name references
 
-### XLSX Export
-- Exports a spec-compliant `.xlsx` file with `survey`, `choices`, and `settings` sheets
-- Properly handles `type` column values (e.g., `select_one list_name`, `begin group`)
-- Includes all Esri extension columns when populated
+Create and manage choice lists for select_one, select_multiple, and rank questions. Add, remove, and reorder choices with inline editing. Choice lists are shared across questions via `list_name` references, just like in XLSForm.
+
+### XLSX Import & Export
+
+Open any existing Survey123 `.xlsx` form to continue editing, or start from scratch. Export produces a spec-compliant `.xlsx` file with `survey`, `choices`, and `settings` sheets, including all Esri extension columns when populated.
 
 ### Other
-- Undo/Redo with keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z)
-- New form / Open existing XLSX import
-- Form-level settings (title, form ID, version, style, default language)
-- Duplicate and delete questions from the canvas
 
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Framework | React 19 + TypeScript |
-| Build | Vite 8 |
-| Styling | Tailwind CSS v4 |
-| State | Zustand (with temporal undo/redo) |
-| Drag & Drop | @dnd-kit (core + sortable) |
-| XLSX | SheetJS |
-| Icons | Lucide React |
+Undo/Redo with keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z), inline label editing (double-click any question label on the canvas), question type and field name indicators on each card, collapsible groups, and form-level settings (title, form ID, version, style, default language).
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ and npm
+
+Node.js 18+ and npm.
 
 ### Install & Run
 
@@ -97,6 +79,19 @@ npm run build
 
 Output goes to `dist/`. Deploy to any static hosting (GitHub Pages, Netlify, Vercel, S3, etc.).
 
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 19 + TypeScript |
+| Build | Vite 8 |
+| Styling | Tailwind CSS v4 |
+| State | Zustand (with temporal undo/redo) |
+| Drag & Drop | @dnd-kit (core + sortable) |
+| Rich Text | TipTap |
+| XLSX | SheetJS |
+| Icons | Lucide React |
+
 ## Project Structure
 
 ```
@@ -108,19 +103,24 @@ src/
   store/surveyStore.ts             # Zustand store with undo/redo
   utils/
     icons.tsx                      # Lucide icon resolver
-    xlsxExport.ts                  # XLSX file generation
+    xlsxExport.ts                  # XLSX file generation + import parsing
+    validation.ts                  # Row & expression validation
   components/
     sidebar/QuestionPalette.tsx    # Draggable question cards + platform filter
     canvas/
-      FormCanvas.tsx               # Drop zone + sortable list
-      SortableQuestionRow.tsx      # Individual question row (drag handle, actions)
-      QuestionPreview.tsx          # Live preview rendering per question type
+      FormCanvas.tsx               # Drop zone, sortable list, sticky search
+      SortableQuestionRow.tsx      # Question row with live preview + inline editing
     properties/
-      PropertiesPanel.tsx          # Right panel shell (tabs: Properties | Settings)
+      PropertiesPanel.tsx          # Right panel shell (tabs: Properties | Media | Settings)
       QuestionProperties.tsx       # Dynamic property editor
-      ExpressionBuilder.tsx        # Visual expression builder with wizard
+      ExpressionBuilder.tsx        # Visual expression builder with wizard + functions
       ChoiceListEditor.tsx         # Choice list management
+      CsvFilePicker.tsx            # CSV upload with delimiter auto-detection
+      CsvEditorModal.tsx           # Spreadsheet-style CSV editor
+      MediaPanel.tsx               # Media references overview + upload status
       FormSettingsEditor.tsx       # Form-level settings
+      RichTextEditor.tsx           # TipTap rich text for note fields
+      ParameterBuilder.tsx         # Key-value parameter editor
     toolbar/Toolbar.tsx            # Top bar (New, Open, Export, Undo, Redo)
 ```
 
@@ -128,27 +128,27 @@ src/
 
 | Category | Types |
 |----------|-------|
-| Text Input | Text, Multiline Text, Email, Password* |
-| Numeric | Integer, Spinner*, Calculator*, Decimal, Range/Slider* |
-| Selection | Select One, Dropdown, Autocomplete, Likert Scale, Select Multiple, Rank*, Select from CSV* |
+| Structure | Note, Group, Compact Group, Field List, Table List, Repeat, Compact Repeat, Field List Repeat |
+| Text Input | Text, Multiline Text, Geocode, Predictive Text, No Predictive, Email, Password |
+| Numeric | Integer, Spinner, Calculator, Decimal, Distress Scale, Range/Slider |
+| Selection | Autocomplete, Compact Select, CSV Autocomplete, Dropdown, Likert Scale, Rank, Select Multiple, Select Multiple (CSV), Select One, Select One (CSV) |
 | Location | Geopoint, Geotrace*, Geoshape* |
 | Date & Time | Date, Year Only*, Month-Year*, Time, Date & Time |
 | Media & Files | Photo, Signature, Draw*, Annotate*, Audio*, File Upload*, Barcode/QR* |
-| Structure | Note, Group, Repeat |
 | Hidden & Calculated | Calculate, Hidden |
 | Metadata | Start Time, End Time, Username, Device ID* |
 
-*\* = Field App only (not available in Web App)*
+*\* = Field App only (hidden in Web App mode)*
 
 ## Roadmap
 
-- [ ] Survey123 Connect XLSX round-trip (import, edit, export without data loss)
+- [ ] Survey123 Connect XLSX round-trip (import → edit → export without data loss)
 - [ ] Multi-language support (translation columns)
 - [ ] Cascading select wizard
 - [ ] Form theme / styling options
-- [ ] Publish directly to ArcGIS Online (OAuth login, Portal REST API + Survey123 API)
+- [ ] Publish directly to ArcGIS Online (OAuth integration)
 - [ ] Collaborative editing
-- [ ] Form validation / lint warnings
+- [ ] Full XLSX + media zip export
 
 ## License
 
