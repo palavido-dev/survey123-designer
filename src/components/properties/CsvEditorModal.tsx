@@ -395,11 +395,11 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                           if (e.key === 'Enter') renameColumn(ci, headerValue);
                           if (e.key === 'Escape') setEditingHeader(null);
                         }}
-                        className="w-full bg-white border-2 border-[#007a62] font-mono text-xs px-2 py-1.5 outline-none"
+                        className="w-full bg-white border-2 border-[#007a62] font-mono text-xs px-2.5 py-2 outline-none"
                       />
                     ) : (
                       <div
-                        className="flex items-center justify-between px-2 py-1.5 cursor-pointer hover:bg-gray-100 group"
+                        className="flex items-center justify-between px-2.5 py-2 cursor-pointer hover:bg-gray-100 group"
                         onDoubleClick={() => { setEditingHeader(ci); setHeaderValue(col); }}
                       >
                         <span className="font-mono text-xs">{col}</span>
@@ -423,10 +423,10 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
             </thead>
             <tbody>
               {rows.map((row, ri) => (
-                <tr key={ri} className="group/row">
+                <tr key={ri} className={`group/row ${ri % 2 === 1 ? 'bg-gray-50/60' : 'bg-white'}`}>
                   <td
                     className="border border-gray-200 bg-gray-50 text-center text-[10px] text-gray-400 font-mono"
-                    style={{ padding: '2px 4px' }}
+                    style={{ padding: '4px 6px' }}
                   >
                     {ri + 1}
                   </td>
@@ -441,7 +441,7 @@ export function CsvEditorModal({ fileName, onClose }: Props) {
                         onFocus={() => setActiveCell({ row: ri, col: ci })}
                         onKeyDown={(e) => handleCellKeyDown(e, ri, ci)}
                         className="w-full bg-transparent text-xs text-gray-700 outline-none focus:bg-blue-50 focus:ring-1 focus:ring-blue-300 font-mono"
-                        style={{ padding: '4px 8px', border: 'none' }}
+                        style={{ padding: '6px 10px', border: 'none' }}
                       />
                     </td>
                   ))}
