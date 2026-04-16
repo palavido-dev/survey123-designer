@@ -15,6 +15,7 @@ import {
   FormSettings,
   QuestionType,
   PanelView,
+  MediaFile,
 } from '../types/survey';
 import { createDefaultRow } from '../data/questionTypes';
 
@@ -52,6 +53,12 @@ interface SurveyStore {
   updateChoice: (listName: string, choiceId: string, updates: Partial<ChoiceItem>) => void;
   moveChoice: (listName: string, fromIndex: number, toIndex: number) => void;
 
+  // === Media File Actions ===
+  addMediaFile: (file: MediaFile) => void;
+  removeMediaFile: (fileId: string) => void;
+  linkMediaFileToQuestion: (fileName: string, questionId: string) => void;
+  unlinkMediaFileFromQuestion: (fileName: string, questionId: string) => void;
+
   // === Settings Actions ===
   updateSettings: (updates: Partial<FormSettings>) => void;
 
@@ -87,6 +94,7 @@ const defaultForm: SurveyForm = {
   settings: defaultSettings,
   survey: [],
   choiceLists: [],
+  mediaFiles: [],
 };
 
 // ============================================================
@@ -391,6 +399,79 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
   },
 
   // ----------------------------------------------------------
+  // Media File Actions
+  // ----------------------------------------------------------
+
+  addMediaFile: (file) => {
+    const state = get();
+    // Check for duplicate filename
+    const existing = state.form.mediaFiles.find((f) => f.fileName === file.fileName);
+    if (existing) {
+      // Merge references
+      const merged = {
+        ...existing,
+        columns: file.columns,
+        sampleData: file.sampleData,
+        totalRows: file.totalRows,
+        referencedBy: [...new Set([...existing.referencedBy, ...file.referencedBy])],
+      };
+      set({
+        form: {
+          ...state.form,
+          mediaFiles: state.form.mediaFiles.map((f) =>
+            f.fileName === file.fileName ? merged : f
+          ),
+        },
+      });
+    } else {
+      set({
+        form: {
+          ...state.form,
+          mediaFiles: [...state.form.mediaFiles, file],
+        },
+      });
+    }
+  },
+
+  removeMediaFile: (fileId) => {
+    const state = get();
+    set({
+      form: {
+        ...state.form,
+        mediaFiles: state.form.mediaFiles.filter((f) => f.id !== fileId),
+      },
+    });
+  },
+
+  linkMediaFileToQuestion: (fileName, questionId) => {
+    const state = get();
+    set({
+      form: {
+        ...state.form,
+        mediaFiles: state.form.mediaFiles.map((f) =>
+          f.fileName === fileName
+            ? { ...f, referencedBy: [...new Set([...f.referencedBy, questionId])] }
+            : f
+        ),
+      },
+    });
+  },
+
+  unlinkMediaFileFromQuestion: (fileName, questionId) => {
+    const state = get();
+    set({
+      form: {
+        ...state.form,
+        mediaFiles: state.form.mediaFiles.map((f) =>
+          f.fileName === fileName
+            ? { ...f, referencedBy: f.referencedBy.filter((id) => id !== questionId) }
+            : f
+        ),
+      },
+    });
+  },
+
+  // ----------------------------------------------------------
   // Settings Actions
   // ----------------------------------------------------------
 
@@ -472,7 +553,7 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
 
   loadForm: (form) => {
     set({
-      form,
+      form: { ...form, mediaFiles: form.mediaFiles || [] },
       selectedRowId: null,
       undoStack: [],
       redoStack: [],
@@ -481,7 +562,7 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
 
   resetForm: () => {
     set({
-      form: { ...defaultForm, survey: [], choiceLists: [] },
+      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [] },
       selectedRowId: null,
       undoStack: [],
       redoStack: [],

@@ -240,6 +240,25 @@ export interface FormSettings {
 }
 
 // ============================================================
+// Media Files (CSV files for select_from_file, pulldata, etc.)
+// ============================================================
+
+export interface MediaFile {
+  /** Unique ID */
+  id: string;
+  /** Filename (e.g. "species.csv") */
+  fileName: string;
+  /** Column names from the CSV header row */
+  columns: string[];
+  /** First N rows of data for value picking (max 200 rows stored) */
+  sampleData: Record<string, string>[];
+  /** Total row count in the original file */
+  totalRows: number;
+  /** Which question IDs reference this file */
+  referencedBy: string[];
+}
+
+// ============================================================
 // Complete Form Model
 // ============================================================
 
@@ -247,6 +266,7 @@ export interface SurveyForm {
   settings: FormSettings;
   survey: SurveyRow[];
   choiceLists: ChoiceList[];
+  mediaFiles: MediaFile[];
 }
 
 // ============================================================

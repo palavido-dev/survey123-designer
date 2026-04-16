@@ -13,6 +13,7 @@ import { ChevronDown } from '../../utils/icons';
 import { ExpressionBuilder } from './ExpressionBuilder';
 import { ParameterBuilder } from './ParameterBuilder';
 import { RichTextEditor, containsHtml } from './RichTextEditor';
+import { CsvFilePicker } from './CsvFilePicker';
 
 interface Props {
   row: SurveyRow;
@@ -249,12 +250,10 @@ export function QuestionProperties({ row }: Props) {
         )}
 
         {isSelectFromFile && (
-          <TextField
-            label="Source File"
+          <CsvFilePicker
             value={row.fileName || ''}
             onChange={(v) => update('fileName', v)}
-            placeholder="data.csv"
-            mono
+            questionId={row.id}
           />
         )}
 

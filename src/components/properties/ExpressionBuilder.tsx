@@ -65,7 +65,7 @@ const COMMON_VALUES: OperatorItem[] = [
 // Function Slot System — guided function insertion
 // ============================================================
 
-type SlotType = 'field' | 'value' | 'number' | 'text' | 'format';
+type SlotType = 'field' | 'value' | 'number' | 'text' | 'format' | 'csv_file' | 'csv_column';
 
 interface FunctionSlot {
   type: SlotType;
@@ -75,6 +75,8 @@ interface FunctionSlot {
   fieldFilter?: 'select' | 'numeric' | 'text' | 'date' | 'any';
   /** For value slots: derive choices from a previous field slot by index */
   choicesFromField?: number;
+  /** For csv_column slots: which previous slot index has the CSV filename */
+  csvFileSlotIndex?: number;
   /** Preset options for text/format slots */
   options?: { label: string; value: string }[];
   /** Default value if user skips or for optional params */
@@ -308,9 +310,9 @@ const FUNCTIONS: FunctionTemplate[] = [
     description: 'Look up value from CSV',
     category: 'logic',
     slots: [
-      { type: 'text', label: 'CSV filename (without .csv)', placeholder: 'my_data' },
-      { type: 'text', label: 'Return column name', placeholder: 'result_column' },
-      { type: 'text', label: 'Lookup column name', placeholder: 'key_column' },
+      { type: 'csv_file', label: 'Which CSV file?', placeholder: 'my_data' },
+      { type: 'csv_column', label: 'Return which column?', csvFileSlotIndex: 0, placeholder: 'result_column' },
+      { type: 'csv_column', label: 'Lookup by which column?', csvFileSlotIndex: 0, placeholder: 'key_column' },
       { type: 'field', label: 'Lookup value field', fieldFilter: 'any' },
     ],
     build: (v) => `pulldata('${v[0]}', '${v[1]}', '${v[2]}', \${${v[3]}})`,
@@ -615,6 +617,9 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     const list = form.choiceLists.find((cl) => cl.list_name === row.listName);
     return list?.choices || [];
   }, [funcWizard, form.survey, form.choiceLists]);
+
+  // CSV files available for expression builder
+  const csvFiles = React.useMemo(() => form.mediaFiles || [], [form.mediaFiles]);
 
   const relevantFunctions = FUNCTIONS.filter((f) => {
     if (funcCategory !== 'all') return f.category === funcCategory;
@@ -1350,6 +1355,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                         funcWizard={funcWizard}
                         funcWizardFields={funcWizardFields}
                         funcWizardChoices={funcWizardChoices}
+                        csvFiles={csvFiles}
                         onNext={funcWizardNext}
                         onBack={funcWizardBack}
                         onSkip={funcWizardSkip}
@@ -1653,6 +1659,7 @@ function FuncWizardPanel({
   funcWizard,
   funcWizardFields,
   funcWizardChoices,
+  csvFiles,
   onNext,
   onBack,
   onSkip,
@@ -1663,6 +1670,7 @@ function FuncWizardPanel({
   funcWizard: FuncWizardState;
   funcWizardFields: SurveyRow[];
   funcWizardChoices: { id: string; name: string; label: string }[];
+  csvFiles: { id: string; fileName: string; columns: string[]; totalRows: number }[];
   onNext: (value: string) => void;
   onBack: () => void;
   onSkip: () => void;
@@ -1674,6 +1682,21 @@ function FuncWizardPanel({
   const slot = funcWizard.func.slots![funcWizard.slotIndex];
   const totalSlots = funcWizard.func.slots!.length;
   const isLastSlot = funcWizard.slotIndex === totalSlots - 1;
+
+  // For csv_column slots, find the columns from the selected CSV file
+  const wizardCsvFileName = slot.type === 'csv_column' && slot.csvFileSlotIndex !== undefined
+    ? funcWizard.values[slot.csvFileSlotIndex] || ''
+    : '';
+  const csvColumnsForSlot = React.useMemo(() => {
+    if (slot.type !== 'csv_column' || !wizardCsvFileName) return [];
+    // Match by filename (with or without .csv extension)
+    const csvFile = csvFiles.find((f) =>
+      f.fileName.replace(/\.csv$/i, '') === wizardCsvFileName ||
+      f.fileName === wizardCsvFileName ||
+      f.fileName === wizardCsvFileName + '.csv'
+    );
+    return csvFile?.columns || [];
+  }, [slot.type, wizardCsvFileName, csvFiles]);
 
   // Reset input value when slot changes
   React.useEffect(() => {
@@ -1947,6 +1970,104 @@ function FuncWizardPanel({
             <button
               onClick={() => onNext(inputValue || slot.defaultValue || '')}
               disabled={!inputValue && !slot.defaultValue}
+              className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast disabled:opacity-40 shrink-0"
+              style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
+            >
+              {isLastSlot ? 'Done' : 'Next'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* === CSV FILE SLOT (pick from uploaded CSVs or type name) === */}
+      {slot.type === 'csv_file' && (
+        <div>
+          {csvFiles.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Uploaded CSV Files
+              </p>
+              <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 6 }}>
+                {csvFiles.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => onNext(f.fileName.replace(/\.csv$/i, ''))}
+                    className="border rounded-md bg-white border-gray-200 text-gray-600 hover:border-[#007a62] hover:bg-[#f0faf7] hover:text-[#007a62] transition-fast"
+                    style={{ padding: '4px 10px', fontSize: 11 }}
+                  >
+                    <span className="font-mono" style={{ fontWeight: 600 }}>{f.fileName.replace(/\.csv$/i, '')}</span>
+                    <span className="text-gray-400 ml-1.5" style={{ fontSize: 9 }}>
+                      {f.columns.length} cols
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex items-center" style={{ gap: 6 }}>
+            <input
+              ref={valueInputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={slot.placeholder || 'CSV filename (without .csv)'}
+              onKeyDown={(e) => { if (e.key === 'Enter' && inputValue) { e.preventDefault(); onNext(inputValue); } }}
+              className="flex-1 border border-gray-200 rounded-md bg-white focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+              style={{ padding: '6px 10px', fontSize: 12 }}
+            />
+            <button
+              onClick={() => onNext(inputValue || slot.placeholder || '')}
+              disabled={!inputValue && !slot.placeholder}
+              className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast disabled:opacity-40 shrink-0"
+              style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
+            >
+              Next
+            </button>
+          </div>
+          {csvFiles.length === 0 && (
+            <p className="text-gray-400" style={{ fontSize: 10, marginTop: 6 }}>
+              Tip: Upload CSV files on select_from_file questions to get column autocompletion here.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* === CSV COLUMN SLOT (pick from columns of selected CSV) === */}
+      {slot.type === 'csv_column' && (
+        <div>
+          {csvColumnsForSlot.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <p className="text-gray-400" style={{ fontSize: 10, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Columns in {wizardCsvFileName || 'CSV'}
+              </p>
+              <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 6 }}>
+                {csvColumnsForSlot.map((col) => (
+                  <button
+                    key={col}
+                    onClick={() => onNext(col)}
+                    className="border rounded-md bg-white border-gray-200 text-gray-600 hover:border-[#007a62] hover:bg-[#f0faf7] hover:text-[#007a62] transition-fast"
+                    style={{ padding: '4px 10px', fontSize: 11 }}
+                  >
+                    <span className="font-mono" style={{ fontWeight: 600 }}>{col}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex items-center" style={{ gap: 6 }}>
+            <input
+              ref={valueInputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={slot.placeholder || 'Column name'}
+              onKeyDown={(e) => { if (e.key === 'Enter' && inputValue) { e.preventDefault(); onNext(inputValue); } }}
+              className="flex-1 border border-gray-200 rounded-md bg-white focus:border-[#00856a] transition-fast placeholder-gray-300 font-mono"
+              style={{ padding: '6px 10px', fontSize: 12 }}
+            />
+            <button
+              onClick={() => onNext(inputValue || slot.placeholder || '')}
+              disabled={!inputValue && !slot.placeholder}
               className="bg-[#007a62] text-white rounded-md hover:bg-[#006652] transition-fast disabled:opacity-40 shrink-0"
               style={{ padding: '6px 12px', fontSize: 11, fontWeight: 600 }}
             >
