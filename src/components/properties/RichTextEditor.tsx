@@ -358,14 +358,26 @@ export function RichTextEditor({
 function cleanHtmlForSurvey123(html: string): string {
   if (!html || html === '<p></p>') return '';
 
-  // If content is just a single paragraph, unwrap it
-  const singleParagraph = html.match(/^<p(?:\s[^>]*)?>(.+?)<\/p>$/s);
-  if (singleParagraph) {
-    return singleParagraph[1];
+  // Convert TipTap's <p style="text-align: X"> to Survey123-compatible wrappers
+  // This must happen BEFORE unwrapping single paragraphs
+  let result = html
+    .replace(/<p style="text-align: center">(.*?)<\/p>/gs, '<center>$1</center>')
+    .replace(/<p style="text-align: right">(.*?)<\/p>/gs, '<div style="text-align: right">$1</div>')
+    .replace(/<p style="text-align: left">(.*?)<\/p>/gs, '$1');
+
+  // If content is just a single plain paragraph (no attributes), unwrap it
+  const singlePlainParagraph = result.match(/^<p>(.+?)<\/p>$/s);
+  if (singlePlainParagraph) {
+    return singlePlainParagraph[1];
   }
 
-  // Convert <p> to line breaks for multi-paragraph content
-  return html
+  // If the conversion already handled everything (no <p> tags left), return as-is
+  if (!result.includes('<p>') && !result.includes('<p ')) {
+    return result;
+  }
+
+  // Convert remaining <p> to line breaks for multi-paragraph content
+  return result
     .replace(/<p>/g, '')
     .replace(/<\/p>/g, '<br/>')
     .replace(/<br\/>$/, '') // Remove trailing break
