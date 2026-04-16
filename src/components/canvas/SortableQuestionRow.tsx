@@ -9,7 +9,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
-import { X, Copy, ChevronDown, ChevronRight } from '../../utils/icons';
+import { X, Copy, ChevronDown, ChevronRight, Eye, Calculator, AlertCircle } from '../../utils/icons';
 
 interface Props {
   row: SurveyRow;
@@ -287,6 +287,64 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
 
       {/* Live input preview */}
       <QuestionWidget row={row} />
+
+      {/* Logic indicators */}
+      <LogicBadges row={row} />
+    </div>
+  );
+}
+
+// ============================================================
+// Shared input class
+// ============================================================
+
+// ============================================================
+// Logic Indicator Badges — subtle pills showing conditions/calculations
+// ============================================================
+
+function LogicBadges({ row }: { row: SurveyRow }) {
+  const badges: { icon: React.ReactNode; label: string; color: string; tooltip: string }[] = [];
+
+  if (row.relevant) {
+    badges.push({
+      icon: <Eye size={10} />,
+      label: 'Visibility',
+      color: 'bg-blue-50 text-blue-500 border-blue-200',
+      tooltip: row.relevant,
+    });
+  }
+  if (row.calculation) {
+    badges.push({
+      icon: <Calculator size={10} />,
+      label: 'Calculated',
+      color: 'bg-amber-50 text-amber-600 border-amber-200',
+      tooltip: row.calculation,
+    });
+  }
+  if (row.constraint) {
+    badges.push({
+      icon: <AlertCircle size={10} />,
+      label: 'Constraint',
+      color: 'bg-orange-50 text-orange-500 border-orange-200',
+      tooltip: row.constraint,
+    });
+  }
+
+  if (badges.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" style={{ marginTop: 8 }}>
+      {badges.map((b, i) => (
+        <span
+          key={i}
+          className={`inline-flex items-center gap-1 border rounded-full ${b.color}`}
+          style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+          title={b.tooltip}
+        >
+          {b.icon}
+          {b.label}
+        </span>
+      ))}
     </div>
   );
 }
