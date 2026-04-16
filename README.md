@@ -4,7 +4,14 @@ A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSF
 
 **[Try it live](https://palavido-dev.github.io/survey123-designer/)** — runs entirely in the browser, no install needed.
 
-<!-- Screenshots: see docs/screenshots/ once captured -->
+![Main Overview](docs/screenshots/01-main-overview.png)
+*Three-column layout: question palette (left), form canvas (center), properties panel (right)*
+
+![Properties Panel](docs/screenshots/02-properties-panel.png)
+*Selecting a question reveals its full property editor with collapsible sections*
+
+![Expression Builder](docs/screenshots/03-expression-builder.png)
+*Visual expression builder with field picker, operators, and function library*
 
 ## Why This Exists
 
