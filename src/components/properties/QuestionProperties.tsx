@@ -185,10 +185,10 @@ export function QuestionProperties({ row }: Props) {
     <div>
       {/* Question type badge */}
       <div className="bg-[#f0faf7] border-b border-gray-100"
-        style={{ padding: '12px 16px' }}>
+        style={{ padding: '10px 20px' }}>
         <div className="flex items-center" style={{ gap: 8 }}>
           <span className="inline-block bg-white rounded border border-[#007a62]/20"
-            style={{ padding: '2px 8px', fontSize: 11, fontWeight: 600, color: '#007a62' }}>
+            style={{ padding: '3px 10px', fontSize: 11, fontWeight: 600, color: '#007a62' }}>
             {row.type.replace(/_/g, ' ')}
           </span>
           <span className="text-gray-500 truncate" style={{ fontSize: 12 }}>{row.name}</span>

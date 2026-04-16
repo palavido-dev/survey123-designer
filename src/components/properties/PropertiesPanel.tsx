@@ -39,8 +39,8 @@ export function PropertiesPanel() {
     <div className="bg-white border-l border-gray-200 flex flex-col h-full"
       style={{ width: 320 }}>
       {/* Tab bar */}
-      <div className="flex border-b border-gray-200 bg-[#fafafa]"
-        style={{ padding: '0 4px' }}>
+      <div className="flex border-b border-gray-200 bg-[#fafafa] shrink-0"
+        style={{ padding: '0 6px' }}>
         <TabButton
           active={panelView === 'properties'}
           onClick={() => setPanelView('properties')}
@@ -57,14 +57,13 @@ export function PropertiesPanel() {
           active={panelView === 'media'}
           onClick={() => setPanelView('media')}
           label="Media"
-          icon={<MediaTabIcon size={13} />}
+          icon={<MediaTabIcon size={12} />}
           badge={mediaBadge}
         />
         <TabButton
           active={panelView === 'settings'}
           onClick={() => setPanelView('settings')}
-          label="Settings"
-          icon={<Settings size={13} />}
+          icon={<Settings size={15} />}
         />
       </div>
 
@@ -104,27 +103,28 @@ function TabButton({
 }: {
   active: boolean;
   onClick: () => void;
-  label: string;
+  label?: string;
   icon?: React.ReactNode;
   badge?: 'count' | 'warn';
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center transition-fast relative
+      title={label || ''}
+      className={`flex items-center transition-fast relative whitespace-nowrap
         ${active
           ? 'text-[#007a62] bg-white border-b-2 border-[#007a62]'
           : 'text-gray-400 hover:text-gray-600'
         }`}
-      style={{ padding: '10px 16px', gap: 6, fontSize: 13, fontWeight: 600 }}
+      style={{ padding: label ? '10px 12px' : '10px 10px', gap: 5, fontSize: 12, fontWeight: 600 }}
     >
       {icon}
       {label}
       {badge === 'warn' && (
-        <span className="w-2 h-2 rounded-full bg-amber-400" style={{ marginLeft: 2 }} />
+        <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" style={{ marginLeft: 1 }} />
       )}
       {badge === 'count' && (
-        <span className="w-2 h-2 rounded-full bg-emerald-400" style={{ marginLeft: 2 }} />
+        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" style={{ marginLeft: 1 }} />
       )}
     </button>
   );
