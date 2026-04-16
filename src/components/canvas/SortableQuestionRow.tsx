@@ -111,6 +111,9 @@ function InlineEdit({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
+          // Stop ALL keyboard events from reaching dnd-kit's KeyboardSensor
+          // (which intercepts Space/Enter to initiate drag)
+          e.stopPropagation();
           if (e.key === 'Enter') commit();
           if (e.key === 'Escape') { setDraft(value); setEditing(false); }
         }}
