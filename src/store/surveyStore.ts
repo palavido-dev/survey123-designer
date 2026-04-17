@@ -337,9 +337,55 @@ export const useSurveyStore = create<SurveyStore>()(
     const state = get();
     state.pushUndo();
 
-    const newSurvey = [...state.form.survey];
-    const [moved] = newSurvey.splice(fromIndex, 1);
-    newSurvey.splice(toIndex, 0, moved);
+    const survey = state.form.survey;
+    const movedRow = survey[fromIndex];
+
+    // Determine the block of rows to move
+    // For begin_group/begin_repeat, move the entire block (begin -> end inclusive)
+    let blockStart = fromIndex;
+    let blockEnd = fromIndex;
+
+    if (movedRow.type === 'begin_group' || movedRow.type === 'begin_repeat') {
+      const endType = movedRow.type === 'begin_group' ? 'end_group' : 'end_repeat';
+      let depth = 0;
+      for (let i = fromIndex; i < survey.length; i++) {
+        if (survey[i].type === movedRow.type) depth++;
+        if (survey[i].type === endType) depth--;
+        if (depth === 0) {
+          blockEnd = i;
+          break;
+        }
+      }
+    }
+
+    // Don't allow dropping a group inside itself
+    if (toIndex > blockStart && toIndex <= blockEnd) {
+      return;
+    }
+
+    // Determine effective insertion point
+    let insertAt = toIndex;
+    const targetRow = survey[toIndex];
+
+    // If dropping onto a begin_group/begin_repeat, insert inside it (after the header)
+    if (targetRow && (targetRow.type === 'begin_group' || targetRow.type === 'begin_repeat')) {
+      // Only nest if the target is not the row we're moving
+      if (toIndex !== fromIndex) {
+        insertAt = toIndex + 1; // Insert right after the group header
+      }
+    }
+
+    // Extract the block
+    const newSurvey = [...survey];
+    const block = newSurvey.splice(blockStart, blockEnd - blockStart + 1);
+
+    // Adjust insertion index after extraction
+    if (insertAt > blockStart) {
+      insertAt -= block.length;
+    }
+
+    // Insert the block at the new position
+    newSurvey.splice(insertAt, 0, ...block);
 
     set({
       form: { ...state.form, survey: newSurvey },
@@ -355,20 +401,51 @@ export const useSurveyStore = create<SurveyStore>()(
     if (idx === -1) return;
 
     const original = state.form.survey[idx];
-    const newRow: SurveyRow = {
-      ...original,
-      id: uuid(),
-      name: `${original.name}_copy`,
-    };
 
-    const newSurvey = [...state.form.survey];
-    newSurvey.splice(idx + 1, 0, newRow);
+    // For groups/repeats, duplicate the entire block
+    if (original.type === 'begin_group' || original.type === 'begin_repeat') {
+      const endType = original.type === 'begin_group' ? 'end_group' : 'end_repeat';
+      let depth = 0;
+      let blockEnd = idx;
+      for (let i = idx; i < state.form.survey.length; i++) {
+        if (state.form.survey[i].type === original.type) depth++;
+        if (state.form.survey[i].type === endType) depth--;
+        if (depth === 0) { blockEnd = i; break; }
+      }
 
-    set({
-      form: { ...state.form, survey: newSurvey },
-      selectedRowId: newRow.id,
-      redoStack: [],
-    });
+      // Build a name mapping for all rows in the block so internal refs stay consistent
+      const nameMap = new Map<string, string>();
+      const block = state.form.survey.slice(idx, blockEnd + 1);
+      const duplicated = block.map((r) => {
+        const newName = r.name ? `${r.name}_copy` : r.name;
+        if (r.name) nameMap.set(r.name, newName);
+        return { ...r, id: uuid(), name: newName };
+      });
+
+      const newSurvey = [...state.form.survey];
+      newSurvey.splice(blockEnd + 1, 0, ...duplicated);
+
+      set({
+        form: { ...state.form, survey: newSurvey },
+        selectedRowId: duplicated[0].id,
+        redoStack: [],
+      });
+    } else {
+      const newRow: SurveyRow = {
+        ...original,
+        id: uuid(),
+        name: `${original.name}_copy`,
+      };
+
+      const newSurvey = [...state.form.survey];
+      newSurvey.splice(idx + 1, 0, newRow);
+
+      set({
+        form: { ...state.form, survey: newSurvey },
+        selectedRowId: newRow.id,
+        redoStack: [],
+      });
+    }
   },
 
   renameField: (oldName, newName) => {

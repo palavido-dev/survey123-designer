@@ -201,10 +201,15 @@ export default function App() {
         // Dropped on empty canvas or at the end
         addRow(questionType, undefined, appearance);
       } else {
-        // Dropped on/near an existing row — insert after it
         const overIndex = form.survey.findIndex((r) => r.id === over.id);
         if (overIndex !== -1) {
-          addRow(questionType, overIndex + 1, appearance);
+          const targetRow = form.survey[overIndex];
+          // If dropping onto a group/repeat header, insert inside it (after the header)
+          if (targetRow.type === 'begin_group' || targetRow.type === 'begin_repeat') {
+            addRow(questionType, overIndex + 1, appearance);
+          } else {
+            addRow(questionType, overIndex + 1, appearance);
+          }
         } else {
           addRow(questionType, undefined, appearance);
         }
