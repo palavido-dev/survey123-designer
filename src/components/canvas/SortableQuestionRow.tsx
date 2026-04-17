@@ -448,11 +448,15 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
               {isBeginGroup ? 'Group' : 'Repeat'}
             </span>
             <span className="text-[14px] text-gray-700 font-medium">
-              <InlineEdit
-                value={row.label || ''}
-                onChange={(v) => updateRow(row.id, { label: v })}
-                placeholder={row.name}
-              />
+              {containsHtml(row.label) ? (
+                <HtmlLabel html={row.label} />
+              ) : (
+                <InlineEdit
+                  value={row.label || ''}
+                  onChange={(v) => updateRow(row.id, { label: v })}
+                  placeholder={row.name}
+                />
+              )}
             </span>
             <span className="text-[10px] text-gray-400 italic font-normal ml-1" style={{ opacity: 0.6 }}>
               <InlineFieldNameEdit row={row} />
