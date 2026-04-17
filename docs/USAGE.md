@@ -10,6 +10,8 @@ The interface is a three-column layout:
 - **Center canvas** — the live form preview. Shows how questions will render, with inline editing support. A sticky search bar at the top lets you find questions by name, label, or type.
 - **Right panel** — tabbed properties panel. Switches between Properties (per-question settings), Choices (for select types), Media (file references overview), and Settings (form-level config).
 
+The top toolbar provides mode switching (Form / Report), file operations (New, Open, Export), and Undo/Redo controls.
+
 ## Building a Form
 
 ### Adding Questions
@@ -40,6 +42,10 @@ Group variants include Compact Group, Field List, Table List, Compact Repeat, an
 ### Inline Label Editing
 
 Double-click any question label on the canvas to edit it directly. For Note-type questions, double-clicking opens a rich text editor (TipTap) with bold, italic, underline, links, headings, and bullet list support.
+
+### Inline Field Name Editing
+
+Field names (the XLSForm `name` column) can be edited directly in the properties panel. The editor validates in real time for illegal characters, duplicate names, reserved words, and length limits. A "Fix" button appears for auto-correctable issues (e.g., replacing spaces with underscores).
 
 ## Properties Panel
 
@@ -152,6 +158,61 @@ The sticky search bar at the top of the canvas searches across question names, l
 - Ctrl+F focuses the search bar from anywhere
 - Escape clears the search
 
+## Auto-Save & Recovery
+
+### How It Works
+
+The designer automatically saves your form to the browser's IndexedDB storage whenever you make changes. Only the form data and last-saved timestamp are persisted — UI state like selection, undo/redo history, and drag state are not saved.
+
+### Recovery Banner
+
+If the page is refreshed or the browser crashes while you have unsaved work, a recovery banner appears at the top of the page on next load. The banner shows:
+
+- The recovered form's title
+- The number of questions
+- How long ago it was saved (e.g., "saved 5m ago")
+
+You can choose to **Keep working** (dismiss the banner and continue editing) or **Discard & start fresh** (clear the recovered form and start with a blank canvas).
+
+### Auto-Save Indicator
+
+A subtle indicator in the bottom-right corner shows "Saved just now" or "Saved Xm ago" to confirm that your work is being persisted. This only appears when there are questions in the form.
+
+## Report Template Builder
+
+The Report Template Builder lets you create Survey123 Feature Report templates — `.docx` files that use `${fieldname}` tokens to generate per-feature reports from submitted survey data.
+
+### Switching to Report Mode
+
+Click the **Report** toggle in the top toolbar to switch from Form mode to Report mode. The three-column layout adapts:
+
+- **Left panel** — field palette listing all form fields organized by type (Text Fields, Date/Time Fields, Select Fields, etc.) with field count badges
+- **Center canvas** — a rich text editor (TipTap) for composing the report template with a formatting toolbar
+- **Right panel** — Template Actions (import/export `.docx`) and a Syntax Reference showing all supported token patterns
+
+### Inserting Fields
+
+Click any field in the left palette to insert its `${fieldname}` token at the current cursor position in the editor. Fields are color-coded by type and show both the label and field name.
+
+### Syntax Reference
+
+The right panel includes a quick-reference for Survey123 report template syntax:
+
+- **Field value** — `${fieldname}` inserts the submitted value
+- **With filter** — `${field | filter}` applies a filter to the value
+- **Conditional** — `${if field | selected:"val"}...${/}` for conditional content
+- **Repeat** — `${#repeatname}...${/}` for repeating sections
+- **Image** — `${$image | size:460:0}` for photo attachments
+- **File** — `${$file | size:460:0}` for file attachments
+- **Date** — `${date | format:"MM/DD/YYYY"}` for date formatting
+- **Report date** — `${$date}` for the report generation date
+- **Multiline** — `${field | appearance:"multiline"}` for multiline text
+
+### Importing & Exporting
+
+- **Import .docx** — load an existing Word document as a starting point for your template
+- **Export .docx** — download the current template as a `.docx` file ready for use with Survey123
+
 ## XLSX Import & Export
 
 ### Opening an Existing Form
@@ -167,6 +228,18 @@ Click **Export XLSX** to download a spec-compliant `.xlsx` file. The export incl
 - `settings` sheet with form_title, form_id, version, style, and default_language
 
 The `type` column correctly formats composite values like `select_one list_name` and `begin group`.
+
+### Survey123 Connect-Style Features
+
+Exported Excel files include several features that match the output of Survey123 Connect:
+
+**Data Validation Dropdowns** — the `type`, `appearance`, `required`, `readonly`, `bind::type`, `bind::esri:fieldType`, and `bind::esri:fieldLength` columns have dropdown data validation. The appearance dropdown is type-aware: it dynamically shows only the appearances valid for the question type in that row (e.g., `multiline` for text, `spinner` for integer).
+
+**Row Shading** — group rows (`begin group` / `end group`) are shaded purple (#E8DEF8) and repeat rows (`begin repeat` / `end repeat`) are shaded teal (#D0F0E8) for visual structure.
+
+**Styled Header Row** — the first row has a dark background (#374151) with white bold text.
+
+**Reference Sheets** — hidden `_appearances` and `_fieldtypes` sheets contain the valid values for each dropdown, organized as named ranges that the data validation formulas reference.
 
 ## Keyboard Shortcuts
 
