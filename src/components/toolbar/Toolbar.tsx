@@ -39,8 +39,8 @@ export function Toolbar() {
   const reportFileInputRef = useRef<HTMLInputElement>(null);
 
   // ---- Form mode handlers ----
-  const handleExport = () => {
-    exportToXlsx(form);
+  const handleExport = async () => {
+    await exportToXlsx(form);
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {

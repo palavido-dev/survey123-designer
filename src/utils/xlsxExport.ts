@@ -5,9 +5,20 @@
  * XLSX file matching the full Advanced Template format from Survey123 Connect.
  * Includes all 40 survey columns, 8 choice columns, 8 settings columns,
  * plus reference sheets (Version, Question types, Appearances, Field types, Reserved).
+ *
+ * Features:
+ * - Group/repeat row shading (purple for groups, teal for repeats)
+ * - Data validation dropdowns matching Survey123 Connect:
+ *   - Type column: question type dropdown
+ *   - Appearance column: dynamic dropdown based on question type
+ *   - Required / Readonly: "yes" dropdown
+ *   - bind::type, bind::esri:fieldType: dropdown lists
+ *   - bind::esri:fieldLength: whole number validation
+ *   - name column: custom formula validation
  */
 
 import * as XLSX from 'xlsx-js-style';
+import JSZip from 'jszip';
 import { SurveyForm, SurveyRow, ChoiceList, ChoiceItem, FormSettings, QuestionType } from '../types/survey';
 import { buildTypeColumnValue } from '../data/questionTypes';
 
@@ -89,10 +100,41 @@ const SETTINGS_COLUMNS = [
 ];
 
 // ============================================================
+// Per-type appearance lists (matching Survey123 Connect)
+// ============================================================
+
+const APPEARANCE_LISTS: Record<string, string[]> = {
+  // Fallback for types with no specific appearances
+  a:        ['hidden'],
+  aAudio:   ['hidden'],
+  aBarcode: ['minimal', 'hidden'],
+  aGrp:     ['compact', 'field-list', 'table-list', 'hidden'],
+  aRpt:     ['minimal', 'minimal compact', 'compact', 'field-list', 'hidden'],
+  aDate:    ['year', 'month-year', 'week-number', 'hidden'],
+  aDateTime:['hidden'],
+  aDecimal: ['spinner', 'numbers', 'calculator', 'thousands-sep', 'rangefinder', 'hidden'],
+  aFile:    ['multiline', 'hidden'],
+  aGeopoint:['hide-input', 'press-to-locate', 'hidden'],
+  aGeoshape:['press-to-locate', 'hidden'],
+  aGeotrace:['press-to-locate', 'hidden'],
+  aImage:   ['multiline', 'draw', 'annotate', 'signature', 'new-rear', 'new-front', 'spike', 'spike-full-measure', 'spike-point-to-point', 'hidden'],
+  aInteger: ['spinner', 'numbers', 'calculator', 'distress', 'rangefinder', 'hidden'],
+  aNote:    ['hidden'],
+  aRange:   ['no-ticks', 'hidden'],
+  aRank:    ['hidden'],
+  aSM:      ['minimal', 'compact', 'horizontal', 'horizontal-compact', 'search()', 'image-map', 'hidden'],
+  aSMF:     ['minimal', 'compact', 'horizontal', 'horizontal-compact', 'hidden'],
+  aSO:      ['autocomplete', 'minimal', 'compact', 'horizontal', 'horizontal-compact', 'likert', 'search()', 'image-map', 'hidden'],
+  aSOF:     ['autocomplete', 'minimal', 'compact', 'horizontal', 'horizontal-compact', 'likert', 'hidden'],
+  aText:    ['multiline', 'predictivetext', 'nopredictivetext', 'geocode', 'rangefinder', 'inframarker', 'getinframarkerid', 'hidden'],
+  aTime:    ['hidden'],
+};
+
+// ============================================================
 // Export Function
 // ============================================================
 
-export function exportToXlsx(form: SurveyForm): void {
+export async function exportToXlsx(form: SurveyForm): Promise<void> {
   const wb = XLSX.utils.book_new();
 
   // --- Survey Sheet (always all columns) ---
@@ -117,13 +159,26 @@ export function exportToXlsx(form: SurveyForm): void {
   // --- Reference Sheets ---
   addVersionSheet(wb);
   addQuestionTypesSheet(wb);
-  addAppearancesSheet(wb);
-  addFieldTypesSheet(wb);
+  const appMetadata = addAppearancesSheet(wb);
+  const fieldMetadata = addFieldTypesSheet(wb);
   addReservedSheet(wb);
 
-  // --- Download ---
+  // --- Write to buffer, post-process with JSZip, then download ---
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+  const surveyRowCount = form.survey.length;
+
+  const finalBlob = await postProcessXlsx(buf, surveyRowCount, appMetadata, fieldMetadata);
+
+  // Trigger download
   const fileName = `${form.settings.form_id || 'survey'}.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  const url = URL.createObjectURL(finalBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ============================================================
@@ -241,15 +296,15 @@ function addQuestionTypesSheet(wb: XLSX.WorkBook): void {
     ['date', 'Date input.'],
     ['time', 'Time input.'],
     ['dateTime', 'Date and time input.'],
-    ['select_one list_name', "Multiple choice question; only one answer can be selected. Replace 'list_name' with the name of your choice list on the choices sheet."],
-    ['select_one_from_file file_name.csv', "Multiple choice question; only one answer can be selected. Replace 'file_name.csv' with the name of the file located in the survey's media folder that contains the list of choices."],
-    ['select_multiple list_name', "Multiple choice question; multiple answers can be selected. Replace 'list_name' with the name of your choice list on the choices sheet."],
-    ['select_multiple_from_file file_name.csv', "Multiple choice question; multiple answers can be selected. Replace 'file_name.csv' with the name of the file located in the survey's media folder that contains the list of choices."],
-    ['rank list_name', "Ranking question; rank the options in order of preference. Replace 'list_name' with the name of your choice list on the choices sheet."],
-    ['note', 'Display a note on the screen, takes no input. Optionally use with calculation.'],
+    ['select_one list_name', "Multiple choice question; only one answer can be selected."],
+    ['select_one_from_file file_name.csv', "Multiple choice from external CSV file."],
+    ['select_multiple list_name', "Multiple choice question; multiple answers can be selected."],
+    ['select_multiple_from_file file_name.csv', "Multiple choice from external CSV file; multiple answers."],
+    ['rank list_name', "Ranking question; rank the options in order of preference."],
+    ['note', 'Display a note on the screen, takes no input.'],
     ['geopoint', 'Collect a single set of GPS coordinates.'],
-    ['geotrace', 'Record a line feature (collection of two or more GPS coordinates).'],
-    ['geoshape', 'Record a polygon feature (collection of three or more GPS coordinates forming a closed shape).'],
+    ['geotrace', 'Record a line feature.'],
+    ['geoshape', 'Record a polygon feature.'],
     ['image', 'Take a photo or upload an image file.'],
     ['audio', 'Take an audio recording or upload an audio file.'],
     ['file', 'Upload a file.'],
@@ -258,42 +313,49 @@ function addQuestionTypesSheet(wb: XLSX.WorkBook): void {
     ['end group', 'End a group of questions.'],
     ['begin repeat', 'Begin a set of repeating questions.'],
     ['end repeat', 'End a set of repeating questions.'],
-    ['calculate', 'Perform a calculation on values in the form. Not displayed on the form.'],
-    ['hidden', 'A field not displayed on the form that can accept a value through calculation or default.'],
+    ['calculate', 'Perform a calculation on values in the form.'],
+    ['hidden', 'A field not displayed on the form.'],
     ['range', 'A slider-based number input.'],
-    ['username', "Automatically captures the username of the signed-in user. Not displayed on form. Use with 'esri:fieldType' to control storage."],
+    ['username', 'Automatically captures the username of the signed-in user.'],
     ['email', 'Free text response with email validation.'],
     ['start', 'Start date and time of the survey.'],
     ['end', 'End date and time of the survey.'],
-    ['deviceid', "Collect the unique device ID. Use pulldata('@property', 'deviceid') for cross-platform support."],
+    ['deviceid', 'Collect the unique device ID.'],
     ['password', 'Masked text input for passwords.'],
   ];
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [{ wch: 40 }, { wch: 80 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Question types');
+  // Question types table: tblQuestionTypes, rows A1:B33 (header + 32 types)
 }
 
-function addAppearancesSheet(wb: XLSX.WorkBook): void {
-  const data = [
+interface AppearanceSheetMetadata {
+  /** Map from named range name → { startRow (1-based), endRow (1-based) } in the Appearances sheet */
+  ranges: Record<string, { startRow: number; endRow: number }>;
+}
+
+function addAppearancesSheet(wb: XLSX.WorkBook): AppearanceSheetMetadata {
+  // Main reference table (rows 1-36)
+  const mainData = [
     ['Appearance', 'Applies to', 'Description', 'Field app', 'Web app'],
     ['minimal', 'select_one, select_multiple, barcode, begin repeat', 'Presents questions in a more space-efficient manner.', 'Yes', 'Yes'],
     ['minimal compact', 'begin repeat', 'Group of questions is displayed both collapsed and hidden.', 'Yes', 'Yes'],
-    ['compact', 'select_one, select_multiple, begin group, begin repeat', "For select questions, presents choices horizontally in a space-efficient manner. Use 'compact-n' to set max columns. Groups and repeats will appear collapsed.", 'Yes', 'Yes'],
+    ['compact', 'select_one, select_multiple, begin group, begin repeat', 'For select questions, presents choices horizontally.', 'Yes', 'Yes'],
     ['horizontal', 'select_one, select_multiple', 'Presents choices horizontally in columns of equal width.', 'Yes', 'Yes'],
     ['horizontal-compact', 'select_one, select_multiple', "Same as 'compact' for select questions.", 'Yes', 'Yes'],
-    ['image-map', 'select_one, select_multiple', "Displays an SVG image with selectable regions. SVG file must be stored in the survey's media folder.", 'Yes', 'No'],
-    ['autocomplete', 'select_one', 'Presents choices in a drop-down menu, with text input to narrow down options.', 'Yes', 'Yes'],
+    ['image-map', 'select_one, select_multiple', 'Displays an SVG image with selectable regions.', 'Yes', 'No'],
+    ['autocomplete', 'select_one', 'Presents choices with text input to narrow down options.', 'Yes', 'Yes'],
     ['likert', 'select_one', 'Presents choices as a Likert scale.', 'Yes', 'Yes'],
-    ['search()', 'select_one, select_multiple', "Populates the choice list with values from a CSV file in the survey's media folder or an existing feature layer or table.", 'Yes', 'Yes'],
-    ['multiline', 'text, image, file', 'Presents a text question as a multiline text box. Allows multiple attachments for an image or file question.', 'Yes', 'Yes'],
-    ['geocode', 'text, geopoint', 'Presents a search box for address lookup with geocoding suggestions.', 'Yes', 'Yes'],
+    ['search()', 'select_one, select_multiple', 'Populates the choice list from a CSV or feature layer.', 'Yes', 'Yes'],
+    ['multiline', 'text, image, file', 'Multiline text box or multiple attachments.', 'Yes', 'Yes'],
+    ['geocode', 'text, geopoint', 'Search box for address lookup with geocoding.', 'Yes', 'Yes'],
     ['numbers', 'integer, decimal', 'Presents numeric keyboard on mobile devices.', 'Yes', 'No'],
     ['calculator', 'integer, decimal', 'Presents calculator-style keyboard.', 'Yes', 'No'],
-    ['spinner', 'integer, decimal', 'Provides increment/decrement buttons for numeric values.', 'Yes', 'Yes'],
+    ['spinner', 'integer, decimal', 'Provides increment/decrement buttons.', 'Yes', 'Yes'],
     ['thousands-sep', 'integer, decimal', 'Displays numbers with thousands separators.', 'Yes', 'Yes'],
     ['distress', 'integer', 'Presents a 0-10 distress/pain scale.', 'Yes', 'Yes'],
     ['signature', 'image', 'Presents a signature capture popup.', 'Yes', 'Yes'],
-    ['draw', 'image', 'Presents a drawing canvas for freehand sketching.', 'Yes', 'Yes'],
+    ['draw', 'image', 'Drawing canvas for freehand sketching.', 'Yes', 'Yes'],
     ['annotate', 'image', 'Allows drawing annotations on a captured image.', 'Yes', 'No'],
     ['year', 'date', 'Presents year-only selector.', 'Yes', 'Yes'],
     ['month-year', 'date', 'Presents month and year selector.', 'Yes', 'Yes'],
@@ -304,21 +366,63 @@ function addAppearancesSheet(wb: XLSX.WorkBook): void {
     ['new-front', 'image', 'Opens front camera by default.', 'Yes', 'No'],
     ['new-rear', 'image', 'Opens rear camera by default.', 'Yes', 'No'],
     ['randomize', 'select_one, select_multiple', 'Randomizes the order of choices.', 'Yes', 'No'],
-    ['table-list', 'begin group', 'Displays questions in the group in a tabular layout.', 'Yes', 'Yes'],
+    ['table-list', 'begin group', 'Displays questions in a tabular layout.', 'Yes', 'Yes'],
     ['field-list', 'begin group, begin repeat', 'Displays group/repeat on a separate page.', 'Yes', 'Yes'],
-    ['w1', 'any question in a grid group', 'Sets the width of a question in a grid group to 1 column.', 'Yes', 'Yes'],
-    ['w2', 'any question in a grid group', 'Sets the width of a question in a grid group to 2 columns.', 'Yes', 'Yes'],
-    ['w3', 'any question in a grid group', 'Sets the width of a question in a grid group to 3 columns.', 'Yes', 'Yes'],
-    ['w4', 'any question in a grid group', 'Sets the width of a question in a grid group to 4 columns.', 'Yes', 'Yes'],
-    ['hidden', 'any', 'Hides the question from the form while still accepting values.', 'Yes', 'Yes'],
+    ['w1', 'any question in a grid group', 'Sets width to 1 column.', 'Yes', 'Yes'],
+    ['w2', 'any question in a grid group', 'Sets width to 2 columns.', 'Yes', 'Yes'],
+    ['w3', 'any question in a grid group', 'Sets width to 3 columns.', 'Yes', 'Yes'],
+    ['w4', 'any question in a grid group', 'Sets width to 4 columns.', 'Yes', 'Yes'],
+    ['hidden', 'any', 'Hides the question from the form.', 'Yes', 'Yes'],
   ];
-  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Add separator rows and then per-type appearance lookup data
+  // These are used by named ranges for the dynamic appearance dropdown
+  const lookupHeader = [
+    [],
+    [],
+    ['Appearance'],
+    ['The list below is used for data validation on the survey worksheet.'],
+  ];
+
+  // Build the full sheet data
+  const allData = [...mainData, ...lookupHeader];
+
+  // Track named range positions (1-based row numbers)
+  const ranges: Record<string, { startRow: number; endRow: number }> = {};
+
+  // Order of appearance lists — matches Survey123 Connect ordering
+  const listOrder = [
+    'a', 'aAudio', 'aBarcode', 'aGrp', 'aRpt', 'aDate', 'aDateTime',
+    'aDecimal', 'aFile', 'aGeopoint', 'aGeoshape', 'aGeotrace',
+    'aImage', 'aInteger', 'aNote', 'aRange', 'aRank',
+    'aSM', 'aSMF', 'aSO', 'aSOF', 'aText', 'aTime',
+  ];
+
+  for (const listName of listOrder) {
+    const items = APPEARANCE_LISTS[listName] || ['hidden'];
+    const startRow = allData.length + 1; // 1-based
+    for (const item of items) {
+      allData.push([item]);
+    }
+    const endRow = allData.length; // 1-based (inclusive)
+    ranges[listName] = { startRow, endRow };
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(allData);
   ws['!cols'] = [{ wch: 22 }, { wch: 45 }, { wch: 70 }, { wch: 10 }, { wch: 10 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Appearances');
+
+  return { ranges };
 }
 
-function addFieldTypesSheet(wb: XLSX.WorkBook): void {
-  const data = [
+interface FieldTypesMetadata {
+  esriFieldTypesRange: { startRow: number; endRow: number };
+  bindTypesRange: { startRow: number; endRow: number };
+}
+
+function addFieldTypesSheet(wb: XLSX.WorkBook): FieldTypesMetadata {
+  // Esri field types table (rows 1-15)
+  const esriData = [
     ['Esri field types', 'Description', 'Learn more'],
     ['esriFieldTypeDate', 'Day, month, year, and time values in local time', 'https://doc.arcgis.com/en/survey123/desktop/create-surveys/esricustomcolumns.htm'],
     ['esriFieldTypeDateOnly', 'Day, month, and year values', ''],
@@ -330,14 +434,37 @@ function addFieldTypesSheet(wb: XLSX.WorkBook): void {
     ['esriFieldTypeSmallInteger', 'Small whole numbers (from -32,768 to 32,767)', ''],
     ['esriFieldTypeBigInteger', 'Whole numbers (from -9,007,199,254,740,991 to 9,007,199,254,740,991)', ''],
     ['esriFieldTypeString', 'A series of alphanumeric symbols', ''],
-    ['esriFieldTypeGUID', 'Globally unique identifier', ''],
-    ['esriFieldTypeGlobalID', 'Global ID for geodatabase features', ''],
-    ['esriFieldTypePointZ', 'Point geometry with z-value', ''],
-    ['null', 'Omits the question from the feature layer', ''],
+    ['esriFieldTypePointZ', 'Adds Z axis support to geopoint question', ''],
+    ['esriFieldTypeGUID', 'Globally Unique Identifier', ''],
+    ['null', 'Question does not require a field in feature layer', ''],
   ];
-  const ws = XLSX.utils.aoa_to_sheet(data);
+
+  // Gap rows
+  const gap = [[], [], [], [], []];
+
+  // Bind types table (starts after gap)
+  const bindData = [
+    ['Bind types', 'Description', 'Learn more'],
+    ['int', 'Integer numbers', ''],
+    ['decimal', 'Decimal numbers', ''],
+    ['string', 'A series of alphanumeric symbols', ''],
+    ['time', 'Time value', ''],
+    ['dateTime', 'Date and time value', ''],
+    ['date', 'Date value', ''],
+  ];
+
+  const allData = [...esriData, ...gap, ...bindData];
+
+  const ws = XLSX.utils.aoa_to_sheet(allData);
   ws['!cols'] = [{ wch: 30 }, { wch: 60 }, { wch: 70 }];
   XLSX.utils.book_append_sheet(wb, ws, 'Field types');
+
+  const bindStartRow = esriData.length + gap.length + 1; // 1-based
+
+  return {
+    esriFieldTypesRange: { startRow: 1, endRow: esriData.length },    // includes header
+    bindTypesRange: { startRow: bindStartRow, endRow: allData.length }, // includes header
+  };
 }
 
 function addReservedSheet(wb: XLSX.WorkBook): void {
@@ -444,8 +571,151 @@ function addReservedSheet(wb: XLSX.WorkBook): void {
 }
 
 // ============================================================
-// Helpers
+// Post-processing: Inject Data Validations & Named Ranges
 // ============================================================
+
+/**
+ * Post-process the xlsx zip to inject:
+ * 1. Named ranges (definedNames) into workbook.xml
+ * 2. Data validations into the survey sheet (sheet1.xml)
+ */
+async function postProcessXlsx(
+  buf: ArrayBuffer,
+  surveyRowCount: number,
+  appMeta: AppearanceSheetMetadata,
+  fieldMeta: FieldTypesMetadata
+): Promise<Blob> {
+  const zip = await JSZip.loadAsync(buf);
+  const maxRow = surveyRowCount + 1; // +1 for header; data rows are 2..maxRow
+
+  // Sheet indices (0-based) in the workbook — must match book_append_sheet order:
+  // 0=survey, 1=choices, 2=settings, 3=Version, 4=Question types, 5=Appearances, 6=Field types, 7=Reserved
+
+  // ---- 1. Inject named ranges into workbook.xml ----
+  const wbXmlPath = 'xl/workbook.xml';
+  let wbXml = await zip.file(wbXmlPath)!.async('string');
+  const definedNames = buildDefinedNames(appMeta, fieldMeta);
+  // Insert before </workbook>
+  wbXml = wbXml.replace('</workbook>', `${definedNames}</workbook>`);
+  zip.file(wbXmlPath, wbXml);
+
+  // ---- 2. Inject data validations into survey sheet ----
+  const sheetPath = 'xl/worksheets/sheet1.xml';
+  let sheetXml = await zip.file(sheetPath)!.async('string');
+  const dataValidations = buildDataValidations(maxRow);
+  // Insert before </worksheet>
+  sheetXml = sheetXml.replace('</worksheet>', `${dataValidations}</worksheet>`);
+  zip.file(sheetPath, sheetXml);
+
+  // Generate final blob
+  return await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+
+function buildDefinedNames(
+  appMeta: AppearanceSheetMetadata,
+  fieldMeta: FieldTypesMetadata
+): string {
+  const names: string[] = [];
+
+  // QuestionTypes — references Question types sheet column A (rows 2..33, excluding header)
+  // Sheet index 4 = 'Question types'
+  names.push(`<definedName name="QuestionTypes">'Question types'!$A$2:$A$33</definedName>`);
+
+  // EsriFieldTypes — references Field types sheet column A (rows 2..endRow)
+  const eft = fieldMeta.esriFieldTypesRange;
+  names.push(`<definedName name="EsriFieldTypes">'Field types'!$A$2:$A$${eft.endRow}</definedName>`);
+
+  // BindTypes — references Field types sheet column A (bindStart+1..bindEnd, skip header)
+  const bt = fieldMeta.bindTypesRange;
+  names.push(`<definedName name="BindTypes">'Field types'!$A$${bt.startRow + 1}:$A$${bt.endRow}</definedName>`);
+
+  // Reserved — references Reserved sheet column A (rows 2..end)
+  names.push(`<definedName name="Reserved">'Reserved'!$A$2:$A$1095</definedName>`);
+
+  // Per-type appearance ranges
+  for (const [rangeName, range] of Object.entries(appMeta.ranges)) {
+    names.push(`<definedName name="${rangeName}">'Appearances'!$A$${range.startRow}:$A$${range.endRow}</definedName>`);
+  }
+
+  return `<definedNames>${names.join('')}</definedNames>`;
+}
+
+function buildDataValidations(maxRow: number): string {
+  const sqref = (col: string) => `${col}2:${col}${maxRow}`;
+
+  const validations: string[] = [];
+
+  // 1. Type column (A) — dropdown from QuestionTypes named range
+  validations.push(
+    `<dataValidation type="list" allowBlank="1" sqref="${sqref('A')}">` +
+    `<formula1>QuestionTypes</formula1>` +
+    `</dataValidation>`
+  );
+
+  // 2. Name column (B) — custom formula: no spaces, starts with letter, no reserved words, <32 chars
+  validations.push(
+    `<dataValidation type="custom" errorStyle="warning" allowBlank="1" showErrorMessage="1" ` +
+    `errorTitle="Invalid Name" ` +
+    `error="Question names must be unique, start with a letter, contain only letters/numbers/underscores, and cannot exceed 31 characters or use reserved keywords." ` +
+    `sqref="${sqref('B')}">` +
+    `<formula1>AND(ISERR(LEFT(B2,1)*1),LEN(B2)=LEN(SUBSTITUTE(B2," ","")),LEN(B2)&lt;32,COUNTIF(Reserved,B2)=0)</formula1>` +
+    `</dataValidation>`
+  );
+
+  // 3. Appearance column (F) — dynamic dropdown based on question type in column A
+  // Uses IF chain to select the right named range based on the type value
+  const appearanceFormula =
+    `IF(LEFT(A2,4)="rank",aRank,` +
+    `IF(LEFT(A2,16)="select_multiple ",aSM,` +
+    `IF(LEFT(A2,11)="select_one ",aSO,` +
+    `IF(LEFT(A2,12)="select_one_f",aSOF,` +
+    `IF(LEFT(A2,17)="select_multiple_f",aSMF,` +
+    `IF(A2="begin group",aGrp,` +
+    `IF(A2="begin repeat",aRpt,` +
+    `INDIRECT("a"&amp;A2))))))))`;
+
+  validations.push(
+    `<dataValidation type="list" allowBlank="1" sqref="${sqref('F')}">` +
+    `<formula1>${appearanceFormula}</formula1>` +
+    `</dataValidation>`
+  );
+
+  // 4. Required (G) and Readonly (I) — "yes" dropdown
+  validations.push(
+    `<dataValidation type="list" allowBlank="1" sqref="${sqref('G')} ${sqref('I')}">` +
+    `<formula1>"yes"</formula1>` +
+    `</dataValidation>`
+  );
+
+  // 5. bind::type (S) — dropdown from BindTypes named range
+  validations.push(
+    `<dataValidation type="list" allowBlank="1" showErrorMessage="1" ` +
+    `errorTitle="Invalid Bind Type" error="The value you have entered is not one of the supported bind types." ` +
+    `sqref="${sqref('S')}">` +
+    `<formula1>BindTypes</formula1>` +
+    `</dataValidation>`
+  );
+
+  // 6. bind::esri:fieldType (T) — dropdown from EsriFieldTypes named range
+  validations.push(
+    `<dataValidation type="list" allowBlank="1" showErrorMessage="1" ` +
+    `errorTitle="Invalid Field Type" error="The value you have entered is not one of the supported field types." ` +
+    `sqref="${sqref('T')}">` +
+    `<formula1>EsriFieldTypes</formula1>` +
+    `</dataValidation>`
+  );
+
+  // 7. bind::esri:fieldLength (U) — whole number > 0
+  validations.push(
+    `<dataValidation type="whole" operator="greaterThan" allowBlank="1" showErrorMessage="1" ` +
+    `errorTitle="Invalid Field Length" error="Please enter a whole number greater than zero." ` +
+    `sqref="${sqref('U')}">` +
+    `<formula1>0</formula1>` +
+    `</dataValidation>`
+  );
+
+  return `<dataValidations count="${validations.length}">${validations.join('')}</dataValidations>`;
+}
 
 // ============================================================
 // Row Shading for Groups & Repeats
@@ -488,7 +758,6 @@ function applyGroupRepeatShading(
       for (let c = 0; c < numCols; c++) {
         const addr = XLSX.utils.encode_cell({ r: excelRow, c });
         if (!ws[addr]) {
-          // Create empty styled cell so the background shows
           ws[addr] = { t: 's', v: '', s: { fill } };
         } else {
           ws[addr].s = { ...(ws[addr].s || {}), fill };
@@ -497,6 +766,10 @@ function applyGroupRepeatShading(
     }
   }
 }
+
+// ============================================================
+// Helpers
+// ============================================================
 
 function applyColumnWidths(ws: XLSX.WorkSheet, data: string[][]): void {
   if (data.length === 0) return;
