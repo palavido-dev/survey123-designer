@@ -706,8 +706,9 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
 
     return (
       <div ref={setNodeRef} style={style} data-question-id={row.id}
+        {...attributes} {...listeners}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
-        className={`rounded-lg cursor-pointer transition-fast
+        className={`rounded-lg cursor-grab active:cursor-grabbing transition-fast
           ${isSelected ? 'selected-glow' : ''}
           ${isBeginGroup
             ? 'bg-[#f7f3ff] border border-purple-200'
@@ -725,9 +726,8 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
             >
               <CollapseIcon size={14} />
             </button>
-            {/* Drag handle */}
-            <span {...attributes} {...listeners}
-              className={`text-[11px] font-bold uppercase tracking-wide cursor-grab active:cursor-grabbing
+            <span
+              className={`text-[11px] font-bold uppercase tracking-wide
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
               {isBeginGroup ? 'Group' : 'Repeat'}
             </span>
@@ -770,10 +770,12 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
           </div>
           <div className="flex items-center gap-1">
             <button onClick={(e) => { e.stopPropagation(); duplicateRow(row.id); }}
+              onPointerDown={(e) => e.stopPropagation()}
               className="p-1.5 text-gray-300 hover:text-gray-500 transition-fast">
               <Copy size={13} />
             </button>
             <button onClick={(e) => { e.stopPropagation(); removeRow(row.id); }}
+              onPointerDown={(e) => e.stopPropagation()}
               className="p-1.5 text-gray-300 hover:text-red-500 transition-fast">
               <X size={13} />
             </button>
