@@ -590,10 +590,11 @@ function NoteLabel({ row }: { row: SurveyRow }) {
       style={{ minHeight: 24 }}
     >
       {hasHtml ? (
-        <div
-          className="note-html-content text-[14px] text-gray-700 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: sanitizeHtml(row.label) }}
-        />
+        <HtmlLabel html={row.label} />
+      ) : containsVariableRef(row.label) ? (
+        <div className="text-[14px] text-gray-700 leading-relaxed">
+          <LabelWithVariables text={row.label} />
+        </div>
       ) : (
         <div className="text-[14px] text-gray-500 italic">
           {row.label || 'Information note — double-click to edit'}
