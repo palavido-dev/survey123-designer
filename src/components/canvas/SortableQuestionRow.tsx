@@ -9,6 +9,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SurveyRow, ChoiceItem } from '../../types/survey';
 import { useSurveyStore } from '../../store/surveyStore';
+import type { LayoutContext } from './FormCanvas';
 import { X, Copy, ChevronDown, ChevronRight, Eye, Calculator, AlertCircle } from '../../utils/icons';
 import { validateRow, validateFieldName, sanitizeFieldName, type RowValidationResult } from '../../utils/validation';
 import { RichTextEditor, sanitizeHtml, containsHtml } from '../properties/RichTextEditor';
@@ -19,6 +20,7 @@ interface Props {
   depth: number;
   isSelected: boolean;
   onSelect: () => void;
+  layoutContext?: LayoutContext;
 }
 
 /** Format XLSForm type names into human-readable labels */
@@ -608,17 +610,32 @@ function NoteLabel({ row }: { row: SurveyRow }) {
 // Main Component
 // ============================================================
 
-export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }: Props) {
+export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, layoutContext }: Props) {
   const { form, removeRow, duplicateRow, updateRow, collapsedGroups, toggleGroupCollapse } = useSurveyStore();
+  const layout = layoutContext || { type: 'normal' as const };
 
   const {
     attributes, listeners, setNodeRef, transform, transition, isDragging,
   } = useSortable({ id: row.id });
 
-  const style = {
+  // In grid layout, children don't need marginLeft (the wrapper handles it)
+  // and they need gridColumn span based on their w-appearance
+  const isInsideLayout = layout.type === 'grid' || layout.type === 'table-list' || layout.type === 'field-list';
+  const isBeginOrEnd = ['begin_group', 'begin_repeat', 'end_group', 'end_repeat'].includes(row.type);
+  const useLayoutMargin = isInsideLayout && !isBeginOrEnd;
+
+  const gridSpan = (() => {
+    if (layout.type !== 'grid') return undefined;
+    const app = row.appearance || '';
+    const wMatch = app.match(/\bw([1-4])\b/);
+    return wMatch ? parseInt(wMatch[1]) : 4; // default full width
+  })();
+
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    marginLeft: `${depth * 24}px`,
+    marginLeft: useLayoutMargin ? 0 : `${depth * 24}px`,
+    ...(layout.type === 'grid' && !isBeginOrEnd ? { gridColumn: `span ${gridSpan}` } : {}),
   };
 
   const isEndStructural = ['end_group', 'end_repeat'].includes(row.type);
@@ -714,6 +731,22 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
               ${isBeginGroup ? 'text-purple-500' : 'text-teal-600'}`}>
               {isBeginGroup ? 'Group' : 'Repeat'}
             </span>
+            {/* Layout type badge */}
+            {layout.type === 'grid' && (
+              <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 border border-blue-200">
+                Grid
+              </span>
+            )}
+            {layout.type === 'table-list' && (
+              <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+                Table
+              </span>
+            )}
+            {layout.type === 'field-list' && (
+              <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-600 border border-indigo-200">
+                Page {layout.pageNumber}
+              </span>
+            )}
             <span className="text-[14px] text-gray-700 font-medium">
               {containsHtml(row.label) ? (
                 <HtmlLabel html={row.label} />
@@ -745,6 +778,48 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
               <X size={13} />
             </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Table-list row: render select_one questions as a table row with radio circles
+  if (layout.type === 'table-list' && row.type === 'select_one') {
+    const choices = layout.choices;
+    return (
+      <div
+        ref={setNodeRef}
+        style={{ ...style, padding: 0 }}
+        data-question-id={row.id}
+        {...attributes}
+        {...listeners}
+        onClick={(e) => { e.stopPropagation(); onSelect(); }}
+        className={`cursor-pointer transition-fast border-b border-gray-100
+          ${isDragging ? 'opacity-40 z-50' : ''}
+          ${isSelected ? 'bg-[#f0faf7]' : 'hover:bg-gray-50'}`}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `minmax(180px, 1fr) ${choices.map(() => 'minmax(60px, 100px)').join(' ')}`,
+            gap: 0,
+            padding: '10px 12px',
+            alignItems: 'center',
+          }}
+        >
+          {/* Question label */}
+          <div className="flex items-center gap-2 pr-4">
+            <span className="text-[13px] text-gray-700 font-medium">
+              {row.label || row.name}
+              {row.required === 'yes' && <span className="text-red-500 ml-0.5">*</span>}
+            </span>
+          </div>
+          {/* Radio circles for each choice */}
+          {choices.map((c) => (
+            <div key={c.name} className="flex justify-center">
+              <div className="w-[18px] h-[18px] rounded-full border-2 border-gray-300 bg-white" />
+            </div>
+          ))}
         </div>
       </div>
     );

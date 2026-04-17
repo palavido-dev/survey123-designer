@@ -14,7 +14,109 @@ import { SortableQuestionRow } from './SortableQuestionRow';
 import { ExpressionBuilder } from '../properties/ExpressionBuilder';
 import { CsvEditorModal } from '../properties/CsvEditorModal';
 import { Plus } from '../../utils/icons';
-import { SurveyRow } from '../../types/survey';
+import { SurveyRow, ChoiceList } from '../../types/survey';
+
+// ============================================================
+// Layout Context — tells child rows what visual layout to use
+// ============================================================
+
+export type LayoutContext =
+  | { type: 'normal' }
+  | { type: 'grid'; columns: 4 }
+  | { type: 'table-list'; choices: { name: string; label: string }[] }
+  | { type: 'field-list'; pageNumber: number };
+
+/** Determine the layout context for a begin_group row */
+function getGroupLayout(row: SurveyRow, pageCounter: number, choiceLists: ChoiceList[], survey: SurveyRow[]): LayoutContext {
+  const appearance = row.appearance || '';
+  if (appearance.includes('table-list')) {
+    // Find the first select_one child to get its choice list
+    const startIdx = survey.indexOf(row);
+    let choices: { name: string; label: string }[] = [];
+    if (startIdx >= 0) {
+      let depth = 0;
+      for (let i = startIdx; i < survey.length; i++) {
+        const r = survey[i];
+        if (r.type === 'begin_group' || r.type === 'begin_repeat') depth++;
+        if (r.type === 'end_group' || r.type === 'end_repeat') depth--;
+        if (depth === 0) break;
+        if (depth === 1 && r.type === 'select_one' && r.listName) {
+          const list = choiceLists.find(cl => cl.list_name === r.listName);
+          if (list) {
+            choices = list.choices.map(c => ({ name: c.name, label: c.label }));
+          }
+          break;
+        }
+      }
+    }
+    return { type: 'table-list', choices };
+  }
+  if (appearance.includes('field-list')) {
+    return { type: 'field-list', pageNumber: pageCounter };
+  }
+  // Check if any direct children have w1-w4 appearances, or the group itself has w appearance
+  if (/\bw[1-4]\b/.test(appearance)) {
+    return { type: 'grid', columns: 4 };
+  }
+  // Check children for w appearances
+  const startIdx = survey.indexOf(row);
+  if (startIdx >= 0) {
+    let depth = 0;
+    for (let i = startIdx; i < survey.length; i++) {
+      const r = survey[i];
+      if (r.type === 'begin_group' || r.type === 'begin_repeat') depth++;
+      if (r.type === 'end_group' || r.type === 'end_repeat') depth--;
+      if (depth === 0) break;
+      if (depth === 1 && r.appearance && /\bw[1-4]\b/.test(r.appearance)) {
+        return { type: 'grid', columns: 4 };
+      }
+    }
+  }
+  return { type: 'normal' };
+}
+
+/** Build a map of row ID -> layout context based on parent groups */
+function buildLayoutMap(
+  survey: SurveyRow[],
+  choiceLists: ChoiceList[],
+  collapsedGroups: Set<string>
+): Map<string, LayoutContext> {
+  const layoutMap = new Map<string, LayoutContext>();
+  const layoutStack: LayoutContext[] = [];
+  const groupIdStack: string[] = [];
+  let pageCounter = 0;
+
+  for (const row of survey) {
+    if (row.type === 'begin_group') {
+      const layout = getGroupLayout(row, ++pageCounter, choiceLists, survey);
+      if (layout.type !== 'field-list') pageCounter--; // only count field-list pages
+      layoutMap.set(row.id, layout); // The group header itself gets its own layout context
+      layoutStack.push(layout);
+      groupIdStack.push(row.id);
+    } else if (row.type === 'end_group') {
+      layoutStack.pop();
+      groupIdStack.pop();
+      // End markers get the layout of their parent group
+      const parentLayout = layoutStack.length > 0 ? layoutStack[layoutStack.length - 1] : { type: 'normal' as const };
+      layoutMap.set(row.id, parentLayout);
+    } else if (row.type === 'begin_repeat' || row.type === 'end_repeat') {
+      // Repeats don't create layout contexts
+      if (row.type === 'begin_repeat') {
+        layoutStack.push({ type: 'normal' });
+        groupIdStack.push(row.id);
+      } else {
+        layoutStack.pop();
+        groupIdStack.pop();
+      }
+      layoutMap.set(row.id, layoutStack.length > 0 ? layoutStack[layoutStack.length - 1] : { type: 'normal' });
+    } else {
+      // Regular questions get the layout of their nearest parent group
+      const currentLayout = layoutStack.length > 0 ? layoutStack[layoutStack.length - 1] : { type: 'normal' as const };
+      layoutMap.set(row.id, currentLayout);
+    }
+  }
+  return layoutMap;
+}
 
 const EDITOR_LABELS = {
   relevant: 'Visibility Condition',
@@ -115,6 +217,10 @@ export function FormCanvas() {
   const items = form.survey.map((row) => row.id);
   const depths = calculateDepths(form.survey);
   const hiddenSet = calculateHiddenRows(form.survey, collapsedGroups);
+  const layoutMap = React.useMemo(
+    () => buildLayoutMap(form.survey, form.choiceLists, collapsedGroups),
+    [form.survey, form.choiceLists, collapsedGroups]
+  );
 
   // ---- Question Search ----
   const [searchQuery, setSearchQuery] = useState('');
@@ -313,19 +419,7 @@ export function FormCanvas() {
             ) : (
               <SortableContext items={items} strategy={verticalListSortingStrategy}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                  {form.survey.map((row, index) => {
-                    if (hiddenSet.has(row.id)) return null;
-                    return (
-                      <SortableQuestionRow
-                        key={row.id}
-                        row={row}
-                        index={index}
-                        depth={depths[index] || 0}
-                        isSelected={row.id === selectedRowId}
-                        onSelect={() => selectRow(row.id)}
-                      />
-                    );
-                  })}
+                  {renderLayoutAwareRows(form.survey, hiddenSet, depths, layoutMap, selectedRowId, selectRow)}
                 </div>
               </SortableContext>
             )}
@@ -375,6 +469,208 @@ export function FormCanvas() {
       )}
     </div>
   );
+}
+
+// ============================================================
+// Layout-Aware Row Renderer
+// Groups children inside grid/table-list/field-list wrappers
+// ============================================================
+
+function renderLayoutAwareRows(
+  survey: SurveyRow[],
+  hiddenSet: Set<string>,
+  depths: number[],
+  layoutMap: Map<string, LayoutContext>,
+  selectedRowId: string | null,
+  selectRow: (id: string | null) => void,
+): React.ReactNode[] {
+  const elements: React.ReactNode[] = [];
+  // Track which grid groups are open so we can wrap children
+  const gridGroupStack: { id: string; layout: LayoutContext; childElements: React.ReactNode[]; depth: number }[] = [];
+
+  for (let index = 0; index < survey.length; index++) {
+    const row = survey[index];
+    if (hiddenSet.has(row.id)) continue;
+
+    const layout = layoutMap.get(row.id) || { type: 'normal' as const };
+    const depth = depths[index] || 0;
+
+    // Detect begin_group with special layouts
+    if (row.type === 'begin_group') {
+      const groupLayout = layout as LayoutContext;
+      if (groupLayout.type === 'grid' || groupLayout.type === 'table-list' || groupLayout.type === 'field-list') {
+        // Render the group header itself normally
+        const headerEl = (
+          <SortableQuestionRow
+            key={row.id}
+            row={row}
+            index={index}
+            depth={depth}
+            isSelected={row.id === selectedRowId}
+            onSelect={() => selectRow(row.id)}
+            layoutContext={groupLayout}
+          />
+        );
+        // Push to the current container (either parent grid or top level)
+        if (gridGroupStack.length > 0) {
+          gridGroupStack[gridGroupStack.length - 1].childElements.push(headerEl);
+        } else {
+          elements.push(headerEl);
+        }
+        // Start collecting children
+        gridGroupStack.push({ id: row.id, layout: groupLayout, childElements: [], depth });
+        continue;
+      }
+    }
+
+    // Detect end_group that closes a layout group
+    if (row.type === 'end_group' && gridGroupStack.length > 0) {
+      // Check if this end_group matches the current layout group
+      // by looking at depth: the end_group depth equals the begin_group depth
+      const currentGroup = gridGroupStack[gridGroupStack.length - 1];
+      if (depth === currentGroup.depth) {
+        // Close this layout group and render the wrapper
+        gridGroupStack.pop();
+        const wrappedEl = renderLayoutWrapper(
+          currentGroup.id,
+          currentGroup.layout,
+          currentGroup.childElements,
+          currentGroup.depth,
+        );
+        // Render the end marker
+        const endEl = (
+          <SortableQuestionRow
+            key={row.id}
+            row={row}
+            index={index}
+            depth={depth}
+            isSelected={row.id === selectedRowId}
+            onSelect={() => selectRow(row.id)}
+            layoutContext={currentGroup.layout}
+          />
+        );
+
+        if (gridGroupStack.length > 0) {
+          gridGroupStack[gridGroupStack.length - 1].childElements.push(wrappedEl);
+          gridGroupStack[gridGroupStack.length - 1].childElements.push(endEl);
+        } else {
+          elements.push(wrappedEl);
+          elements.push(endEl);
+        }
+        continue;
+      }
+    }
+
+    // Regular row: render with layout context
+    const el = (
+      <SortableQuestionRow
+        key={row.id}
+        row={row}
+        index={index}
+        depth={depth}
+        isSelected={row.id === selectedRowId}
+        onSelect={() => selectRow(row.id)}
+        layoutContext={layout}
+      />
+    );
+
+    if (gridGroupStack.length > 0) {
+      gridGroupStack[gridGroupStack.length - 1].childElements.push(el);
+    } else {
+      elements.push(el);
+    }
+  }
+
+  return elements;
+}
+
+/** Wraps collected children in the appropriate layout container */
+function renderLayoutWrapper(
+  groupId: string,
+  layout: LayoutContext,
+  children: React.ReactNode[],
+  depth: number,
+): React.ReactNode {
+  if (layout.type === 'grid') {
+    return (
+      <div
+        key={`grid-${groupId}`}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 12,
+          marginLeft: `${(depth + 1) * 24}px`,
+          padding: '8px 0',
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  if (layout.type === 'table-list') {
+    const choices = layout.choices;
+    return (
+      <div
+        key={`table-${groupId}`}
+        style={{ marginLeft: `${(depth + 1) * 24}px`, padding: '4px 0' }}
+      >
+        {/* Table header with choice labels */}
+        {choices.length > 0 && (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(180px, 1fr) ${choices.map(() => 'minmax(60px, 100px)').join(' ')}`,
+              gap: 0,
+              borderBottom: '2px solid #e5e7eb',
+              padding: '8px 12px',
+              marginBottom: 2,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+              Question
+            </div>
+            {choices.map((c) => (
+              <div key={c.name} style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: '#6b7280',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em',
+              }}>
+                {c.label}
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Table rows (each child is a select_one row rendered as a table row) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  if (layout.type === 'field-list') {
+    return (
+      <div
+        key={`page-${groupId}`}
+        style={{
+          marginLeft: `${(depth + 1) * 24}px`,
+          padding: '4px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  // Normal fallback
+  return <React.Fragment key={`wrap-${groupId}`}>{children}</React.Fragment>;
 }
 
 function calculateDepths(rows: { type: string }[]): number[] {
