@@ -628,7 +628,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
     if (layout.type !== 'grid') return undefined;
     const app = row.appearance || '';
     const wMatch = app.match(/\bw([1-4])\b/);
-    return wMatch ? parseInt(wMatch[1]) : 4; // default full width
+    return wMatch ? parseInt(wMatch[1]) : layout.defaultSpan; // inherit group's default
   })();
 
   const style: React.CSSProperties = {

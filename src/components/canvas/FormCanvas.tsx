@@ -22,7 +22,7 @@ import { SurveyRow, ChoiceList } from '../../types/survey';
 
 export type LayoutContext =
   | { type: 'normal' }
-  | { type: 'grid'; columns: 4 }
+  | { type: 'grid'; columns: 4; defaultSpan: number }
   | { type: 'table-list'; choices: { name: string; label: string }[] }
   | { type: 'field-list'; pageNumber: number };
 
@@ -55,8 +55,9 @@ function getGroupLayout(row: SurveyRow, pageCounter: number, choiceLists: Choice
     return { type: 'field-list', pageNumber: pageCounter };
   }
   // Check if any direct children have w1-w4 appearances, or the group itself has w appearance
-  if (/\bw[1-4]\b/.test(appearance)) {
-    return { type: 'grid', columns: 4 };
+  const groupWMatch = appearance.match(/\bw([1-4])\b/);
+  if (groupWMatch) {
+    return { type: 'grid', columns: 4, defaultSpan: parseInt(groupWMatch[1]) };
   }
   // Check children for w appearances
   const startIdx = survey.indexOf(row);
@@ -67,8 +68,11 @@ function getGroupLayout(row: SurveyRow, pageCounter: number, choiceLists: Choice
       if (r.type === 'begin_group' || r.type === 'begin_repeat') depth++;
       if (r.type === 'end_group' || r.type === 'end_repeat') depth--;
       if (depth === 0) break;
-      if (depth === 1 && r.appearance && /\bw[1-4]\b/.test(r.appearance)) {
-        return { type: 'grid', columns: 4 };
+      if (depth === 1 && r.appearance) {
+        const childW = r.appearance.match(/\bw([1-4])\b/);
+        if (childW) {
+          return { type: 'grid', columns: 4, defaultSpan: parseInt(childW[1]) };
+        }
       }
     }
   }
