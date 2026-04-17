@@ -363,6 +363,18 @@ export const useSurveyStore = create<SurveyStore>()(
       'bind::esri:parameters',
     ];
 
+    // Label/hint fields only get ${...} replacement (no bare word replacement,
+    // since labels contain natural language where bare words would false-match)
+    const LABEL_FIELDS: (keyof SurveyRow)[] = ['label', 'hint'];
+
+    const replaceInLabel = (text: string | undefined): string | undefined => {
+      if (!text) return text;
+      return text.replace(
+        new RegExp(`\\$\\{\\s*${escapeRegExp(oldName)}\\s*\\}`, 'g'),
+        `\${${newName}}`
+      );
+    };
+
     const updatedRowIds: string[] = [];
 
     const newSurvey = state.form.survey.map((row) => {
@@ -386,6 +398,19 @@ export const useSurveyStore = create<SurveyStore>()(
         const val = row[field as keyof SurveyRow] as string | undefined;
         if (val && typeof val === 'string' && val.includes(oldName)) {
           const newVal = replaceInExpression(val);
+          if (newVal !== val) {
+            (updates as any)[field] = newVal;
+            changed = true;
+          }
+        }
+      }
+
+      // Update ${field} references in labels and hints (only ${...} patterns,
+      // not bare words, to avoid mangling natural language text)
+      for (const field of LABEL_FIELDS) {
+        const val = row[field as keyof SurveyRow] as string | undefined;
+        if (val && typeof val === 'string' && val.includes(`\${${oldName}}`)) {
+          const newVal = replaceInLabel(val);
           if (newVal !== val) {
             (updates as any)[field] = newVal;
             changed = true;
