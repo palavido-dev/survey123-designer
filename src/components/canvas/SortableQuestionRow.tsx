@@ -142,6 +142,267 @@ function InlineEdit({
 }
 
 // ============================================================
+// Variable Reference Helpers — parse and render ${field} tokens
+// ============================================================
+
+/** Check if a string contains ${...} variable references */
+function containsVariableRef(text: string): boolean {
+  return /\$\{[^}]+\}/.test(text || '');
+}
+
+/** Split label text into segments of plain text and variable references */
+function parseVariableRefs(text: string): Array<{ type: 'text' | 'variable'; value: string }> {
+  const parts: Array<{ type: 'text' | 'variable'; value: string }> = [];
+  const regex = /\$\{([^}]+)\}/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+    }
+    parts.push({ type: 'variable', value: match[1] });
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ type: 'text', value: text.slice(lastIndex) });
+  }
+  return parts;
+}
+
+/** Renders label text with ${field} references as teal pill badges */
+function LabelWithVariables({ text, className }: { text: string; className?: string }) {
+  const parts = parseVariableRefs(text);
+  return (
+    <span className={className}>
+      {parts.map((part, i) =>
+        part.type === 'variable' ? (
+          <span
+            key={i}
+            className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded-full
+              bg-[#e6f5f0] text-[#007a62] text-[12px] font-mono font-medium
+              border border-[#b2e0d4] mx-0.5 align-baseline"
+            title={`Field reference: \${${part.value}}`}
+          >
+            <svg className="w-2.5 h-2.5 opacity-50 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M7 8l-4 4 4 4M17 8l4 4-4 4" />
+            </svg>
+            {part.value}
+          </span>
+        ) : (
+          <span key={i}>{part.value}</span>
+        )
+      )}
+    </span>
+  );
+}
+
+// ============================================================
+// Inline Edit with Variable Picker
+// ============================================================
+
+function InlineEditWithVariables({
+  value,
+  onChange,
+  placeholder,
+  className,
+  currentRowId,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  currentRowId: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const form = useSurveyStore((s) => s.form);
+
+  // All fields except the current row and structural types
+  const fields = React.useMemo(() =>
+    form.survey.filter((r) =>
+      r.id !== currentRowId &&
+      !['end_group', 'end_repeat', 'begin_group', 'begin_repeat'].includes(r.type)
+    ),
+    [form.survey, currentRowId]
+  );
+
+  const filteredFields = React.useMemo(() => {
+    if (!pickerSearch) return fields;
+    const q = pickerSearch.toLowerCase();
+    return fields.filter((f) =>
+      f.name.toLowerCase().includes(q) || (f.label || '').toLowerCase().includes(q)
+    );
+  }, [fields, pickerSearch]);
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [value, editing]);
+
+  // Close picker on outside click
+  useEffect(() => {
+    if (!showPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false);
+        setPickerSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showPicker]);
+
+  const commit = () => {
+    setEditing(false);
+    setShowPicker(false);
+    setPickerSearch('');
+    const trimmed = draft.trim();
+    if (trimmed !== value) onChange(trimmed);
+  };
+
+  const insertVariable = (fieldName: string) => {
+    const input = inputRef.current;
+    const token = `\${${fieldName}}`;
+    if (input) {
+      const start = input.selectionStart ?? draft.length;
+      const end = input.selectionEnd ?? draft.length;
+      const newVal = draft.slice(0, start) + token + draft.slice(end);
+      setDraft(newVal);
+      // Restore cursor after the inserted token
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          const pos = start + token.length;
+          inputRef.current.setSelectionRange(pos, pos);
+          inputRef.current.focus();
+        }
+      });
+    } else {
+      setDraft(draft + token);
+    }
+    setShowPicker(false);
+    setPickerSearch('');
+  };
+
+  const stopDrag = {
+    onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    onMouseDown: (e: React.MouseEvent) => e.stopPropagation(),
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+  };
+
+  if (editing) {
+    return (
+      <div className="relative" {...stopDrag}>
+        <div className="flex items-center gap-1">
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={(e) => {
+              // Don't commit if clicking into the picker
+              if (pickerRef.current?.contains(e.relatedTarget as Node)) return;
+              commit();
+            }}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') commit();
+              if (e.key === 'Escape') { setDraft(value); setEditing(false); setShowPicker(false); }
+            }}
+            placeholder={placeholder}
+            className={`flex-1 bg-white border border-[#00856a] rounded px-1.5 py-0.5 outline-none text-gray-800 ${className || ''}`}
+            style={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit' }}
+          />
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={(e) => { e.stopPropagation(); setShowPicker(!showPicker); setPickerSearch(''); }}
+            className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded
+              bg-[#007a62] text-white hover:bg-[#006652] transition-colors"
+            title="Insert field variable"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M7 8l-4 4 4 4M17 8l4 4-4 4" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Field picker dropdown */}
+        {showPicker && (
+          <div
+            ref={pickerRef}
+            className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <div className="p-2 border-b border-gray-100">
+              <input
+                type="text"
+                value={pickerSearch}
+                onChange={(e) => setPickerSearch(e.target.value)}
+                placeholder="Search fields..."
+                className="w-full px-2 py-1.5 text-[12px] border border-gray-200 rounded outline-none focus:border-[#007a62]"
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {filteredFields.length === 0 ? (
+                <div className="px-3 py-4 text-[12px] text-gray-400 text-center">No matching fields</div>
+              ) : (
+                filteredFields.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => insertVariable(f.name)}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#f0faf7] flex items-center justify-between gap-2 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-[12px] text-gray-700 font-medium truncate">{f.label || f.name}</div>
+                      <div className="text-[10px] text-gray-400 font-mono">{f.name}</div>
+                    </div>
+                    <span className="text-[9px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                      {formatTypeName(f.type)}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Not editing: show label with variable pills
+  const hasVars = containsVariableRef(value);
+  return (
+    <span
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setEditing(true);
+      }}
+      {...stopDrag}
+      className={`cursor-text hover:bg-[#e6f5f0] hover:outline hover:outline-1 hover:outline-[#00856a]/30 rounded px-0.5 -mx-0.5 transition-colors ${className || ''}`}
+      title="Double-click to edit"
+    >
+      {value ? (
+        hasVars ? <LabelWithVariables text={value} /> : value
+      ) : (
+        <span className="text-gray-400 italic">{placeholder || 'Untitled'}</span>
+      )}
+    </span>
+  );
+}
+
+// ============================================================
 // Inline Editable Field Name — with rename propagation
 // ============================================================
 
@@ -263,7 +524,12 @@ function InlineFieldNameEdit({
 // ============================================================
 
 function HtmlLabel({ html }: { html: string }) {
-  const safe = React.useMemo(() => sanitizeHtml(html), [html]);
+  const safe = React.useMemo(() => {
+    let s = sanitizeHtml(html);
+    // Replace ${fieldname} tokens with styled pill spans
+    s = s.replace(/\$\{([^}]+)\}/g, '<span class="variable-pill" title="Field reference: ${$1}" style="display:inline-flex;align-items:center;gap:2px;padding:0 6px;border-radius:9999px;background:#e6f5f0;color:#007a62;font-size:12px;font-family:monospace;font-weight:500;border:1px solid #b2e0d4;margin:0 2px">$1</span>');
+    return s;
+  }, [html]);
   return (
     <span
       className="html-label-preview"
@@ -451,10 +717,11 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
               {containsHtml(row.label) ? (
                 <HtmlLabel html={row.label} />
               ) : (
-                <InlineEdit
+                <InlineEditWithVariables
                   value={row.label || ''}
                   onChange={(v) => updateRow(row.id, { label: v })}
                   placeholder={row.name}
+                  currentRowId={row.id}
                 />
               )}
             </span>
@@ -542,10 +809,11 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect }:
             {containsHtml(row.label) ? (
               <HtmlLabel html={row.label} />
             ) : (
-              <InlineEdit
+              <InlineEditWithVariables
                 value={row.label || ''}
                 onChange={(v) => updateRow(row.id, { label: v })}
                 placeholder="Untitled question"
+                currentRowId={row.id}
               />
             )}
             {row.required === 'yes' && <span className="text-red-500 ml-1">*</span>}
