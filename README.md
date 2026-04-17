@@ -14,6 +14,12 @@ A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSF
 ![Main Overview](docs/screenshots/01-main-overview.png)
 *Three-column layout: question palette (left), form canvas (center), properties panel (right)*
 
+![Expression Builder](docs/screenshots/03-expression-builder.png)
+*Visual expression builder with field picker, operators, and function library*
+
+![Report Builder](docs/screenshots/04-report-builder.png)
+*Report Template Builder with field palette, rich text editor, and syntax reference*
+
 ## Why This Exists
 
 ArcGIS Survey123 is powerful, but authoring surveys still means wrestling with XLSForm spreadsheets or using Esri's hosted designer (which requires an ArcGIS Online/Enterprise account). This project provides a free, offline-capable alternative that runs entirely in the browser.
