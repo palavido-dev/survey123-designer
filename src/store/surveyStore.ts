@@ -743,10 +743,10 @@ export const useSurveyStore = create<SurveyStore>()(
   {
     name: 'survey123-designer-autosave',
     storage: createJSONStorage(() => idbStorage),
-    // Only persist the form data and save timestamp — not UI state
+    // Only persist form data and the save timestamp — not UI state
     partialize: (state) => ({
       form: state.form,
-      lastSavedAt: Date.now(),
+      lastSavedAt: state.lastSavedAt,
     }),
     // On rehydration, detect recovered form
     onRehydrateStorage: () => {
@@ -756,11 +756,27 @@ export const useSurveyStore = create<SurveyStore>()(
           return;
         }
         if (state && state.form && state.form.survey.length > 0) {
-          // We recovered a non-empty form — flag it
-          state.hasRecoveredForm = true;
+          // Use setState to properly trigger a re-render with recovered flag
+          useSurveyStore.setState({ hasRecoveredForm: true });
         }
       };
     },
   }
 ));
+
+// ============================================================
+// Auto-save timestamp tracking
+// ============================================================
+// Subscribe to form changes and update lastSavedAt so the indicator works.
+// This runs AFTER persist middleware writes to IndexedDB.
+let _prevForm = useSurveyStore.getState().form;
+useSurveyStore.subscribe((state) => {
+  if (state.form !== _prevForm) {
+    _prevForm = state.form;
+    // Update timestamp after a tick to avoid triggering during the same set() call
+    queueMicrotask(() => {
+      useSurveyStore.setState({ lastSavedAt: Date.now() });
+    });
+  }
+});
 
