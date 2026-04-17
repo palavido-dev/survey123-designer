@@ -7,7 +7,7 @@
  * plus reference sheets (Version, Question types, Appearances, Field types, Reserved).
  */
 
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { SurveyForm, SurveyRow, ChoiceList, ChoiceItem, FormSettings, QuestionType } from '../types/survey';
 import { buildTypeColumnValue } from '../data/questionTypes';
 
@@ -99,6 +99,7 @@ export function exportToXlsx(form: SurveyForm): void {
   const surveyData = buildSurveySheet(form.survey);
   const surveyWs = XLSX.utils.aoa_to_sheet(surveyData);
   applyColumnWidths(surveyWs, surveyData);
+  applyGroupRepeatShading(surveyWs, form.survey, surveyData[0].length);
   XLSX.utils.book_append_sheet(wb, surveyWs, 'survey');
 
   // --- Choices Sheet (always all columns) ---
@@ -445,6 +446,57 @@ function addReservedSheet(wb: XLSX.WorkBook): void {
 // ============================================================
 // Helpers
 // ============================================================
+
+// ============================================================
+// Row Shading for Groups & Repeats
+// ============================================================
+
+/** Light purple for begin_group / end_group rows */
+const GROUP_FILL = { fgColor: { rgb: 'E8DEF8' } };
+/** Light teal for begin_repeat / end_repeat rows */
+const REPEAT_FILL = { fgColor: { rgb: 'D0F0E8' } };
+/** Dark header style */
+const HEADER_FILL = { fgColor: { rgb: '374151' } };
+const HEADER_FONT = { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 };
+
+function applyGroupRepeatShading(
+  ws: XLSX.WorkSheet,
+  rows: SurveyRow[],
+  numCols: number
+): void {
+  // Style header row (row 0 in sheet = row 1 in Excel, cell address R=0)
+  for (let c = 0; c < numCols; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[addr]) {
+      ws[addr].s = { fill: HEADER_FILL, font: HEADER_FONT };
+    }
+  }
+
+  // Style data rows — rows array is offset by 1 (header is row 0)
+  for (let i = 0; i < rows.length; i++) {
+    const rowType = rows[i].type;
+    let fill: { fgColor: { rgb: string } } | null = null;
+
+    if (rowType === 'begin_group' || rowType === 'end_group') {
+      fill = GROUP_FILL;
+    } else if (rowType === 'begin_repeat' || rowType === 'end_repeat') {
+      fill = REPEAT_FILL;
+    }
+
+    if (fill) {
+      const excelRow = i + 1; // +1 for header
+      for (let c = 0; c < numCols; c++) {
+        const addr = XLSX.utils.encode_cell({ r: excelRow, c });
+        if (!ws[addr]) {
+          // Create empty styled cell so the background shows
+          ws[addr] = { t: 's', v: '', s: { fill } };
+        } else {
+          ws[addr].s = { ...(ws[addr].s || {}), fill };
+        }
+      }
+    }
+  }
+}
 
 function applyColumnWidths(ws: XLSX.WorkSheet, data: string[][]): void {
   if (data.length === 0) return;
