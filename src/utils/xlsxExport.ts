@@ -600,11 +600,12 @@ async function postProcessXlsx(
   zip.file(wbXmlPath, wbXml);
 
   // ---- 2. Inject data validations into survey sheet ----
+  // OOXML requires dataValidations BEFORE ignoredErrors and other trailing elements.
+  // Insert right after </sheetData> to satisfy the schema order.
   const sheetPath = 'xl/worksheets/sheet1.xml';
   let sheetXml = await zip.file(sheetPath)!.async('string');
   const dataValidations = buildDataValidations(maxRow);
-  // Insert before </worksheet>
-  sheetXml = sheetXml.replace('</worksheet>', `${dataValidations}</worksheet>`);
+  sheetXml = sheetXml.replace('</sheetData>', `</sheetData>${dataValidations}`);
   zip.file(sheetPath, sheetXml);
 
   // Generate final blob

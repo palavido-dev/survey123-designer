@@ -6,6 +6,8 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage, type StateStorage } from 'zustand/middleware';
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { v4 as uuid } from 'uuid';
 import {
   SurveyForm,
@@ -20,12 +22,32 @@ import {
 import { createDefaultRow } from '../data/questionTypes';
 
 // ============================================================
+// IndexedDB Storage Adapter for Zustand persist
+// ============================================================
+
+const idbStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return (await idbGet(name)) ?? null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    await idbSet(name, value);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await idbDel(name);
+  },
+};
+
+// ============================================================
 // Store Interface
 // ============================================================
 
 interface SurveyStore {
   // === Form Data ===
   form: SurveyForm;
+
+  // === Auto-save State ===
+  lastSavedAt: number | null;        // timestamp of last auto-save
+  hasRecoveredForm: boolean;          // true if form was loaded from IndexedDB on startup
 
   // === UI State ===
   selectedRowId: string | null;
@@ -86,6 +108,10 @@ interface SurveyStore {
   // === Form Actions ===
   loadForm: (form: SurveyForm) => void;
   resetForm: () => void;
+
+  // === Auto-save Actions ===
+  dismissRecovery: () => void;
+  discardRecoveredForm: () => void;
 }
 
 // ============================================================
@@ -117,8 +143,12 @@ const defaultForm: SurveyForm = {
 // Store Implementation
 // ============================================================
 
-export const useSurveyStore = create<SurveyStore>((set, get) => ({
+export const useSurveyStore = create<SurveyStore>()(
+  persist(
+  (set, get) => ({
   form: { ...defaultForm },
+  lastSavedAt: null,
+  hasRecoveredForm: false,
   selectedRowId: null,
   panelView: 'properties',
   isDragging: false,
@@ -673,6 +703,7 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
     set({
       form: { ...form, mediaFiles: form.mediaFiles || [] },
       selectedRowId: null,
+      hasRecoveredForm: false,
       undoStack: [],
       redoStack: [],
     });
@@ -682,8 +713,54 @@ export const useSurveyStore = create<SurveyStore>((set, get) => ({
     set({
       form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [] },
       selectedRowId: null,
+      hasRecoveredForm: false,
       undoStack: [],
       redoStack: [],
     });
   },
-}));
+
+  // ----------------------------------------------------------
+  // Auto-save Actions
+  // ----------------------------------------------------------
+
+  dismissRecovery: () => {
+    set({ hasRecoveredForm: false });
+  },
+
+  discardRecoveredForm: () => {
+    set({
+      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [] },
+      selectedRowId: null,
+      hasRecoveredForm: false,
+      undoStack: [],
+      redoStack: [],
+    });
+  },
+}),
+  // ----------------------------------------------------------
+  // Zustand Persist Configuration
+  // ----------------------------------------------------------
+  {
+    name: 'survey123-designer-autosave',
+    storage: createJSONStorage(() => idbStorage),
+    // Only persist the form data and save timestamp — not UI state
+    partialize: (state) => ({
+      form: state.form,
+      lastSavedAt: Date.now(),
+    }),
+    // On rehydration, detect recovered form
+    onRehydrateStorage: () => {
+      return (state, error) => {
+        if (error) {
+          console.warn('Auto-save recovery failed:', error);
+          return;
+        }
+        if (state && state.form && state.form.survey.length > 0) {
+          // We recovered a non-empty form — flag it
+          state.hasRecoveredForm = true;
+        }
+      };
+    },
+  }
+));
+

@@ -79,6 +79,88 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+// ============================================================
+// Recovery Banner — shown when auto-saved form is restored
+// ============================================================
+
+function RecoveryBanner() {
+  const hasRecoveredForm = useSurveyStore((s) => s.hasRecoveredForm);
+  const lastSavedAt = useSurveyStore((s) => s.lastSavedAt);
+  const dismissRecovery = useSurveyStore((s) => s.dismissRecovery);
+  const discardRecoveredForm = useSurveyStore((s) => s.discardRecoveredForm);
+  const formTitle = useSurveyStore((s) => s.form.settings.form_title);
+  const rowCount = useSurveyStore((s) => s.form.survey.length);
+
+  if (!hasRecoveredForm) return null;
+
+  const timeAgo = lastSavedAt ? getTimeAgo(lastSavedAt) : '';
+
+  return (
+    <div className="bg-[#007a62] text-white px-4 py-2.5 flex items-center justify-between text-sm shadow-md z-50">
+      <div className="flex items-center gap-2">
+        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span>
+          <strong>Recovered:</strong> &ldquo;{formTitle}&rdquo; ({rowCount} questions){timeAgo ? ` \u2014 saved ${timeAgo}` : ''}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={dismissRecovery}
+          className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-medium transition-colors"
+        >
+          Keep working
+        </button>
+        <button
+          onClick={discardRecoveredForm}
+          className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs font-medium transition-colors"
+        >
+          Discard &amp; start fresh
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function getTimeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// ============================================================
+// Auto-save Indicator
+// ============================================================
+
+function AutoSaveIndicator() {
+  const lastSavedAt = useSurveyStore((s) => s.lastSavedAt);
+  const rowCount = useSurveyStore((s) => s.form.survey.length);
+  const [, forceUpdate] = React.useState(0);
+
+  // Re-render every 30s to update the time display
+  React.useEffect(() => {
+    const interval = setInterval(() => forceUpdate((n) => n + 1), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!lastSavedAt || rowCount === 0) return null;
+
+  return (
+    <div className="fixed bottom-3 right-3 bg-gray-800/80 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm z-40 flex items-center gap-1.5">
+      <svg className="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+      </svg>
+      Saved {getTimeAgo(lastSavedAt)}
+    </div>
+  );
+}
+
 export default function App() {
   const { form, addRow, moveRow, setDragging } = useSurveyStore();
   const mode = useReportStore((s) => s.mode);
@@ -143,6 +225,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="h-screen flex flex-col bg-gray-100">
+        <RecoveryBanner />
         <Toolbar />
 
         {mode === 'form' ? (
@@ -177,6 +260,8 @@ export default function App() {
             <ReportPropertiesPanel />
           </div>
         )}
+
+        <AutoSaveIndicator />
       </div>
     </ErrorBoundary>
   );
