@@ -12,6 +12,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import Link from '@tiptap/extension-link';
+import { useSurveyStore } from '../../store/surveyStore';
 
 // ============================================================
 // Toolbar Icons (inline SVGs for zero dependencies)
@@ -203,6 +204,120 @@ function Toolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       <ToolbarBtn active={false} onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear formatting">
         <CodeIcon />
       </ToolbarBtn>
+
+      <div className="w-px h-4 bg-gray-200 mx-1" />
+
+      <VariableInsertButton editor={editor} />
+    </div>
+  );
+}
+
+// ============================================================
+// Variable Insert Button — field picker for inserting ${field} tokens
+// ============================================================
+
+function VariableInsertButton({ editor }: { editor: ReturnType<typeof useEditor> }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const form = useSurveyStore((s) => s.form);
+
+  const fields = React.useMemo(() =>
+    form.survey.filter((r) =>
+      !['end_group', 'end_repeat', 'begin_group', 'begin_repeat'].includes(r.type)
+    ),
+    [form.survey]
+  );
+
+  const filtered = React.useMemo(() => {
+    if (!search) return fields;
+    const q = search.toLowerCase();
+    return fields.filter((f) =>
+      f.name.toLowerCase().includes(q) || (f.label || '').toLowerCase().includes(q)
+    );
+  }, [fields, search]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const insertVar = (fieldName: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent(`\${${fieldName}}`).run();
+    setOpen(false);
+    setSearch('');
+  };
+
+  const typeLabel = (type: string): string => {
+    const map: Record<string, string> = {
+      text: 'text', integer: 'int', decimal: 'dec', select_one: 'select1',
+      select_multiple: 'selectN', date: 'date', time: 'time', datetime: 'datetime',
+      geopoint: 'geo', image: 'image', note: 'note', calculate: 'calc',
+      hidden: 'hidden', range: 'range', rank: 'rank', email: 'email',
+    };
+    return map[type] || type;
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <ToolbarBtn
+        active={open}
+        onClick={() => { setOpen(!open); setSearch(''); }}
+        title="Insert field variable"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 8l-4 4 4 4M17 8l4 4-4 4" />
+        </svg>
+      </ToolbarBtn>
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <div className="p-2 border-b border-gray-100">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search fields..."
+              className="w-full px-2 py-1.5 text-[12px] border border-gray-200 rounded outline-none focus:border-[#007a62]"
+              onKeyDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="px-3 py-4 text-[12px] text-gray-400 text-center">No matching fields</div>
+            ) : (
+              filtered.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => insertVar(f.name)}
+                  className="w-full text-left px-3 py-1.5 hover:bg-[#f0faf7] flex items-center justify-between gap-2 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[12px] text-gray-700 font-medium truncate">{f.label || f.name}</div>
+                    <div className="text-[10px] text-gray-400 font-mono">{f.name}</div>
+                  </div>
+                  <span className="text-[9px] font-mono text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded flex-shrink-0">
+                    {typeLabel(f.type)}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
