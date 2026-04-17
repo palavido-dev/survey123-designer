@@ -167,6 +167,53 @@ export const useSurveyStore = create<SurveyStore>()(
     state.pushUndo();
 
     const newRow = createDefaultRow(type, appearance);
+
+    // Auto-inherit grid width from parent group if dropping into a grid group
+    // and the new row doesn't already have a w-appearance set
+    if (index !== undefined && !newRow.appearance?.match(/\bw[1-4]\b/) &&
+        type !== 'begin_group' && type !== 'begin_repeat' &&
+        type !== 'end_group' && type !== 'end_repeat') {
+      // Walk backwards from the insertion point to find the nearest open group
+      let depth = 0;
+      for (let i = index - 1; i >= 0; i--) {
+        const r = state.form.survey[i];
+        if (r.type === 'end_group' || r.type === 'end_repeat') depth++;
+        if (r.type === 'begin_group' || r.type === 'begin_repeat') {
+          if (depth === 0) {
+            // Found the parent group - check if it has a w-appearance
+            const parentApp = r.appearance || '';
+            const wMatch = parentApp.match(/\bw([1-4])\b/);
+            if (wMatch) {
+              // Inherit the parent group's w-value
+              newRow.appearance = newRow.appearance
+                ? `${newRow.appearance} w${wMatch[1]}`
+                : `w${wMatch[1]}`;
+            } else {
+              // Check if any sibling in this group has a w-appearance (grid detected from children)
+              let sibDepth = 0;
+              for (let j = i + 1; j < state.form.survey.length; j++) {
+                const s = state.form.survey[j];
+                if (s.type === 'begin_group' || s.type === 'begin_repeat') sibDepth++;
+                if (s.type === 'end_group' || s.type === 'end_repeat') {
+                  if (sibDepth === 0) break;
+                  sibDepth--;
+                }
+                if (sibDepth === 0 && s.appearance?.match(/\bw([1-4])\b/)) {
+                  const sibW = s.appearance.match(/\bw([1-4])\b/)!;
+                  newRow.appearance = newRow.appearance
+                    ? `${newRow.appearance} w${sibW[1]}`
+                    : `w${sibW[1]}`;
+                  break;
+                }
+              }
+            }
+            break;
+          }
+          depth--;
+        }
+      }
+    }
+
     const newSurvey = [...state.form.survey];
 
     // For groups and repeats, also add the closing element
