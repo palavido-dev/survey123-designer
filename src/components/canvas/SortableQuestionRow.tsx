@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { SurveyRow, ChoiceItem } from '../../types/survey';
@@ -945,6 +946,7 @@ function CascadingDetailPopover({
   onReconfigure,
   onRemove,
   onGoToQuestion,
+  badgeRef,
 }: {
   row: SurveyRow;
   isParent: boolean;
@@ -954,9 +956,26 @@ function CascadingDetailPopover({
   onReconfigure: () => void;
   onRemove: () => void;
   onGoToQuestion: (id: string) => void;
+  badgeRef: React.RefObject<HTMLSpanElement | null>;
 }) {
   const { form } = useSurveyStore();
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  // Position the popover relative to the badge
+  useEffect(() => {
+    if (badgeRef.current) {
+      const rect = badgeRef.current.getBoundingClientRect();
+      const popWidth = 320;
+      let left = rect.left;
+      // Keep it within viewport
+      if (left + popWidth > window.innerWidth - 16) {
+        left = window.innerWidth - popWidth - 16;
+      }
+      if (left < 8) left = 8;
+      setPosition({ top: rect.bottom + 4, left });
+    }
+  }, [badgeRef]);
 
   // Close on outside click (with mount guard to prevent closing on the same click that opened it)
   useEffect(() => {
@@ -1013,11 +1032,13 @@ function CascadingDetailPopover({
     }));
   })();
 
-  return (
+  if (!position) return null;
+
+  return ReactDOM.createPortal(
     <div
       ref={popoverRef}
-      className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-xl"
-      style={{ width: 320, padding: 0 }}
+      className="fixed z-[9999] bg-white border border-gray-200 rounded-lg shadow-xl"
+      style={{ width: 320, padding: 0, top: position.top, left: position.left, maxHeight: 'calc(100vh - 32px)' }}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
@@ -1169,7 +1190,8 @@ function CascadingDetailPopover({
           Reconfigure
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1385,6 +1407,7 @@ function LogicBadges({ row }: { row: SurveyRow }) {
                   isParent={isParent}
                   isChild={isChild}
                   childRows={childRows}
+                  badgeRef={cascadingBadgeRef}
                   onClose={() => setShowCascadingDetail(false)}
                   onReconfigure={() => {
                     setShowCascadingDetail(false);

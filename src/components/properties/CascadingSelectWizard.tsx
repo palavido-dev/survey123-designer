@@ -58,14 +58,18 @@ export function CascadingSelectWizard({ onClose, initialParentId, initialChildId
     ? form.choiceLists.find((cl) => cl.list_name === parentRow.listName)
     : null;
 
-  const childCandidates = useMemo(() =>
-    form.survey.filter((r) =>
+  const childCandidates = useMemo(() => {
+    // Child must appear AFTER the parent in form order
+    const parentIndex = parentRowId
+      ? form.survey.findIndex((r) => r.id === parentRowId)
+      : -1;
+    return form.survey.filter((r, idx) =>
       (r.type === 'select_one' || r.type === 'select_multiple') &&
       r.listName &&
-      r.id !== parentRowId
-    ),
-    [form.survey, parentRowId]
-  );
+      r.id !== parentRowId &&
+      (parentIndex === -1 || idx > parentIndex)
+    );
+  }, [form.survey, parentRowId]);
 
   const childRow = childRowId ? form.survey.find((r) => r.id === childRowId) : null;
   const childChoiceList = childRow?.listName
