@@ -18,13 +18,13 @@ import { FormSettingsEditor } from './FormSettingsEditor';
 import { MediaPanel } from './MediaPanel';
 import { ScriptFunctionLibrary } from '../scripts/ScriptFunctionLibrary';
 import { ScriptEditorModal } from '../scripts/ScriptEditorModal';
-import { CascadingSelectWizard } from './CascadingSelectWizard';
+// CascadingSelectWizard is now launched from per-question badges on the canvas
 import { Settings, MousePointerClick, List } from '../../utils/icons';
 
 export function PropertiesPanel() {
   const { form, selectedRowId, panelView, setPanelView } = useSurveyStore();
   const [showScriptSourceEditor, setShowScriptSourceEditor] = useState(false);
-  const [showCascadingWizard, setShowCascadingWizard] = useState(false);
+  // Cascading wizard is now launched from per-question badges on the canvas
 
   const selectedRow = selectedRowId
     ? form.survey.find((r) => r.id === selectedRowId)
@@ -113,25 +113,7 @@ export function PropertiesPanel() {
         ) : panelView === 'settings' ? (
           <FormSettingsEditor />
         ) : panelView === 'choiceLists' ? (
-          <div className="flex flex-col h-full">
-            <ChoiceListManager />
-            {/* Cascading select shortcut */}
-            {form.choiceLists.length >= 2 && (
-              <div className="shrink-0 border-t border-gray-100" style={{ padding: '10px 14px' }}>
-                <button
-                  onClick={() => setShowCascadingWizard(true)}
-                  className="w-full flex items-center gap-2 text-[12px] font-medium text-[#007a62]
-                    bg-[#f0faf7] border border-[#007a62]/20 rounded-lg hover:bg-[#e0f2ed] transition-colors"
-                  style={{ padding: '8px 12px' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
-                  </svg>
-                  Set Up Cascading Select
-                </button>
-              </div>
-            )}
-          </div>
+          <ChoiceListManager />
         ) : panelView === 'choices' && selectedRow && isSelectType ? (
           <div className="flex flex-col h-full">
             <ChoiceListEditor listName={selectedRow.listName!} />
@@ -166,10 +148,6 @@ export function PropertiesPanel() {
         <ScriptEditorModal onClose={() => setShowScriptSourceEditor(false)} />
       )}
 
-      {/* Cascading Select Wizard Modal */}
-      {showCascadingWizard && (
-        <CascadingSelectWizard onClose={() => setShowCascadingWizard(false)} />
-      )}
     </div>
   );
 }

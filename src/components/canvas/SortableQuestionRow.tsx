@@ -13,6 +13,7 @@ import type { LayoutContext } from './FormCanvas';
 import { X, Copy, ChevronDown, ChevronRight, Eye, Calculator, AlertCircle } from '../../utils/icons';
 import { validateRow, validateFieldName, sanitizeFieldName, type RowValidationResult } from '../../utils/validation';
 import { RichTextEditor, sanitizeHtml, containsHtml } from '../properties/RichTextEditor';
+import { CascadingSelectWizard } from '../properties/CascadingSelectWizard';
 
 interface Props {
   row: SurveyRow;
@@ -941,6 +942,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
 
 function LogicBadges({ row }: { row: SurveyRow }) {
   const { form, updateRow, openExpressionEditor, openCsvEditor } = useSurveyStore();
+  const [showCascadingWizard, setShowCascadingWizard] = useState<{ parentId?: string } | null>(null);
 
   // Build set of all field names for expression validation
   const allFieldNames = React.useMemo(
@@ -1087,7 +1089,68 @@ function LogicBadges({ row }: { row: SurveyRow }) {
             </span>
           );
         })()}
+
+        {/* Cascading badge — for select_one / select_multiple questions */}
+        {['select_one', 'select_multiple'].includes(row.type) && (() => {
+          // Check if this question is a cascading PARENT
+          // (another question's choice_filter references ${thisName})
+          const isParent = form.survey.some(
+            (r) => r.id !== row.id && r.choice_filter && r.choice_filter.includes(`\${${row.name}}`)
+          );
+          // Check if this question is a cascading CHILD (has choice_filter set)
+          const isChild = !!row.choice_filter;
+          const isCascading = isParent || isChild;
+
+          return (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                // If this is a parent (or not yet cascading), open wizard with this as parent
+                // If this is a child, also open wizard (user can reconfigure)
+                setShowCascadingWizard({
+                  parentId: (isParent || !isChild) ? row.id : undefined,
+                });
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`inline-flex items-center gap-1 border rounded-full cursor-pointer select-none transition-fast ${
+                isCascading
+                  ? 'bg-violet-50 text-violet-600 border-violet-200 hover:bg-violet-100 hover:border-violet-300'
+                  : 'bg-transparent text-gray-300 border-gray-200/60 hover:bg-gray-50 hover:text-gray-400 hover:border-gray-300'
+              }`}
+              style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+              title={
+                isParent && isChild
+                  ? `Cascading parent & child — choice_filter: ${row.choice_filter}`
+                  : isParent
+                  ? 'Cascading parent — other questions filter by this value'
+                  : isChild
+                  ? `Cascading child — ${row.choice_filter}`
+                  : 'Set up cascading select'
+              }
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
+              </svg>
+              {isParent ? 'Parent' : isChild ? 'Filtered' : 'Cascading'}
+              {!isCascading && (
+                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              )}
+            </span>
+          );
+        })()}
       </div>
+
+      {/* Cascading Select Wizard Modal (opened from badge) */}
+      {showCascadingWizard && (
+        <CascadingSelectWizard
+          onClose={() => setShowCascadingWizard(null)}
+          initialParentId={showCascadingWizard.parentId}
+        />
+      )}
 
       {/* Validation error/warning indicators */}
       {hasIssues && (
