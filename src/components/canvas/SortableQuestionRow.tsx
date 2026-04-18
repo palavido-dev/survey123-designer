@@ -933,6 +933,242 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
 }
 
 // ============================================================
+// Cascading Detail Popover — shows existing cascading configuration
+// ============================================================
+
+function CascadingDetailPopover({
+  row,
+  isParent,
+  isChild,
+  childRows,
+  onClose,
+  onReconfigure,
+  onRemove,
+  onGoToQuestion,
+}: {
+  row: SurveyRow;
+  isParent: boolean;
+  isChild: boolean;
+  childRows: SurveyRow[];
+  onClose: () => void;
+  onReconfigure: () => void;
+  onRemove: () => void;
+  onGoToQuestion: (id: string) => void;
+}) {
+  const { form } = useSurveyStore();
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [onClose]);
+
+  // Parse the choice_filter expression to extract parent field name and filter column
+  const parseChoiceFilter = (expr: string): { filterColumn: string; parentField: string } | null => {
+    // Match patterns like: "region = ${parent_field}"
+    const match = expr.match(/^(\w+)\s*=\s*\$\{(\w+)\}$/);
+    if (match) return { filterColumn: match[1], parentField: match[2] };
+    return null;
+  };
+
+  // Find parent question (for child rows)
+  const childFilterParsed = isChild && row.choice_filter ? parseChoiceFilter(row.choice_filter) : null;
+  const parentQuestion = childFilterParsed
+    ? form.survey.find((r) => r.name === childFilterParsed.parentField)
+    : null;
+
+  // Get choice list and show sample of filter column values
+  const choiceList = row.listName
+    ? form.choiceLists.find((cl) => cl.list_name === row.listName)
+    : null;
+
+  // For parent: show which child lists reference it and how
+  const childDetails = childRows.map((cr) => {
+    const parsed = cr.choice_filter ? parseChoiceFilter(cr.choice_filter) : null;
+    const cList = cr.listName
+      ? form.choiceLists.find((cl) => cl.list_name === cr.listName)
+      : null;
+    return { row: cr, parsed, choiceCount: cList?.choices.length || 0 };
+  });
+
+  // For child: show sample of filter column mappings
+  const filterMappingSamples = (() => {
+    if (!isChild || !childFilterParsed || !choiceList) return [];
+    const col = childFilterParsed.filterColumn;
+    return choiceList.choices.slice(0, 6).map((c) => ({
+      name: c.name,
+      label: c.label,
+      filterValue: c[col] || '',
+    }));
+  })();
+
+  return (
+    <div
+      ref={popoverRef}
+      className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-xl"
+      style={{ width: 320, padding: 0 }}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-100"
+        style={{ padding: '10px 14px' }}>
+        <div className="flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
+          </svg>
+          <span className="text-[13px] font-semibold text-gray-800">Cascading Select</span>
+        </div>
+        <button onClick={onClose}
+          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors">
+          <X size={14} />
+        </button>
+      </div>
+
+      <div style={{ padding: '12px 14px' }}>
+        {/* Role badge */}
+        <div className="flex items-center gap-2" style={{ marginBottom: 10 }}>
+          {isParent && (
+            <span className="text-[10px] font-bold text-violet-600 bg-violet-100 rounded-full"
+              style={{ padding: '2px 8px' }}>
+              PARENT
+            </span>
+          )}
+          {isChild && (
+            <span className="text-[10px] font-bold text-violet-600 bg-violet-100 rounded-full"
+              style={{ padding: '2px 8px' }}>
+              CHILD
+            </span>
+          )}
+        </div>
+
+        {/* Child view: show parent + filter expression + mappings */}
+        {isChild && (
+          <div>
+            {/* Expression */}
+            <div style={{ marginBottom: 10 }}>
+              <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+                style={{ marginBottom: 3 }}>Choice Filter</div>
+              <code className="block text-[11px] font-mono text-violet-700 bg-violet-50 rounded border border-violet-200"
+                style={{ padding: '6px 10px' }}>
+                {row.choice_filter}
+              </code>
+            </div>
+
+            {/* Parent question */}
+            {parentQuestion && (
+              <div style={{ marginBottom: 10 }}>
+                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+                  style={{ marginBottom: 3 }}>Filtered By</div>
+                <button
+                  onClick={() => onGoToQuestion(parentQuestion.id)}
+                  className="w-full text-left bg-gray-50 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50/50 transition-colors"
+                  style={{ padding: '8px 10px' }}
+                >
+                  <div className="text-[12px] font-medium text-gray-800">{parentQuestion.label || parentQuestion.name}</div>
+                  <div className="text-[10px] text-gray-400 font-mono">{parentQuestion.name} · {parentQuestion.listName}</div>
+                </button>
+              </div>
+            )}
+
+            {/* Filter column mapping preview */}
+            {childFilterParsed && filterMappingSamples.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+                  style={{ marginBottom: 3 }}>
+                  Filter Column: <span className="text-violet-600 font-mono">{childFilterParsed.filterColumn}</span>
+                </div>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-3 bg-gray-50 border-b border-gray-200"
+                    style={{ padding: '3px 8px' }}>
+                    <span className="text-[9px] font-semibold text-gray-400">Value</span>
+                    <span className="text-[9px] font-semibold text-gray-400">Label</span>
+                    <span className="text-[9px] font-semibold text-violet-400">{childFilterParsed.filterColumn}</span>
+                  </div>
+                  {filterMappingSamples.map((s) => (
+                    <div key={s.name} className="grid grid-cols-3 border-b border-gray-50"
+                      style={{ padding: '3px 8px' }}>
+                      <span className="text-[10px] text-gray-600 font-mono truncate">{s.name}</span>
+                      <span className="text-[10px] text-gray-600 truncate">{s.label}</span>
+                      <span className="text-[10px] text-violet-600 font-mono truncate">{s.filterValue || '—'}</span>
+                    </div>
+                  ))}
+                  {choiceList && choiceList.choices.length > 6 && (
+                    <div className="text-[9px] text-gray-400 text-center" style={{ padding: '3px 0' }}>
+                      +{choiceList.choices.length - 6} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Parent view: show which questions filter by this */}
+        {isParent && (
+          <div>
+            <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+              style={{ marginBottom: 4 }}>
+              {childDetails.length} question{childDetails.length !== 1 ? 's' : ''} filtered by this
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+              {childDetails.map((cd) => (
+                <button
+                  key={cd.row.id}
+                  onClick={() => onGoToQuestion(cd.row.id)}
+                  className="w-full text-left bg-gray-50 rounded-lg border border-gray-200 hover:border-violet-300 hover:bg-violet-50/50 transition-colors"
+                  style={{ padding: '8px 10px' }}
+                >
+                  <div className="text-[12px] font-medium text-gray-800">{cd.row.label || cd.row.name}</div>
+                  <div className="text-[10px] text-gray-400">
+                    <span className="font-mono">{cd.row.name}</span>
+                    {cd.parsed && (
+                      <span className="text-violet-500 ml-1">
+                        · filter: {cd.parsed.filterColumn}
+                      </span>
+                    )}
+                    <span className="ml-1">· {cd.choiceCount} choices</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between border-t border-gray-100"
+        style={{ padding: '8px 14px' }}>
+        {isChild ? (
+          <button
+            onClick={onRemove}
+            className="text-[11px] font-medium text-red-500 hover:text-red-700 transition-colors"
+          >
+            Remove Filter
+          </button>
+        ) : (
+          <span />
+        )}
+        <button
+          onClick={onReconfigure}
+          className="text-[11px] font-medium text-white bg-violet-600 rounded-md hover:bg-violet-700 transition-colors"
+          style={{ padding: '4px 12px' }}
+        >
+          {isCascading ? 'Reconfigure' : 'Set Up'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // Shared input class
 // ============================================================
 
@@ -941,8 +1177,10 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
 // ============================================================
 
 function LogicBadges({ row }: { row: SurveyRow }) {
-  const { form, updateRow, openExpressionEditor, openCsvEditor } = useSurveyStore();
+  const { form, updateRow, openExpressionEditor, openCsvEditor, pushUndo, selectRow } = useSurveyStore();
   const [showCascadingWizard, setShowCascadingWizard] = useState<{ parentId?: string } | null>(null);
+  const [showCascadingDetail, setShowCascadingDetail] = useState(false);
+  const cascadingBadgeRef = useRef<HTMLSpanElement>(null);
 
   // Build set of all field names for expression validation
   const allFieldNames = React.useMemo(
@@ -1093,51 +1331,76 @@ function LogicBadges({ row }: { row: SurveyRow }) {
         {/* Cascading badge — for select_one / select_multiple questions */}
         {['select_one', 'select_multiple'].includes(row.type) && (() => {
           // Check if this question is a cascading PARENT
-          // (another question's choice_filter references ${thisName})
-          const isParent = form.survey.some(
+          const childRows = form.survey.filter(
             (r) => r.id !== row.id && r.choice_filter && r.choice_filter.includes(`\${${row.name}}`)
           );
-          // Check if this question is a cascading CHILD (has choice_filter set)
+          const isParent = childRows.length > 0;
           const isChild = !!row.choice_filter;
           const isCascading = isParent || isChild;
 
           return (
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                // If this is a parent (or not yet cascading), open wizard with this as parent
-                // If this is a child, also open wizard (user can reconfigure)
-                setShowCascadingWizard({
-                  parentId: (isParent || !isChild) ? row.id : undefined,
-                });
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={`inline-flex items-center gap-1 border rounded-full cursor-pointer select-none transition-fast ${
-                isCascading
-                  ? 'bg-violet-50 text-violet-600 border-violet-200 hover:bg-violet-100 hover:border-violet-300'
-                  : 'bg-transparent text-gray-300 border-gray-200/60 hover:bg-gray-50 hover:text-gray-400 hover:border-gray-300'
-              }`}
-              style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
-              title={
-                isParent && isChild
-                  ? `Cascading parent & child — choice_filter: ${row.choice_filter}`
-                  : isParent
-                  ? 'Cascading parent — other questions filter by this value'
-                  : isChild
-                  ? `Cascading child — ${row.choice_filter}`
-                  : 'Set up cascading select'
-              }
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
-              </svg>
-              {isParent ? 'Parent' : isChild ? 'Filtered' : 'Cascading'}
-              {!isCascading && (
-                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            <span className="relative" ref={cascadingBadgeRef}>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (isCascading) {
+                    // Show detail popover for existing relationships
+                    setShowCascadingDetail(!showCascadingDetail);
+                  } else {
+                    // No relationship — go straight to wizard
+                    setShowCascadingWizard({ parentId: row.id });
+                  }
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`inline-flex items-center gap-1 border rounded-full cursor-pointer select-none transition-fast ${
+                  isCascading
+                    ? 'bg-violet-50 text-violet-600 border-violet-200 hover:bg-violet-100 hover:border-violet-300'
+                    : 'bg-transparent text-gray-300 border-gray-200/60 hover:bg-gray-50 hover:text-gray-400 hover:border-gray-300'
+                }`}
+                style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+                title={isCascading ? 'Click to view cascading configuration' : 'Set up cascading select'}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
                 </svg>
+                {isParent ? 'Parent' : isChild ? 'Filtered' : 'Cascading'}
+                {!isCascading && (
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                )}
+              </span>
+
+              {/* Cascading Detail Popover */}
+              {showCascadingDetail && isCascading && (
+                <CascadingDetailPopover
+                  row={row}
+                  isParent={isParent}
+                  isChild={isChild}
+                  childRows={childRows}
+                  onClose={() => setShowCascadingDetail(false)}
+                  onReconfigure={() => {
+                    setShowCascadingDetail(false);
+                    setShowCascadingWizard({
+                      parentId: isParent ? row.id : undefined,
+                    });
+                  }}
+                  onRemove={() => {
+                    setShowCascadingDetail(false);
+                    pushUndo();
+                    if (isChild) {
+                      updateRow(row.id, { choice_filter: '' });
+                    }
+                  }}
+                  onGoToQuestion={(id) => {
+                    setShowCascadingDetail(false);
+                    selectRow(id);
+                    const el = document.querySelector(`[data-row-id="${id}"]`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                />
               )}
             </span>
           );
