@@ -1166,7 +1166,7 @@ function CascadingDetailPopover({
           className="text-[11px] font-medium text-white bg-violet-600 rounded-md hover:bg-violet-700 transition-colors"
           style={{ padding: '4px 12px' }}
         >
-          {isCascading ? 'Reconfigure' : 'Set Up'}
+          Reconfigure
         </button>
       </div>
     </div>
