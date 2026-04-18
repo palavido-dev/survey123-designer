@@ -3,27 +3,31 @@
  *
  * Shows when no select question is selected, providing a central
  * place to view, edit, delete, and manage all choice lists.
+ * Each list can be expanded inline or popped out to a full modal.
  */
 
 import React, { useState } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { ChoiceListEditor } from './ChoiceListEditor';
+import { ChoiceListModal } from './ChoiceListModal';
 import { Plus, Trash2, ChevronRight } from '../../utils/icons';
 
 export function ChoiceListManager() {
-  const { form, addChoiceList, removeChoiceList, pushUndo } = useSurveyStore();
+  const { form, addChoiceList, removeChoiceList, pushUndo, selectRow } = useSurveyStore();
   const choiceLists = form.choiceLists || [];
   const [expandedList, setExpandedList] = useState<string | null>(null);
+  const [modalList, setModalList] = useState<string | null>(null);
   const [newListName, setNewListName] = useState('');
   const [showNewForm, setShowNewForm] = useState(false);
+  const [usagePopover, setUsagePopover] = useState<string | null>(null);
 
-  // Find which questions reference each choice list
+  // Find which questions reference each choice list (with full row info)
   const listUsage = React.useMemo(() => {
-    const usage = new Map<string, string[]>();
+    const usage = new Map<string, Array<{ id: string; name: string; label: string; type: string }>>();
     for (const cl of choiceLists) {
       const refs = form.survey
         .filter((r) => r.listName === cl.list_name)
-        .map((r) => r.label || r.name);
+        .map((r) => ({ id: r.id, name: r.name, label: r.label || r.name, type: r.type }));
       usage.set(cl.list_name, refs);
     }
     return usage;
@@ -56,6 +60,14 @@ export function ChoiceListManager() {
     if (expandedList === listName) setExpandedList(null);
   };
 
+  const handleGoToQuestion = (questionId: string) => {
+    setUsagePopover(null);
+    selectRow(questionId);
+    // Scroll to the question on the canvas
+    const el = document.querySelector(`[data-row-id="${questionId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   return (
     <div style={{ padding: '12px 14px' }}>
       {/* Header */}
@@ -79,8 +91,8 @@ export function ChoiceListManager() {
 
       {/* New list form */}
       {showNewForm && (
-        <div className="bg-gray-50 rounded-lg border border-gray-200 mb-3"
-          style={{ padding: '8px 10px' }}>
+        <div className="bg-gray-50 rounded-lg border border-gray-200"
+          style={{ padding: '8px 10px', marginBottom: 10 }}>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -112,7 +124,7 @@ export function ChoiceListManager() {
 
       {/* Choice list entries */}
       {choiceLists.length === 0 ? (
-        <div className="text-center py-8 text-gray-300">
+        <div className="text-center text-gray-300" style={{ padding: '32px 0' }}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
             className="mx-auto mb-2 text-gray-300">
@@ -124,21 +136,24 @@ export function ChoiceListManager() {
           </p>
         </div>
       ) : (
-        <div className="space-y-1">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {choiceLists.map((cl) => {
             const isExpanded = expandedList === cl.list_name;
             const refs = listUsage.get(cl.list_name) || [];
             return (
               <div key={cl.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 {/* List header row */}
-                <button
-                  onClick={() => setExpandedList(isExpanded ? null : cl.list_name)}
-                  className={`w-full flex items-center justify-between text-left transition-colors ${
+                <div
+                  className={`flex items-center justify-between transition-colors ${
                     isExpanded ? 'bg-[#f0faf7]' : 'bg-white hover:bg-gray-50'
                   }`}
                   style={{ padding: '8px 10px' }}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  {/* Left: expand toggle + info */}
+                  <button
+                    onClick={() => setExpandedList(isExpanded ? null : cl.list_name)}
+                    className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                  >
                     <ChevronRight
                       size={13}
                       className={`text-gray-400 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -147,35 +162,96 @@ export function ChoiceListManager() {
                       <div className="text-[12px] font-semibold text-gray-800 font-mono truncate">
                         {cl.list_name}
                       </div>
-                      <div className="text-[10px] text-gray-400">
-                        {cl.choices.length} choice{cl.choices.length !== 1 ? 's' : ''}
+                      <div className="text-[10px] text-gray-400 flex items-center gap-1">
+                        <span>{cl.choices.length} choice{cl.choices.length !== 1 ? 's' : ''}</span>
                         {refs.length > 0 && (
-                          <span className="text-[#007a62]"> · Used by {refs.length}</span>
+                          <span
+                            className="text-[#007a62] cursor-pointer hover:underline relative"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setUsagePopover(usagePopover === cl.list_name ? null : cl.list_name);
+                            }}
+                          >
+                            · Used by {refs.length}
+                          </span>
                         )}
                       </div>
                     </div>
-                  </div>
-                  <button
-                    onClick={(e) => handleDeleteList(cl.list_name, e)}
-                    className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50
-                      rounded transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-                    style={{ opacity: isExpanded ? 1 : undefined }}
-                    title="Delete list"
-                  >
-                    <Trash2 size={12} />
                   </button>
-                </button>
+
+                  {/* Right: actions */}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {/* Pop-out to modal */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setModalList(cl.list_name); }}
+                      className="p-1 text-gray-300 hover:text-[#007a62] hover:bg-[#f0faf7] rounded transition-colors"
+                      title="Open in full editor"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      </svg>
+                    </button>
+                    {/* Delete */}
+                    <button
+                      onClick={(e) => handleDeleteList(cl.list_name, e)}
+                      className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                      title="Delete list"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Usage popover */}
+                {usagePopover === cl.list_name && refs.length > 0 && (
+                  <div className="border-t border-gray-100 bg-gray-50"
+                    style={{ padding: '8px 12px' }}>
+                    <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+                      style={{ marginBottom: 4 }}>
+                      Used by
+                    </div>
+                    {refs.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => handleGoToQuestion(r.id)}
+                        className="w-full text-left flex items-center justify-between rounded
+                          hover:bg-white transition-colors"
+                        style={{ padding: '4px 8px' }}
+                      >
+                        <span className="text-[11px] text-gray-700 truncate">{r.label}</span>
+                        <span className="text-[9px] text-gray-400 font-mono shrink-0 ml-2">{r.type}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Expanded: show inline choice list editor */}
                 {isExpanded && (
                   <div className="border-t border-gray-200">
                     <ChoiceListEditor listName={cl.list_name} />
+                    {/* Pop-out hint */}
+                    <div className="border-t border-gray-100" style={{ padding: '6px 12px' }}>
+                      <button
+                        onClick={() => setModalList(cl.list_name)}
+                        className="w-full text-[10px] text-gray-400 hover:text-[#007a62] transition-colors text-center"
+                      >
+                        Open in full editor for more space →
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             );
           })}
         </div>
+      )}
+
+      {/* Choice List Modal */}
+      {modalList && (
+        <ChoiceListModal
+          listName={modalList}
+          onClose={() => setModalList(null)}
+        />
       )}
     </div>
   );
