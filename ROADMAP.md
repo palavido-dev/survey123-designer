@@ -26,11 +26,11 @@ This is a personal project under active development. Features are prioritized ba
 - [x] **Block-aware drag and move** — dragging a group moves the entire block (header, children, end marker); dropping onto a group header nests inside it
 - [x] **Form-level settings** — title, form ID, version, style, and default language
 
-## Up Next
+## Recently Completed
 
-- [ ] **Comprehensive form validation** — validate the entire form before export: duplicate names, missing labels, orphaned choice lists, broken expression references, circular dependencies. Visual error/warning indicators with a summary panel.
-- [ ] **Full XLSX + media zip export** — bundle the `.xlsx` with all referenced CSV files into a `.zip` ready to drop into Survey123 Connect
-- [ ] **Cascading select wizard** — guided setup for cascading/filtered selects with visual parent-child relationship builder and `choice_filter` auto-generation
+- [x] **Comprehensive form validation** — validate the entire form before export: duplicate names, missing labels, orphaned choice lists, broken expression references, unmatched groups, invalid field names. Visual error/warning indicators on the canvas with a collapsible summary panel.
+- [x] **Full XLSX + media zip export** — bundle the `.xlsx` with all referenced CSV files into a `.zip` ready to drop into Survey123 Connect's media folder
+- [x] **Cascading select wizard** — guided step-by-step setup for cascading/filtered selects with visual parent-child relationship builder, mapping UI, and automatic `choice_filter` generation
 
 ## Planned
 

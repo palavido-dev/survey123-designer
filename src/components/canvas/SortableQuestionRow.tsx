@@ -610,6 +610,23 @@ function NoteLabel({ row }: { row: SurveyRow }) {
 // Main Component
 // ============================================================
 
+/** Small validation indicator dot shown on rows with issues */
+function ValidationDot({ rowId }: { rowId: string }) {
+  const validationResult = useSurveyStore((s) => s.validationResult);
+  if (!validationResult) return null;
+  const rowIssue = validationResult.rowIssues.get(rowId);
+  if (!rowIssue) return null;
+  const hasErrors = rowIssue.errors > 0;
+  return (
+    <span
+      title={`${rowIssue.errors} error${rowIssue.errors !== 1 ? 's' : ''}, ${rowIssue.warnings} warning${rowIssue.warnings !== 1 ? 's' : ''}`}
+      className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full border border-white z-10 ${
+        hasErrors ? 'bg-red-500' : 'bg-amber-400'
+      }`}
+    />
+  );
+}
+
 export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, layoutContext }: Props) {
   const { form, removeRow, duplicateRow, updateRow, collapsedGroups, toggleGroupCollapse } = useSurveyStore();
   const layout = layoutContext || { type: 'normal' as const };
@@ -648,7 +665,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
   if (isEndStructural) {
     const isEndGroup = row.type === 'end_group';
     return (
-      <div ref={setNodeRef} style={style} data-question-id={row.id}
+      <div ref={setNodeRef} style={style} data-question-id={row.id} data-row-id={row.id}
         className={`rounded-lg ${isEndGroup
           ? 'bg-[#f7f3ff] border border-purple-200'
           : 'bg-[#f0faf7] border border-teal-200'}`}>
@@ -665,7 +682,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
   // Metadata & hidden fields are compact
   if (isMetadata || isHidden) {
     return (
-      <div ref={setNodeRef} style={style} data-question-id={row.id}
+      <div ref={setNodeRef} style={style} data-question-id={row.id} data-row-id={row.id}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
         className={`flex items-center gap-3 py-4 px-10 rounded-lg text-[12px] cursor-pointer transition-fast
           ${isSelected ? 'bg-[#f0faf7] selected-glow' : 'bg-gray-50 hover:bg-gray-100'}`}>
@@ -705,7 +722,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
     })();
 
     return (
-      <div ref={setNodeRef} style={style} data-question-id={row.id}
+      <div ref={setNodeRef} style={style} data-question-id={row.id} data-row-id={row.id}
         {...attributes} {...listeners}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
         className={`rounded-lg cursor-grab active:cursor-grabbing transition-fast
@@ -792,7 +809,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
       <div
         ref={setNodeRef}
         style={{ ...style, padding: 0 }}
-        data-question-id={row.id}
+        data-question-id={row.id} data-row-id={row.id}
         {...attributes}
         {...listeners}
         onClick={(e) => { e.stopPropagation(); onSelect(); }}
@@ -842,7 +859,7 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
     <div
       ref={setNodeRef}
       style={{ ...style, padding: '10px 14px' }}
-      data-question-id={row.id}
+      data-question-id={row.id} data-row-id={row.id}
       {...attributes}
       {...listeners}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
@@ -858,6 +875,9 @@ export function SortableQuestionRow({ row, index, depth, isSelected, onSelect, l
               : 'bg-transparent hover:bg-gray-50 border border-transparent hover:border-gray-200'}
       `}
     >
+      {/* Validation indicator dot */}
+      <ValidationDot rowId={row.id} />
+
       {/* Action buttons (top right) */}
       <div className={`absolute top-5 right-7 flex items-center gap-0.5
         ${isSelected ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-fast`}>

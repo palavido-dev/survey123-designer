@@ -24,6 +24,7 @@ import { useSurveyStore } from './store/surveyStore';
 import { useReportStore } from './store/reportStore';
 import { QuestionType } from './types/survey';
 import { Toolbar } from './components/toolbar/Toolbar';
+import { ValidationPanel } from './components/toolbar/ValidationPanel';
 import { QuestionPalette } from './components/sidebar/QuestionPalette';
 import { FormCanvas } from './components/canvas/FormCanvas';
 import { PropertiesPanel } from './components/properties/PropertiesPanel';
@@ -232,6 +233,7 @@ export default function App() {
       <div className="h-screen flex flex-col bg-gray-100">
         <RecoveryBanner />
         <Toolbar />
+        <ValidationPanel />
 
         {mode === 'form' ? (
           /* ===== Form Builder Mode ===== */

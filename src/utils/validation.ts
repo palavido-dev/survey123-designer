@@ -327,3 +327,264 @@ export function validateRow(
 
   return { fieldNameIssues, expressionIssues, hasErrors, hasWarnings };
 }
+
+// ============================================================
+// Form-wide Validation
+// ============================================================
+
+export interface FormValidationIssue {
+  level: 'error' | 'warning';
+  category: 'duplicate-name' | 'missing-label' | 'orphaned-list' | 'unused-list'
+    | 'broken-ref' | 'unmatched-group' | 'field-name' | 'expression'
+    | 'missing-list' | 'missing-file' | 'empty-list';
+  message: string;
+  /** Row ID this issue applies to (null for form-level issues) */
+  rowId?: string;
+  /** Field name for row-level issues */
+  fieldName?: string;
+}
+
+export interface FormValidationResult {
+  issues: FormValidationIssue[];
+  errorCount: number;
+  warningCount: number;
+  /** Per-row issue counts for quick canvas indicators */
+  rowIssues: Map<string, { errors: number; warnings: number }>;
+}
+
+interface ValidateFormInput {
+  survey: Array<{
+    id: string;
+    type: string;
+    name: string;
+    label: string;
+    listName?: string;
+    fileName?: string;
+    relevant?: string;
+    calculation?: string;
+    constraint?: string;
+    choice_filter?: string;
+    required?: string;
+    required_message?: string;
+    constraint_message?: string;
+    repeat_count?: string;
+    default?: string;
+    appearance?: string;
+  }>;
+  choiceLists: Array<{
+    list_name: string;
+    choices: Array<{ name: string; label: string }>;
+  }>;
+  mediaFiles: Array<{ fileName: string }>;
+}
+
+export function validateForm(input: ValidateFormInput): FormValidationResult {
+  const issues: FormValidationIssue[] = [];
+  const rowIssues = new Map<string, { errors: number; warnings: number }>();
+
+  const addIssue = (issue: FormValidationIssue) => {
+    issues.push(issue);
+    if (issue.rowId) {
+      const existing = rowIssues.get(issue.rowId) || { errors: 0, warnings: 0 };
+      if (issue.level === 'error') existing.errors++;
+      else existing.warnings++;
+      rowIssues.set(issue.rowId, existing);
+    }
+  };
+
+  const allFieldNames = new Set(
+    input.survey
+      .filter((r) => !['end_group', 'end_repeat'].includes(r.type))
+      .map((r) => r.name)
+      .filter(Boolean)
+  );
+
+  // 1. Duplicate field names
+  const nameCounts = new Map<string, string[]>();
+  for (const row of input.survey) {
+    if (['end_group', 'end_repeat'].includes(row.type)) continue;
+    if (!row.name) continue;
+    const ids = nameCounts.get(row.name) || [];
+    ids.push(row.id);
+    nameCounts.set(row.name, ids);
+  }
+  for (const [name, ids] of nameCounts) {
+    if (ids.length > 1) {
+      for (const id of ids) {
+        addIssue({
+          level: 'error',
+          category: 'duplicate-name',
+          message: `Duplicate field name "${name}" (${ids.length} occurrences)`,
+          rowId: id,
+          fieldName: name,
+        });
+      }
+    }
+  }
+
+  // 2. Missing labels on visible question types
+  const structuralTypes = new Set([
+    'end_group', 'end_repeat', 'calculate', 'hidden',
+    'start', 'end', 'username', 'deviceid',
+  ]);
+  for (const row of input.survey) {
+    if (structuralTypes.has(row.type)) continue;
+    if (!row.label || !row.label.trim()) {
+      addIssue({
+        level: 'warning',
+        category: 'missing-label',
+        message: `Question "${row.name || '(unnamed)'}" has no label`,
+        rowId: row.id,
+        fieldName: row.name,
+      });
+    }
+  }
+
+  // 3. Unmatched groups/repeats
+  const groupStack: { type: string; id: string; name: string }[] = [];
+  for (const row of input.survey) {
+    if (row.type === 'begin_group' || row.type === 'begin_repeat') {
+      groupStack.push({ type: row.type, id: row.id, name: row.name });
+    } else if (row.type === 'end_group') {
+      if (groupStack.length === 0 || groupStack[groupStack.length - 1].type !== 'begin_group') {
+        addIssue({
+          level: 'error',
+          category: 'unmatched-group',
+          message: `end_group "${row.name}" has no matching begin_group`,
+          rowId: row.id,
+          fieldName: row.name,
+        });
+      } else {
+        groupStack.pop();
+      }
+    } else if (row.type === 'end_repeat') {
+      if (groupStack.length === 0 || groupStack[groupStack.length - 1].type !== 'begin_repeat') {
+        addIssue({
+          level: 'error',
+          category: 'unmatched-group',
+          message: `end_repeat "${row.name}" has no matching begin_repeat`,
+          rowId: row.id,
+          fieldName: row.name,
+        });
+      } else {
+        groupStack.pop();
+      }
+    }
+  }
+  for (const unclosed of groupStack) {
+    const typeName = unclosed.type === 'begin_group' ? 'Group' : 'Repeat';
+    addIssue({
+      level: 'error',
+      category: 'unmatched-group',
+      message: `${typeName} "${unclosed.name}" is never closed`,
+      rowId: unclosed.id,
+      fieldName: unclosed.name,
+    });
+  }
+
+  // 4. Missing choice lists (select referencing non-existent list)
+  const choiceListNames = new Set(input.choiceLists.map((cl) => cl.list_name));
+  for (const row of input.survey) {
+    if (['select_one', 'select_multiple', 'rank'].includes(row.type)) {
+      if (row.listName && !choiceListNames.has(row.listName)) {
+        addIssue({
+          level: 'error',
+          category: 'missing-list',
+          message: `Choice list "${row.listName}" not found`,
+          rowId: row.id,
+          fieldName: row.name,
+        });
+      }
+    }
+  }
+
+  // 5. Missing CSV files (select_from_file referencing non-existent file)
+  const mediaFileNames = new Set(input.mediaFiles.map((f) => f.fileName));
+  for (const row of input.survey) {
+    if (['select_one_from_file', 'select_multiple_from_file'].includes(row.type)) {
+      if (row.fileName && !mediaFileNames.has(row.fileName)) {
+        addIssue({
+          level: 'warning',
+          category: 'missing-file',
+          message: `CSV file "${row.fileName}" not uploaded`,
+          rowId: row.id,
+          fieldName: row.name,
+        });
+      }
+    }
+  }
+
+  // 6. Empty choice lists
+  for (const cl of input.choiceLists) {
+    if (cl.choices.length === 0) {
+      addIssue({
+        level: 'error',
+        category: 'empty-list',
+        message: `Choice list "${cl.list_name}" has no choices`,
+      });
+    }
+  }
+
+  // 7. Unused choice lists (lists not referenced by any question)
+  const usedLists = new Set(
+    input.survey
+      .filter((r) => ['select_one', 'select_multiple', 'rank'].includes(r.type))
+      .map((r) => r.listName)
+      .filter(Boolean)
+  );
+  for (const cl of input.choiceLists) {
+    if (!usedLists.has(cl.list_name)) {
+      addIssue({
+        level: 'warning',
+        category: 'unused-list',
+        message: `Choice list "${cl.list_name}" is not used by any question`,
+      });
+    }
+  }
+
+  // 8. Per-row field name validation
+  for (const row of input.survey) {
+    if (['end_group', 'end_repeat'].includes(row.type)) continue;
+    const nameIssues = validateFieldName(row.name);
+    for (const issue of nameIssues) {
+      addIssue({
+        level: issue.level,
+        category: 'field-name',
+        message: `${row.name}: ${issue.message}`,
+        rowId: row.id,
+        fieldName: row.name,
+      });
+    }
+  }
+
+  // 9. Expression validation on all rows
+  const exprFields: { key: string; label: string }[] = [
+    { key: 'relevant', label: 'relevant' },
+    { key: 'calculation', label: 'calculation' },
+    { key: 'constraint', label: 'constraint' },
+    { key: 'choice_filter', label: 'choice_filter' },
+    { key: 'required', label: 'required' },
+    { key: 'repeat_count', label: 'repeat_count' },
+  ];
+  for (const row of input.survey) {
+    for (const { key, label } of exprFields) {
+      const val = (row as any)[key] as string | undefined;
+      if (!val || val === 'yes' || val === 'no') continue;
+      const exprIssues = validateExpression(val, allFieldNames);
+      for (const issue of exprIssues) {
+        addIssue({
+          level: issue.level,
+          category: 'expression',
+          message: `${row.name} → ${label}: ${issue.message}`,
+          rowId: row.id,
+          fieldName: row.name,
+        });
+      }
+    }
+  }
+
+  const errorCount = issues.filter((i) => i.level === 'error').length;
+  const warningCount = issues.filter((i) => i.level === 'warning').length;
+
+  return { issues, errorCount, warningCount, rowIssues };
+}

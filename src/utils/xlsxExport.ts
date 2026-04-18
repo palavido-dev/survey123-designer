@@ -134,7 +134,11 @@ const APPEARANCE_LISTS: Record<string, string[]> = {
 // Export Function
 // ============================================================
 
-export async function exportToXlsx(form: SurveyForm): Promise<void> {
+/**
+ * Build the XLSX workbook and return as a processed Blob.
+ * Shared by both exportToXlsx and exportToZip.
+ */
+async function buildXlsxBlob(form: SurveyForm): Promise<Blob> {
   const wb = XLSX.utils.book_new();
 
   // --- Survey Sheet (always all columns) ---
@@ -163,15 +167,56 @@ export async function exportToXlsx(form: SurveyForm): Promise<void> {
   const fieldMetadata = addFieldTypesSheet(wb);
   addReservedSheet(wb);
 
-  // --- Write to buffer, post-process with JSZip, then download ---
+  // --- Write to buffer, post-process with JSZip ---
   const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
   const surveyRowCount = form.survey.length;
 
-  const finalBlob = await postProcessXlsx(buf, surveyRowCount, appMetadata, fieldMetadata);
+  return await postProcessXlsx(buf, surveyRowCount, appMetadata, fieldMetadata);
+}
+
+export async function exportToXlsx(form: SurveyForm): Promise<void> {
+  const finalBlob = await buildXlsxBlob(form);
 
   // Trigger download
   const fileName = `${form.settings.form_id || 'survey'}.xlsx`;
-  const url = URL.createObjectURL(finalBlob);
+  triggerDownload(finalBlob, fileName);
+}
+
+/**
+ * Export form as a .zip file containing the .xlsx and all referenced
+ * CSV media files in a media/ folder — ready for Survey123 Connect.
+ */
+export async function exportToZip(form: SurveyForm): Promise<void> {
+  const xlsxBlob = await buildXlsxBlob(form);
+  const formId = form.settings.form_id || 'survey';
+
+  const zip = new JSZip();
+
+  // Add the xlsx at the root
+  zip.file(`${formId}.xlsx`, xlsxBlob);
+
+  // Add CSV media files into media/ folder
+  const mediaFiles = (form.mediaFiles || []).filter((f) => f.rawContent);
+  if (mediaFiles.length > 0) {
+    const mediaFolder = zip.folder('media')!;
+    for (const mf of mediaFiles) {
+      mediaFolder.file(mf.fileName, mf.rawContent!);
+    }
+  }
+
+  // Generate and download
+  const zipBlob = await zip.generateAsync({
+    type: 'blob',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 },
+  });
+
+  triggerDownload(zipBlob, `${formId}.zip`);
+}
+
+/** Helper to trigger a browser file download */
+function triggerDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;

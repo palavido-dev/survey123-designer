@@ -3,15 +3,17 @@
  * Includes Form/Report mode toggle
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { useReportStore } from '../../store/reportStore';
-import { exportToXlsx, importFromXlsx } from '../../utils/xlsxExport';
+import { exportToXlsx, exportToZip, importFromXlsx } from '../../utils/xlsxExport';
 import { importDocxToHtml, exportHtmlToDocx } from '../../utils/reportDocx';
 import {
-  Download, Upload, Undo2, Redo2, FileText, Plus,
+  Download, Upload, Undo2, Redo2, FileText, Plus, AlertCircle,
 } from '../../utils/icons';
 import type { AppMode } from '../../types/report';
+import { ValidationPanel } from './ValidationPanel';
+import { CascadingSelectWizard } from '../properties/CascadingSelectWizard';
 
 export function Toolbar() {
   const {
@@ -22,6 +24,9 @@ export function Toolbar() {
     redo,
     resetForm,
     loadForm,
+    runValidation,
+    validationResult,
+    showValidationPanel,
   } = useSurveyStore();
 
   const {
@@ -37,11 +42,18 @@ export function Toolbar() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
+  const [showCascadingWizard, setShowCascadingWizard] = useState(false);
 
   // ---- Form mode handlers ----
   const handleExport = async () => {
     await exportToXlsx(form);
   };
+
+  const handleExportZip = async () => {
+    await exportToZip(form);
+  };
+
+  const hasMediaFiles = (form.mediaFiles || []).some((f) => f.rawContent);
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -178,6 +190,50 @@ export function Toolbar() {
             <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
 
             <button
+              onClick={runValidation}
+              className={`flex items-center text-[13px] font-medium rounded-lg transition-fast relative ${
+                validationResult && validationResult.errorCount > 0
+                  ? 'text-red-600 hover:text-red-800 hover:bg-red-50'
+                  : validationResult && validationResult.warningCount > 0
+                  ? 'text-amber-600 hover:text-amber-800 hover:bg-amber-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+              style={{ padding: '6px 12px', gap: 6 }}
+              title="Validate form"
+            >
+              <AlertCircle size={15} className={
+                validationResult && validationResult.errorCount > 0
+                  ? 'text-red-400'
+                  : validationResult && validationResult.warningCount > 0
+                  ? 'text-amber-400'
+                  : 'text-gray-400'
+              } />
+              Validate
+              {validationResult && (validationResult.errorCount + validationResult.warningCount) > 0 && (
+                <span className={`absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full text-[10px] font-bold flex items-center justify-center px-1 ${
+                  validationResult.errorCount > 0 ? 'bg-red-500 text-white' : 'bg-amber-400 text-white'
+                }`}>
+                  {validationResult.errorCount + validationResult.warningCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setShowCascadingWizard(true)}
+              className="flex items-center text-[13px] font-medium
+                text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast"
+              style={{ padding: '6px 12px', gap: 6 }}
+              title="Cascading select wizard"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
+              </svg>
+              Cascading
+            </button>
+
+            <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
+
+            <button
               onClick={handleExport}
               className="flex items-center text-[13px] font-semibold
                 text-white bg-[#007a62] rounded-lg transition-fast
@@ -188,6 +244,20 @@ export function Toolbar() {
               <Download size={15} />
               Export XLSX
             </button>
+
+            {hasMediaFiles && (
+              <button
+                onClick={handleExportZip}
+                className="flex items-center text-[13px] font-medium
+                  text-[#007a62] bg-[#e8f5f1] rounded-lg transition-fast
+                  hover:bg-[#d0ebe3] active:scale-[0.98]"
+                style={{ padding: '6px 14px', gap: 6 }}
+                title="Export XLSX + media files as ZIP (for Survey123 Connect)"
+              >
+                <Download size={15} />
+                Export ZIP
+              </button>
+            )}
 
             <input
               ref={fileInputRef}
@@ -278,6 +348,11 @@ export function Toolbar() {
           <div style={{ width: 68 }} />
         )}
       </div>
+
+      {/* Cascading Select Wizard Modal */}
+      {showCascadingWizard && (
+        <CascadingSelectWizard onClose={() => setShowCascadingWizard(false)} />
+      )}
     </div>
   );
 }

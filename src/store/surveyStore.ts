@@ -20,6 +20,7 @@ import {
   MediaFile,
 } from '../types/survey';
 import { createDefaultRow } from '../data/questionTypes';
+import { validateForm, FormValidationResult } from '../utils/validation';
 
 // ============================================================
 // IndexedDB Storage Adapter for Zustand persist
@@ -63,6 +64,10 @@ interface SurveyStore {
   // === CSV Editor Modal ===
   csvEditor: { rowId: string; fileName: string } | null;
 
+  // === Validation State ===
+  validationResult: FormValidationResult | null;
+  showValidationPanel: boolean;
+
   // === Survey Row Actions ===
   addRow: (type: QuestionType, index?: number, appearance?: string) => void;
   removeRow: (id: string) => void;
@@ -99,6 +104,11 @@ interface SurveyStore {
   closeExpressionEditor: () => void;
   openCsvEditor: (rowId: string, fileName: string) => void;
   closeCsvEditor: () => void;
+
+  // === Validation Actions ===
+  runValidation: () => FormValidationResult;
+  clearValidation: () => void;
+  setShowValidationPanel: (show: boolean) => void;
 
   // === History ===
   undo: () => void;
@@ -155,6 +165,8 @@ export const useSurveyStore = create<SurveyStore>()(
   collapsedGroups: new Set<string>(),
   expressionEditor: null,
   csvEditor: null,
+  validationResult: null,
+  showValidationPanel: false,
   undoStack: [],
   redoStack: [],
 
@@ -781,6 +793,29 @@ export const useSurveyStore = create<SurveyStore>()(
       },
       redoStack: [],
     });
+  },
+
+  // ----------------------------------------------------------
+  // Validation Actions
+  // ----------------------------------------------------------
+
+  runValidation: () => {
+    const state = get();
+    const result = validateForm({
+      survey: state.form.survey,
+      choiceLists: state.form.choiceLists,
+      mediaFiles: state.form.mediaFiles || [],
+    });
+    set({ validationResult: result, showValidationPanel: true });
+    return result;
+  },
+
+  clearValidation: () => {
+    set({ validationResult: null, showValidationPanel: false });
+  },
+
+  setShowValidationPanel: (show) => {
+    set({ showValidationPanel: show });
   },
 
   // ----------------------------------------------------------
