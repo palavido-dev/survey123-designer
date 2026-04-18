@@ -6,21 +6,142 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useSurveyStore } from '../../store/surveyStore';
 import { ChoiceItem } from '../../types/survey';
-import { X, Plus, Trash2, Search } from '../../utils/icons';
+import { X, Plus, Trash2, Search, GripVertical } from '../../utils/icons';
 
 interface Props {
   listName: string;
   onClose: () => void;
 }
 
+function SortableModalChoice({
+  choice,
+  index,
+  listName,
+  extraColumns,
+  searchQuery,
+}: {
+  choice: ChoiceItem;
+  index: number;
+  listName: string;
+  extraColumns: string[];
+  searchQuery: string;
+}) {
+  const { updateChoice, removeChoice } = useSurveyStore();
+  const {
+    attributes, listeners, setNodeRef, transform, transition, isDragging,
+  } = useSortable({ id: choice.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...style, padding: '4px 20px', gap: 8 }}
+      className={`flex items-center group hover:bg-gray-50 transition-colors border-b border-gray-100 ${
+        isDragging ? 'opacity-40 bg-gray-50' : ''
+      }`}
+    >
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-gray-200 hover:text-gray-400 shrink-0 transition-colors"
+      >
+        <GripVertical size={13} />
+      </div>
+
+      <span className="text-[10px] text-gray-300 font-mono shrink-0 text-right"
+        style={{ width: 28 }}>
+        {searchQuery ? '·' : index + 1}
+      </span>
+
+      <input
+        type="text"
+        value={choice.name}
+        onChange={(e) => updateChoice(listName, choice.id, { name: e.target.value })}
+        className="shrink-0 font-mono border border-transparent hover:border-gray-200
+          focus:border-[#007a62] rounded bg-transparent focus:bg-white transition-colors outline-none"
+        style={{ width: 160, padding: '5px 8px', fontSize: 12 }}
+        placeholder="value"
+      />
+
+      <input
+        type="text"
+        value={choice.label}
+        onChange={(e) => updateChoice(listName, choice.id, { label: e.target.value })}
+        className="flex-1 border border-transparent hover:border-gray-200
+          focus:border-[#007a62] rounded bg-transparent focus:bg-white transition-colors outline-none"
+        style={{ padding: '5px 8px', fontSize: 13 }}
+        placeholder="Display label"
+      />
+
+      {extraColumns.map((col) => (
+        <input
+          key={col}
+          type="text"
+          value={choice[col] || ''}
+          onChange={(e) => updateChoice(listName, choice.id, { [col]: e.target.value })}
+          className="shrink-0 font-mono border border-transparent hover:border-gray-200
+            focus:border-violet-400 rounded bg-transparent focus:bg-white transition-colors outline-none"
+          style={{ width: 120, padding: '5px 8px', fontSize: 11 }}
+          placeholder={col}
+        />
+      ))}
+
+      <button
+        onClick={() => removeChoice(listName, choice.id)}
+        className="shrink-0 text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+        style={{ padding: 4 }}
+        title="Remove choice"
+      >
+        <Trash2 size={13} />
+      </button>
+    </div>
+  );
+}
+
 export function ChoiceListModal({ listName, onClose }: Props) {
-  const { form, addChoice, removeChoice, updateChoice, removeChoiceList, pushUndo } = useSurveyStore();
+  const { form, addChoice, removeChoice, updateChoice, removeChoiceList, moveChoice, pushUndo } = useSurveyStore();
   const list = form.choiceLists.find((cl) => cl.list_name === listName);
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkText, setBulkText] = useState('');
   const [showBulkAdd, setShowBulkAdd] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !list) return;
+    const oldIndex = list.choices.findIndex((c) => c.id === active.id);
+    const newIndex = list.choices.findIndex((c) => c.id === over.id);
+    if (oldIndex !== -1 && newIndex !== -1) {
+      moveChoice(listName, oldIndex, newIndex);
+    }
+  };
 
   // Which questions use this list
   const referencingQuestions = useMemo(() =>
@@ -231,8 +352,9 @@ export function ChoiceListModal({ listName, onClose }: Props) {
         <div className="shrink-0 bg-[#fafafa] border-b border-gray-200"
           style={{ padding: '6px 20px' }}>
           <div className="flex items-center" style={{ gap: 8 }}>
+            <span style={{ width: 13 }} />
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide shrink-0"
-              style={{ width: 32 }}>#</span>
+              style={{ width: 28 }}>#</span>
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide shrink-0"
               style={{ width: 160 }}>Value</span>
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide flex-1">
@@ -263,58 +385,23 @@ export function ChoiceListModal({ listName, onClose }: Props) {
               )}
             </div>
           ) : (
-            filteredChoices.map((choice, index) => (
-              <div key={choice.id}
-                className="flex items-center group hover:bg-gray-50 transition-colors border-b border-gray-100"
-                style={{ padding: '4px 20px', gap: 8 }}>
-                <span className="text-[10px] text-gray-300 font-mono shrink-0 text-right"
-                  style={{ width: 32 }}>
-                  {searchQuery ? '·' : index + 1}
-                </span>
-
-                <input
-                  type="text"
-                  value={choice.name}
-                  onChange={(e) => updateChoice(listName, choice.id, { name: e.target.value })}
-                  className="shrink-0 font-mono border border-transparent hover:border-gray-200
-                    focus:border-[#007a62] rounded bg-transparent focus:bg-white transition-colors outline-none"
-                  style={{ width: 160, padding: '5px 8px', fontSize: 12 }}
-                  placeholder="value"
-                />
-
-                <input
-                  type="text"
-                  value={choice.label}
-                  onChange={(e) => updateChoice(listName, choice.id, { label: e.target.value })}
-                  className="flex-1 border border-transparent hover:border-gray-200
-                    focus:border-[#007a62] rounded bg-transparent focus:bg-white transition-colors outline-none"
-                  style={{ padding: '5px 8px', fontSize: 13 }}
-                  placeholder="Display label"
-                />
-
-                {extraColumns.map((col) => (
-                  <input
-                    key={col}
-                    type="text"
-                    value={choice[col] || ''}
-                    onChange={(e) => updateChoice(listName, choice.id, { [col]: e.target.value })}
-                    className="shrink-0 font-mono border border-transparent hover:border-gray-200
-                      focus:border-violet-400 rounded bg-transparent focus:bg-white transition-colors outline-none"
-                    style={{ width: 120, padding: '5px 8px', fontSize: 11 }}
-                    placeholder={col}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext
+                items={filteredChoices.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {filteredChoices.map((choice, index) => (
+                  <SortableModalChoice
+                    key={choice.id}
+                    choice={choice}
+                    index={index}
+                    listName={listName}
+                    extraColumns={extraColumns}
+                    searchQuery={searchQuery}
                   />
                 ))}
-
-                <button
-                  onClick={() => removeChoice(listName, choice.id)}
-                  className="shrink-0 text-gray-200 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
-                  style={{ padding: 4 }}
-                  title="Remove choice"
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            ))
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 

@@ -4,9 +4,19 @@
 
 import React from 'react';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
+  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useSurveyStore } from '../../store/surveyStore';
@@ -87,8 +97,13 @@ function SortableChoice({
 }
 
 export function ChoiceListEditor({ listName }: Props) {
-  const { form, addChoice } = useSurveyStore();
+  const { form, addChoice, moveChoice } = useSurveyStore();
   const list = form.choiceLists.find((cl) => cl.list_name === listName);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   if (!list) {
     return (
@@ -99,6 +114,16 @@ export function ChoiceListEditor({ listName }: Props) {
   }
 
   const choiceIds = list.choices.map((c) => c.id);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = list.choices.findIndex((c) => c.id === active.id);
+    const newIndex = list.choices.findIndex((c) => c.id === over.id);
+    if (oldIndex !== -1 && newIndex !== -1) {
+      moveChoice(listName, oldIndex, newIndex);
+    }
+  };
 
   return (
     <div style={{ padding: '16px 20px' }}>
@@ -125,11 +150,13 @@ export function ChoiceListEditor({ listName }: Props) {
       </div>
 
       {/* Choice Rows */}
-      <SortableContext items={choiceIds} strategy={verticalListSortingStrategy}>
-        {list.choices.map((choice, index) => (
-          <SortableChoice key={choice.id} choice={choice} listName={listName} index={index} />
-        ))}
-      </SortableContext>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={choiceIds} strategy={verticalListSortingStrategy}>
+          {list.choices.map((choice, index) => (
+            <SortableChoice key={choice.id} choice={choice} listName={listName} index={index} />
+          ))}
+        </SortableContext>
+      </DndContext>
 
       {list.choices.length === 0 && (
         <div className="text-center" style={{ padding: '32px 0' }}>
