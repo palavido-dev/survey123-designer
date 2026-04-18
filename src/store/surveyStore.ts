@@ -18,6 +18,7 @@ import {
   QuestionType,
   PanelView,
   MediaFile,
+  ScriptFile,
 } from '../types/survey';
 import { createDefaultRow } from '../data/questionTypes';
 import { validateForm, FormValidationResult } from '../utils/validation';
@@ -85,6 +86,11 @@ interface SurveyStore {
   updateChoice: (listName: string, choiceId: string, updates: Partial<ChoiceItem>) => void;
   moveChoice: (listName: string, fromIndex: number, toIndex: number) => void;
 
+  // === Script File Actions ===
+  addScriptFile: (file: ScriptFile) => void;
+  removeScriptFile: (fileId: string) => void;
+  updateScriptFile: (fileId: string, updates: Partial<ScriptFile>) => void;
+
   // === Media File Actions ===
   addMediaFile: (file: MediaFile) => void;
   removeMediaFile: (fileId: string) => void;
@@ -147,6 +153,7 @@ const defaultForm: SurveyForm = {
   survey: [],
   choiceLists: [],
   mediaFiles: [],
+  scriptFiles: [],
 };
 
 // ============================================================
@@ -691,6 +698,48 @@ export const useSurveyStore = create<SurveyStore>()(
   },
 
   // ----------------------------------------------------------
+  // Script File Actions
+  // ----------------------------------------------------------
+
+  addScriptFile: (file) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        scriptFiles: [...(state.form.scriptFiles || []), file],
+      },
+      redoStack: [],
+    });
+  },
+
+  removeScriptFile: (fileId) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        scriptFiles: (state.form.scriptFiles || []).filter((f) => f.id !== fileId),
+      },
+      redoStack: [],
+    });
+  },
+
+  updateScriptFile: (fileId, updates) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        scriptFiles: (state.form.scriptFiles || []).map((f) =>
+          f.id === fileId ? { ...f, ...updates } : f
+        ),
+      },
+      redoStack: [],
+    });
+  },
+
+  // ----------------------------------------------------------
   // Media File Actions
   // ----------------------------------------------------------
 
@@ -805,6 +854,7 @@ export const useSurveyStore = create<SurveyStore>()(
       survey: state.form.survey,
       choiceLists: state.form.choiceLists,
       mediaFiles: state.form.mediaFiles || [],
+      scriptFiles: state.form.scriptFiles || [],
     });
     set({ validationResult: result, showValidationPanel: true });
     return result;
@@ -885,7 +935,7 @@ export const useSurveyStore = create<SurveyStore>()(
 
   loadForm: (form) => {
     set({
-      form: { ...form, mediaFiles: form.mediaFiles || [] },
+      form: { ...form, mediaFiles: form.mediaFiles || [], scriptFiles: form.scriptFiles || [] },
       selectedRowId: null,
       hasRecoveredForm: false,
       undoStack: [],
@@ -895,7 +945,7 @@ export const useSurveyStore = create<SurveyStore>()(
 
   resetForm: () => {
     set({
-      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [] },
+      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [], scriptFiles: [] },
       selectedRowId: null,
       hasRecoveredForm: false,
       undoStack: [],
@@ -913,7 +963,7 @@ export const useSurveyStore = create<SurveyStore>()(
 
   discardRecoveredForm: () => {
     set({
-      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [] },
+      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [], scriptFiles: [] },
       selectedRowId: null,
       hasRecoveredForm: false,
       undoStack: [],

@@ -31,6 +31,7 @@ This is a personal project under active development. Features are prioritized ba
 - [x] **Comprehensive form validation** — validate the entire form before export: duplicate names, missing labels, orphaned choice lists, broken expression references, unmatched groups, invalid field names. Visual error/warning indicators on the canvas with a collapsible summary panel.
 - [x] **Full XLSX + media zip export** — bundle the `.xlsx` with all referenced CSV files into a `.zip` ready to drop into Survey123 Connect's media folder
 - [x] **Cascading select wizard** — guided step-by-step setup for cascading/filtered selects with visual parent-child relationship builder, mapping UI, and automatic `choice_filter` generation
+- [x] **JavaScript function editor** — Monaco-powered (VS Code engine) script editor with multi-file tabs, syntax highlighting, function parsing, in-browser testing, and visual function picker for auto-generating `pulldata("@javascript", ...)` expressions. Scripts export in the `scripts/` folder inside ZIP output.
 
 ## Planned
 

@@ -261,6 +261,31 @@ export interface MediaFile {
 }
 
 // ============================================================
+// Script Files (JavaScript functions for pulldata("@javascript"))
+// ============================================================
+
+export interface ScriptFile {
+  /** Unique ID */
+  id: string;
+  /** Filename (e.g. "utils.js") — stored in scripts/ folder */
+  fileName: string;
+  /** Full JavaScript source code */
+  content: string;
+}
+
+/** Parsed function signature extracted from a JS file */
+export interface ParsedFunction {
+  name: string;
+  params: string[];
+  /** The script file this function belongs to */
+  fileName: string;
+  /** Line number in the source (1-based) */
+  line: number;
+  /** JSDoc description if present */
+  description?: string;
+}
+
+// ============================================================
 // Complete Form Model
 // ============================================================
 
@@ -269,6 +294,7 @@ export interface SurveyForm {
   survey: SurveyRow[];
   choiceLists: ChoiceList[];
   mediaFiles: MediaFile[];
+  scriptFiles: ScriptFile[];
 }
 
 // ============================================================

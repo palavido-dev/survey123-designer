@@ -204,6 +204,15 @@ export async function exportToZip(form: SurveyForm): Promise<void> {
     }
   }
 
+  // Add JavaScript files into scripts/ folder
+  const scriptFiles = (form.scriptFiles || []).filter((f) => f.content);
+  if (scriptFiles.length > 0) {
+    const scriptsFolder = zip.folder('scripts')!;
+    for (const sf of scriptFiles) {
+      scriptsFolder.file(sf.fileName, sf.content);
+    }
+  }
+
   // Generate and download
   const zipBlob = await zip.generateAsync({
     type: 'blob',
@@ -968,7 +977,7 @@ function parseWorkbook(wb: XLSX.WorkBook): SurveyForm {
     }
   }
 
-  return { settings, survey, choiceLists, mediaFiles: [] };
+  return { settings, survey, choiceLists, mediaFiles: [], scriptFiles: [] };
 }
 
 function parseTypeColumn(typeStr: string): {

@@ -13,6 +13,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { SurveyRow } from '../../types/survey';
+import { parseJavaScriptFunctions } from '../../utils/scriptParser';
+import { ScriptFunctionPicker } from '../scripts/ScriptFunctionPicker';
 
 interface Props {
   value: string;
@@ -662,6 +664,10 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     return true;
   });
 
+  const scriptFiles = form.scriptFiles || [];
+  const hasScripts = scriptFiles.length > 0;
+  const [showJsPicker, setShowJsPicker] = useState(false);
+
   const funcCategories = [
     { value: 'all', label: 'All' },
     { value: 'selection', label: 'Selection' },
@@ -669,6 +675,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
     { value: 'math', label: 'Math' },
     { value: 'date', label: 'Date' },
     { value: 'logic', label: 'Logic' },
+    ...(hasScripts ? [{ value: 'javascript', label: 'JS' }] : []),
   ];
 
   const quickTemplates = getWizardTemplates(mode);
@@ -1396,6 +1403,26 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                         valueInputRef={funcValueInputRef}
                         getTypeColor={getTypeColor}
                       />
+                    ) : funcCategory === 'javascript' ? (
+                      /* JavaScript functions from script files */
+                      <>
+                        <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8, padding: '0 4px' }}>
+                          {funcCategories.map((cat) => (
+                            <button key={cat.value} onClick={() => setFuncCategory(cat.value)}
+                              className={`rounded-full transition-fast ${
+                                funcCategory === cat.value
+                                  ? cat.value === 'javascript' ? 'bg-amber-500 text-white' : 'bg-[#007a62] text-white'
+                                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                              }`}
+                              style={{ padding: '3px 10px', fontSize: 11, fontWeight: 500 }}>{cat.label}</button>
+                          ))}
+                        </div>
+                        <ScriptFunctionPicker
+                          onInsert={(expr) => { insertAtCursor(expr); setShowJsPicker(false); }}
+                          onClose={() => setFuncCategory('all')}
+                          currentRowId={currentRowId}
+                        />
+                      </>
                     ) : (
                       <>
                         <div className="flex flex-wrap" style={{ gap: 4, marginBottom: 8, padding: '0 4px' }}>

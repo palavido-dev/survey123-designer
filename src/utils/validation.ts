@@ -376,6 +376,7 @@ interface ValidateFormInput {
     choices: Array<{ name: string; label: string }>;
   }>;
   mediaFiles: Array<{ fileName: string }>;
+  scriptFiles?: Array<{ fileName: string; content: string }>;
 }
 
 export function validateForm(input: ValidateFormInput): FormValidationResult {
@@ -579,6 +580,36 @@ export function validateForm(input: ValidateFormInput): FormValidationResult {
           rowId: row.id,
           fieldName: row.name,
         });
+      }
+    }
+  }
+
+  // 10. Validate pulldata("@javascript") references
+  if (input.scriptFiles && input.scriptFiles.length > 0) {
+    const scriptFileNames = new Set(input.scriptFiles.map((f) => f.fileName));
+    const jsRefPattern = /pulldata\s*\(\s*["']@javascript["']\s*,\s*["']([^"']+)["']\s*,\s*["']([^"']+)["']/g;
+
+    for (const row of input.survey) {
+      const exprFieldsToCheck = ['calculation', 'constraint', 'relevant', 'default', 'required', 'choice_filter', 'repeat_count'];
+      for (const field of exprFieldsToCheck) {
+        const val = (row as any)[field] as string | undefined;
+        if (!val) continue;
+        let match;
+        jsRefPattern.lastIndex = 0;
+        const localPattern = new RegExp(jsRefPattern.source, 'g');
+        while ((match = localPattern.exec(val)) !== null) {
+          const refFileName = match[1];
+          const refFuncName = match[2];
+          if (!scriptFileNames.has(refFileName)) {
+            addIssue({
+              level: 'error',
+              category: 'broken-ref',
+              message: `${row.name} → ${field}: Script file "${refFileName}" not found`,
+              rowId: row.id,
+              fieldName: row.name,
+            });
+          }
+        }
       }
     }
   }
