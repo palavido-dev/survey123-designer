@@ -131,7 +131,7 @@ export function CascadingSelectWizard({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-[560px] max-h-[80vh] flex flex-col"
+      <div className="bg-white rounded-xl shadow-xl w-[560px] max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200">

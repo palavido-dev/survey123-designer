@@ -177,21 +177,22 @@ export function ScriptEditorModal({ onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
       onClick={onClose}>
-      <div className="bg-[#1e1e1e] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+      <div className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
         style={{ width: 'min(1100px, 92vw)', height: 'min(720px, 88vh)' }}
         onClick={(e) => e.stopPropagation()}>
 
         {/* Title Bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-[#2d2d2d] border-b border-[#404040]">
+        <div className="flex items-center justify-between bg-white border-b border-gray-200"
+          style={{ padding: '10px 16px' }}>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f0db4f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25" />
-                <path d="m9 17 3-3 3 3" /><path d="M12 14v8" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007a62" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m10 13-2 2 2 2" /><path d="m14 17 2-2-2-2" />
+                <rect x="3" y="3" width="18" height="18" rx="2" />
               </svg>
-              <span className="text-[14px] font-bold text-gray-200">Script Editor</span>
+              <span className="text-[14px] font-bold text-gray-800">Script Editor</span>
             </div>
-            <span className="text-[11px] text-gray-500">
+            <span className="text-[11px] text-gray-400">
               {allFunctions.length} function{allFunctions.length !== 1 ? 's' : ''} across {scriptFiles.length} file{scriptFiles.length !== 1 ? 's' : ''}
             </span>
           </div>
@@ -199,7 +200,7 @@ export function ScriptEditorModal({ onClose }: Props) {
             <button
               onClick={() => setShowFunctions(!showFunctions)}
               className={`text-[11px] px-2.5 py-1 rounded transition-colors ${
-                showFunctions ? 'bg-[#007a62] text-white' : 'bg-[#404040] text-gray-400 hover:text-gray-200'
+                showFunctions ? 'bg-[#007a62] text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-700'
               }`}
             >
               Functions
@@ -207,28 +208,28 @@ export function ScriptEditorModal({ onClose }: Props) {
             <button
               onClick={() => setShowTestPanel(!showTestPanel)}
               className={`text-[11px] px-2.5 py-1 rounded transition-colors ${
-                showTestPanel ? 'bg-[#007a62] text-white' : 'bg-[#404040] text-gray-400 hover:text-gray-200'
+                showTestPanel ? 'bg-[#007a62] text-white' : 'bg-gray-100 text-gray-500 hover:text-gray-700'
               }`}
             >
               Output
             </button>
             <button onClick={onClose}
-              className="p-1.5 text-gray-500 hover:text-gray-300 hover:bg-[#404040] rounded transition-colors">
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors">
               <X size={16} />
             </button>
           </div>
         </div>
 
         {/* File Tabs */}
-        <div className="flex items-center bg-[#252526] border-b border-[#404040] px-1 overflow-x-auto"
+        <div className="flex items-center bg-[#fafafa] border-b border-gray-200 px-2 overflow-x-auto"
           style={{ minHeight: 36 }}>
           {scriptFiles.map((file) => (
             <div
               key={file.id}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[12px] cursor-pointer border-b-2 transition-colors group ${
                 file.id === activeFileId
-                  ? 'text-white bg-[#1e1e1e] border-[#007a62]'
-                  : 'text-gray-400 hover:text-gray-200 border-transparent hover:bg-[#2d2d2d]'
+                  ? 'text-[#007a62] bg-white border-[#007a62]'
+                  : 'text-gray-400 hover:text-gray-600 border-transparent hover:bg-gray-100'
               }`}
               onClick={() => setActiveFileId(file.id)}
               onDoubleClick={() => handleRenameFile(file.id)}
@@ -240,7 +241,7 @@ export function ScriptEditorModal({ onClose }: Props) {
               <span>{file.fileName}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.id); }}
-                className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-[#404040] text-gray-500 hover:text-red-400 transition-all"
+                className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 text-gray-400 hover:text-red-500 transition-all"
               >
                 <X size={12} />
               </button>
@@ -248,7 +249,7 @@ export function ScriptEditorModal({ onClose }: Props) {
           ))}
           <button
             onClick={handleCreateFile}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-gray-500 hover:text-gray-300 hover:bg-[#2d2d2d] rounded transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
             title="New script file"
           >
             <Plus size={13} />
@@ -259,16 +260,16 @@ export function ScriptEditorModal({ onClose }: Props) {
         <div className="flex-1 flex overflow-hidden">
           {/* Functions Sidebar */}
           {showFunctions && (
-            <div className="bg-[#252526] border-r border-[#404040] flex flex-col"
+            <div className="bg-[#fafafa] border-r border-gray-200 flex flex-col"
               style={{ width: 220 }}>
-              <div className="px-3 py-2 border-b border-[#404040]">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <div className="px-3 py-2 border-b border-gray-200">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
                   Functions
                 </span>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {allFunctions.length === 0 ? (
-                  <div className="px-3 py-4 text-[11px] text-gray-600 text-center">
+                  <div className="px-3 py-4 text-[11px] text-gray-400 text-center">
                     No functions defined yet.
                     <br />Create a file and add functions.
                   </div>
@@ -276,12 +277,12 @@ export function ScriptEditorModal({ onClose }: Props) {
                   <div className="py-1">
                     {allFunctions.map((func, idx) => (
                       <div key={`${func.fileName}-${func.name}-${idx}`}
-                        className="px-3 py-1.5 hover:bg-[#2d2d2d] cursor-pointer group"
+                        className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer group"
                         onClick={() => handleGoToFunction(func)}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] text-purple-400 font-mono">ƒ</span>
-                            <span className="text-[12px] text-[#dcdcaa] font-mono">{func.name}</span>
+                            <span className="text-[10px] text-[#007a62] font-mono font-bold">ƒ</span>
+                            <span className="text-[12px] text-gray-700 font-mono">{func.name}</span>
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleTestFunction(func); }}
@@ -291,7 +292,7 @@ export function ScriptEditorModal({ onClose }: Props) {
                             Run
                           </button>
                         </div>
-                        <div className="text-[10px] text-gray-600 font-mono ml-4">
+                        <div className="text-[10px] text-gray-400 font-mono ml-4">
                           ({func.params.join(', ')})
                         </div>
                         {func.description && (
@@ -299,7 +300,7 @@ export function ScriptEditorModal({ onClose }: Props) {
                             {func.description}
                           </div>
                         )}
-                        <div className="text-[9px] text-gray-600 ml-4">
+                        <div className="text-[9px] text-gray-400 ml-4">
                           {func.fileName}:{func.line}
                         </div>
                       </div>
@@ -316,7 +317,7 @@ export function ScriptEditorModal({ onClose }: Props) {
               <Editor
                 height="100%"
                 language="javascript"
-                theme="vs-dark"
+                theme="vs"
                 value={activeFile.content}
                 onChange={handleEditorChange}
                 onMount={handleEditorMount}
@@ -338,14 +339,14 @@ export function ScriptEditorModal({ onClose }: Props) {
                 }}
               />
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-600">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-3 text-gray-700">
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-3 text-gray-300">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                   <path d="m10 13-2 2 2 2" /><path d="m14 17 2-2-2-2" />
                 </svg>
-                <p className="text-[13px] font-medium mb-1">No script files yet</p>
-                <p className="text-[11px] text-gray-700 mb-4 text-center" style={{ maxWidth: 280 }}>
+                <p className="text-[13px] font-medium text-gray-600 mb-1">No script files yet</p>
+                <p className="text-[11px] text-gray-400 mb-4 text-center" style={{ maxWidth: 280 }}>
                   JavaScript functions let you extend Survey123 forms with custom logic
                   beyond what XLSForm expressions offer.
                 </p>
@@ -363,15 +364,15 @@ export function ScriptEditorModal({ onClose }: Props) {
 
         {/* Test Output Panel */}
         {showTestPanel && (
-          <div className="bg-[#1e1e1e] border-t border-[#404040]" style={{ height: 120 }}>
-            <div className="flex items-center justify-between px-3 py-1.5 bg-[#252526] border-b border-[#404040]">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Output</span>
+          <div className="bg-white border-t border-gray-200" style={{ height: 120 }}>
+            <div className="flex items-center justify-between px-3 py-1.5 bg-[#fafafa] border-b border-gray-200">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Output</span>
               <button onClick={() => setTestOutput('')}
-                className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">
+                className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors">
                 Clear
               </button>
             </div>
-            <pre className="px-3 py-2 text-[12px] font-mono text-green-400 overflow-auto h-full"
+            <pre className="px-3 py-2 text-[12px] font-mono text-[#007a62] overflow-auto h-full"
               style={{ whiteSpace: 'pre-wrap' }}>
               {testOutput || 'Click "Run" on a function to test it here.'}
             </pre>

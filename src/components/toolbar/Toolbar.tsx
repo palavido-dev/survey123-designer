@@ -3,7 +3,7 @@
  * Includes Form/Report mode toggle
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { useReportStore } from '../../store/reportStore';
 import { exportToXlsx, exportToZip, importFromXlsx } from '../../utils/xlsxExport';
@@ -13,8 +13,6 @@ import {
 } from '../../utils/icons';
 import type { AppMode } from '../../types/report';
 import { ValidationPanel } from './ValidationPanel';
-import { CascadingSelectWizard } from '../properties/CascadingSelectWizard';
-import { ScriptEditorModal } from '../scripts/ScriptEditorModal';
 
 export function Toolbar() {
   const {
@@ -43,10 +41,6 @@ export function Toolbar() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
-  const [showCascadingWizard, setShowCascadingWizard] = useState(false);
-  const [showScriptEditor, setShowScriptEditor] = useState(false);
-
-  const scriptCount = (form.scriptFiles || []).length;
 
   // ---- Form mode handlers ----
   const handleExport = async () => {
@@ -224,38 +218,6 @@ export function Toolbar() {
               )}
             </button>
 
-            <button
-              onClick={() => setShowCascadingWizard(true)}
-              className="flex items-center text-[13px] font-medium
-                text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast"
-              style={{ padding: '6px 12px', gap: 6 }}
-              title="Cascading select wizard"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
-              </svg>
-              Cascading
-            </button>
-
-            <button
-              onClick={() => setShowScriptEditor(true)}
-              className="flex items-center text-[13px] font-medium
-                text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast relative"
-              style={{ padding: '6px 12px', gap: 6 }}
-              title="JavaScript function editor"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500">
-                <path d="m10 13-2 2 2 2" /><path d="m14 17 2-2-2-2" />
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-              </svg>
-              Scripts
-              {scriptCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full text-[10px] font-bold flex items-center justify-center px-1 bg-amber-400 text-white">
-                  {scriptCount}
-                </span>
-              )}
-            </button>
-
             <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
 
             <button
@@ -374,15 +336,6 @@ export function Toolbar() {
         )}
       </div>
 
-      {/* Cascading Select Wizard Modal */}
-      {showCascadingWizard && (
-        <CascadingSelectWizard onClose={() => setShowCascadingWizard(false)} />
-      )}
-
-      {/* Script Editor Modal */}
-      {showScriptEditor && (
-        <ScriptEditorModal onClose={() => setShowScriptEditor(false)} />
-      )}
     </div>
   );
 }
