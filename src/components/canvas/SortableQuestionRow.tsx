@@ -958,15 +958,20 @@ function CascadingDetailPopover({
   const { form } = useSurveyStore();
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
+  // Close on outside click (with mount guard to prevent closing on the same click that opened it)
   useEffect(() => {
+    let mounted = false;
+    const timer = setTimeout(() => { mounted = true; }, 50);
     const handler = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      if (mounted && popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handler);
+    };
   }, [onClose]);
 
   // Parse the choice_filter expression to extract parent field name and filter column
