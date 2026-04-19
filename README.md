@@ -14,8 +14,20 @@ A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSF
 ![Main Overview](docs/screenshots/01-main-overview.png)
 *Three-column layout: question palette (left), form canvas (center), properties panel (right)*
 
+![Template Library](docs/screenshots/05-template-library.png)
+*Form Template Library with 51 pre-built templates across 10 industry categories*
+
 ![Expression Builder](docs/screenshots/03-expression-builder.png)
 *Visual expression builder with field picker, operators, and function library*
+
+![JavaScript Function Library](docs/screenshots/07-scripts-panel.png)
+*85+ JavaScript function templates across 17 categories with one-click add*
+
+![Choice List Manager](docs/screenshots/06-choices-panel.png)
+*Choice list management with drag-and-drop reordering and pop-out modal editor*
+
+![Validation](docs/screenshots/08-validation.png)
+*Form validation with inline error indicators and field name warnings*
 
 ![Report Builder](docs/screenshots/04-report-builder.png)
 *Report Template Builder with field palette, rich text editor, and syntax reference*
@@ -27,6 +39,10 @@ ArcGIS Survey123 is powerful, but authoring surveys still means wrestling with X
 It solves a few key pain points: visual drag-and-drop instead of typing into Excel rows, a guided expression builder instead of hand-writing XPath, platform-aware question filtering (Field App vs. Web App), and instant preview of how questions will look as you build.
 
 ## Features at a Glance
+
+### Form Template Library
+
+51 pre-built survey templates across 10 industry categories: Environmental & EPA, Water & Wastewater, Construction & Infrastructure, Emergency Management, Natural Resources & Wildlife, Health & Safety, Energy & Utilities, Public Works & Code Enforcement, Real Estate & Planning, and General/Multi-Purpose. Templates range from simple (8 questions) to complex (28+ questions with groups, repeats, cascading selects, and calculations). Browse by category, search by keyword or tag, and load any template in one click via `New → From Template...`.
 
 ### Drag-and-Drop Form Builder
 
@@ -71,7 +87,19 @@ A persistent search bar at the top of the form canvas lets you find questions by
 
 ### Choice List Editor
 
-Create and manage choice lists for select_one, select_multiple, and rank questions. Add, remove, and reorder choices with inline editing. Choice lists are shared across questions via `list_name` references, just like in XLSForm.
+Create and manage choice lists for select_one, select_multiple, and rank questions. Add, remove, and reorder choices with drag-and-drop handles in both the inline editor and the pop-out modal. Choice lists are shared across questions via `list_name` references, just like in XLSForm. A dedicated Choices tab in the right panel gives a form-wide overview of all lists with usage counts.
+
+### Cascading Select Wizard
+
+Set up cascading (filtered) selects through a guided step-by-step wizard. Select a parent question, pick child questions, map parent-to-child choice relationships visually, and the wizard auto-generates the `choice_filter` expressions. Cascading relationships show as badges on question cards, with detail popovers showing the full configuration and quick navigation between linked questions.
+
+### JavaScript Function Editor
+
+A built-in script editor for Survey123's `pulldata("@javascript", ...)` capability. Write custom JavaScript functions with syntax highlighting, organize across multiple files, and test functions in-browser. A function library with 85+ templates across 17 categories (text formatting, date/age, unit conversions, scoring, GIS/coordinates, validation, math, environmental, construction, water/utilities, inspection, geometry, health/safety, lookup, financial, and logic helpers) provides one-click insertion. Scripts export in the `scripts/` folder inside ZIP output.
+
+### Form Validation
+
+Validate the entire form before export: duplicate field names, missing labels, orphaned choice lists, broken expression references, unmatched groups/repeats, invalid field names, and reserved word warnings. Visual error/warning indicators appear inline on question cards, with a collapsible summary panel in the toolbar showing all issues at a glance.
 
 ### Auto-Save & Recovery
 
@@ -142,14 +170,16 @@ src/
   types/
     survey.ts                      # Full XLSForm type definitions
     report.ts                      # Report template types
-  data/questionTypes.ts            # Question catalog, appearances, row factory
+  data/
+    questionTypes.ts               # Question catalog, appearances, row factory
+    formTemplates.ts               # 51 pre-built form templates across 10 categories
   store/
     surveyStore.ts                 # Zustand store with undo/redo + IndexedDB persist
     reportStore.ts                 # Report template state
   utils/
     icons.tsx                      # Lucide icon resolver
     xlsxExport.ts                  # XLSX generation + import + JSZip post-processing
-    validation.ts                  # Row & expression validation
+    validation.ts                  # Row, expression & field name validation
     reportDocx.ts                  # Report template .docx import/export
   components/
     sidebar/QuestionPalette.tsx    # Draggable question cards + platform filter
@@ -157,21 +187,28 @@ src/
       FormCanvas.tsx               # Drop zone, sortable list, sticky search
       SortableQuestionRow.tsx      # Question row with live preview + inline editing
     properties/
-      PropertiesPanel.tsx          # Right panel shell (tabs: Properties | Media | Settings)
+      PropertiesPanel.tsx          # Right panel (tabs: Properties | Choices | Scripts | Settings)
       QuestionProperties.tsx       # Dynamic property editor
       ExpressionBuilder.tsx        # Visual expression builder with wizard + functions
-      ChoiceListEditor.tsx         # Choice list management
+      ChoiceListEditor.tsx         # Inline choice list editing with drag-and-drop
+      ChoiceListModal.tsx          # Pop-out choice list editor with reordering
+      CascadingSelectWizard.tsx    # Guided cascading select setup wizard
       CsvFilePicker.tsx            # CSV upload with delimiter auto-detection
       CsvEditorModal.tsx           # Spreadsheet-style CSV editor
       MediaPanel.tsx               # Media references overview + upload status
       FormSettingsEditor.tsx       # Form-level settings
       RichTextEditor.tsx           # TipTap rich text for note fields
       ParameterBuilder.tsx         # Key-value parameter editor
+    scripts/
+      ScriptFunctionLibrary.tsx    # 85+ JS function templates with one-click add
     report/
       ReportFieldPalette.tsx       # Report field list organized by type
       ReportCanvas.tsx             # TipTap editor for report templates
       ReportPropertiesPanel.tsx    # Template actions + syntax reference
-    toolbar/Toolbar.tsx            # Top bar (New, Open, Export, Undo, Redo, Mode toggle)
+    toolbar/
+      Toolbar.tsx                  # Top bar (New, Open, Export, Validate, Mode toggle)
+      TemplateLibraryModal.tsx     # Browsable form template library
+      ValidationPanel.tsx          # Collapsible validation results summary
 ```
 
 ## Supported Question Types
