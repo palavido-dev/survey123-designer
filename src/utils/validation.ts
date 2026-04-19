@@ -546,6 +546,8 @@ export function validateForm(input: ValidateFormInput): FormValidationResult {
   // 8. Per-row field name validation
   for (const row of input.survey) {
     if (['end_group', 'end_repeat'].includes(row.type)) continue;
+    // Notes don't require a field name — they can be blank or use bind::esri:fieldType=null
+    if (row.type === 'note' && !row.name) continue;
     const nameIssues = validateFieldName(row.name);
     for (const issue of nameIssues) {
       addIssue({

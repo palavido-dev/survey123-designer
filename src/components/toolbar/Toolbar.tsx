@@ -3,16 +3,18 @@
  * Includes Form/Report mode toggle
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { useReportStore } from '../../store/reportStore';
 import { exportToXlsx, exportToZip, importFromXlsx } from '../../utils/xlsxExport';
 import { importDocxToHtml, exportHtmlToDocx } from '../../utils/reportDocx';
 import {
-  Download, Upload, Undo2, Redo2, FileText, Plus, AlertCircle,
+  Download, Upload, Undo2, Redo2, FileText, Plus, AlertCircle, BookOpen, ChevronDown,
 } from '../../utils/icons';
 import type { AppMode } from '../../types/report';
 import { ValidationPanel } from './ValidationPanel';
+import { TemplateLibraryModal } from './TemplateLibraryModal';
+import type { FormTemplate } from '../../data/formTemplates';
 
 export function Toolbar() {
   const {
@@ -41,6 +43,27 @@ export function Toolbar() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const reportFileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showNewMenu, setShowNewMenu] = useState(false);
+  const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const newMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close "New" dropdown on outside click
+  useEffect(() => {
+    if (!showNewMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
+        setShowNewMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showNewMenu]);
+
+  const handleLoadTemplate = (template: FormTemplate) => {
+    const newForm = template.createForm();
+    loadForm(newForm);
+  };
 
   // ---- Form mode handlers ----
   const handleExport = async () => {
@@ -163,16 +186,48 @@ export function Toolbar() {
       <div className="flex items-center" style={{ gap: 4 }}>
         {mode === 'form' ? (
           <>
-            <button
-              onClick={resetForm}
-              className="flex items-center text-[13px] font-medium
-                text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast"
-              style={{ padding: '6px 12px', gap: 6 }}
-              title="New Form"
-            >
-              <Plus size={15} className="text-gray-400" />
-              New
-            </button>
+            <div className="relative" ref={newMenuRef}>
+              <button
+                onClick={() => setShowNewMenu(!showNewMenu)}
+                className="flex items-center text-[13px] font-medium
+                  text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast"
+                style={{ padding: '6px 12px', gap: 4 }}
+                title="New Form"
+              >
+                <Plus size={15} className="text-gray-400" />
+                New
+                <ChevronDown size={12} className="text-gray-400" />
+              </button>
+              {showNewMenu && (
+                <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                  style={{ minWidth: 200, padding: 4 }}>
+                  <button
+                    onClick={() => { resetForm(); setShowNewMenu(false); }}
+                    className="w-full flex items-center text-left rounded-md text-[13px] text-gray-700
+                      hover:bg-gray-100 transition-fast"
+                    style={{ padding: '8px 12px', gap: 10 }}
+                  >
+                    <Plus size={15} className="text-gray-400" />
+                    <div>
+                      <div className="font-medium">Blank Form</div>
+                      <div className="text-[11px] text-gray-400">Start from scratch</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { setShowTemplateLibrary(true); setShowNewMenu(false); }}
+                    className="w-full flex items-center text-left rounded-md text-[13px] text-gray-700
+                      hover:bg-gray-100 transition-fast"
+                    style={{ padding: '8px 12px', gap: 10 }}
+                  >
+                    <BookOpen size={15} className="text-gray-400" />
+                    <div>
+                      <div className="font-medium">From Template...</div>
+                      <div className="text-[11px] text-gray-400">Browse 50+ pre-built forms</div>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
 
@@ -335,6 +390,13 @@ export function Toolbar() {
           <div style={{ width: 68 }} />
         )}
       </div>
+
+      {/* Template Library Modal */}
+      <TemplateLibraryModal
+        open={showTemplateLibrary}
+        onClose={() => setShowTemplateLibrary(false)}
+        onSelect={handleLoadTemplate}
+      />
 
     </div>
   );

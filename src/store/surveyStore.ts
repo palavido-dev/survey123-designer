@@ -76,7 +76,7 @@ interface SurveyStore {
   moveRow: (fromIndex: number, toIndex: number) => void;
   duplicateRow: (id: string) => void;
   /** Rename a field and update ALL references across the form (expressions, choice_filter, etc.) */
-  renameField: (oldName: string, newName: string) => { updatedRows: string[] };
+  renameField: (oldName: string, newName: string, rowId?: string) => { updatedRows: string[] };
 
   // === Choice List Actions ===
   addChoiceList: (listName: string) => void;
@@ -467,7 +467,7 @@ export const useSurveyStore = create<SurveyStore>()(
     }
   },
 
-  renameField: (oldName, newName) => {
+  renameField: (oldName, newName, rowId?) => {
     const state = get();
     if (oldName === newName) return { updatedRows: [] };
 
@@ -524,16 +524,31 @@ export const useSurveyStore = create<SurveyStore>()(
       let changed = false;
       const updates: Partial<SurveyRow> = {};
 
-      // Update the field's own name
-      if (row.name === oldName) {
-        updates.name = newName;
-        changed = true;
-      }
-
-      // Update matching end_group/end_repeat name
-      if ((row.type === 'end_group' || row.type === 'end_repeat') && row.name === oldName) {
-        updates.name = newName;
-        changed = true;
+      // Update the field's own name — only the specific row being renamed gets
+      // its name changed. When rowId is provided, only that row (and its matching
+      // end_group/end_repeat) are affected. Other rows with the same name are NOT
+      // renamed — only their expression references are updated.
+      if (rowId) {
+        // Targeted rename: only this specific row
+        if (row.id === rowId && row.name === oldName) {
+          updates.name = newName;
+          changed = true;
+        }
+        // Also rename the matching end_group/end_repeat
+        if ((row.type === 'end_group' || row.type === 'end_repeat') && row.name === oldName) {
+          // Check if the target row is the corresponding begin_*
+          const targetRow = state.form.survey.find((r) => r.id === rowId);
+          if (targetRow && (targetRow.type === 'begin_group' || targetRow.type === 'begin_repeat')) {
+            updates.name = newName;
+            changed = true;
+          }
+        }
+      } else {
+        // Legacy behavior (no rowId): rename all rows with matching name
+        if (row.name === oldName) {
+          updates.name = newName;
+          changed = true;
+        }
       }
 
       // Update expression references in all relevant columns
