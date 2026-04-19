@@ -258,3 +258,58 @@ input:focus, textarea:focus, select:focus {
   outline-offset: 1px;
   box-shadow: 0 0 0 4px rgba(91, 33, 182, 0.15);
 }
+
+/* ============================================================
+   Expression Editor — Token & Diagnostic Styles
+   ============================================================ */
+
+/* Token colors — match the existing expression preview palette */
+.expression-token-field {
+  background: #f0faf7;
+  color: #007a62;
+  border: 1px solid rgba(0, 122, 98, 0.2);
+}
+.expression-token-field-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.expression-token-function {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.expression-token-keyword {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+.expression-token-operator {
+  background: #fff7ed;
+  color: #ea580c;
+}
+.expression-token-string {
+  background: #fffbeb;
+  color: #b45309;
+}
+.expression-token-number {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.expression-token-error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.expression-token-default {
+  color: #6b7280;
+}
+
+/* Squiggly underlines for diagnostics */
+.expression-token-squiggly-error {
+  text-decoration: underline wavy #dc2626;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+.expression-token-squiggly-warning {
+  text-decoration: underline wavy #d97706;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}

@@ -15,6 +15,7 @@ import { useSurveyStore } from '../../store/surveyStore';
 import { SurveyRow } from '../../types/survey';
 import { parseJavaScriptFunctions } from '../../utils/scriptParser';
 import { ScriptFunctionPicker } from '../scripts/ScriptFunctionPicker';
+import { ExpressionEditor } from './ExpressionEditor';
 
 interface Props {
   value: string;
@@ -1015,48 +1016,17 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
         </div>
       </div>
 
-      {/* Expression textarea */}
+      {/* Expression editor with syntax highlighting, validation, autocomplete, and hover */}
       {!initialExpanded && (
-        <textarea
-          ref={textareaRef}
+        <ExpressionEditor
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={placeholder}
-          rows={value.length > 60 ? 3 : 2}
-          style={{ padding: '8px 12px', fontSize: 12, lineHeight: 1.6 }}
-          className="w-full font-mono border border-gray-200 rounded-lg bg-white
-            focus:border-[#00856a] transition-fast placeholder-gray-300 resize-y"
+          fields={availableFields}
+          textareaRef={textareaRef}
+          rows={2}
+          showTokenPreview={!isOpen}
         />
-      )}
-
-      {/* Expression tokens preview */}
-      {value && !isOpen && !initialExpanded && (
-        <div className="flex flex-wrap items-center" style={{ gap: 4, marginTop: 6 }}>
-          {tokenizeExpression(value).map((token, i) => (
-            <span
-              key={i}
-              className={`inline-block rounded ${
-                token.type === 'field'
-                  ? 'bg-[#f0faf7] text-[#007a62] border border-[#007a62]/20'
-                  : token.type === 'operator'
-                  ? 'bg-orange-50 text-orange-600'
-                  : token.type === 'function'
-                  ? 'bg-blue-50 text-blue-600'
-                  : token.type === 'string'
-                  ? 'bg-amber-50 text-amber-700'
-                  : 'text-gray-600'
-              }`}
-              style={{ padding: '1px 5px', fontSize: 11, fontFamily: 'monospace' }}
-            >
-              {token.text}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Inline validation */}
-      {value && !isOpen && !initialExpanded && (
-        <ExpressionValidator value={value} fields={availableFields} />
       )}
 
       {/* Builder Panel */}
@@ -1513,46 +1483,15 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                 <label className="text-gray-500" style={{ fontSize: 12, fontWeight: 500, marginBottom: 8 }}>
                   Expression
                 </label>
-                <textarea
-                  ref={expandedTextareaRef}
+                <ExpressionEditor
                   value={value}
-                  onChange={(e) => onChange(e.target.value)}
+                  onChange={onChange}
                   placeholder={placeholder}
-                  className="flex-1 font-mono border border-gray-200 rounded-lg bg-[#fafafa]
-                    focus:border-[#00856a] transition-fast placeholder-gray-300 resize-none"
-                  style={{ padding: '16px 20px', fontSize: 14, lineHeight: 1.8 }}
+                  fields={availableFields}
+                  textareaRef={expandedTextareaRef}
+                  rows={6}
+                  showTokenPreview={true}
                 />
-
-                {/* Syntax preview */}
-                {value && (
-                  <div style={{ marginTop: 12 }}>
-                    <label className="text-gray-400" style={{ fontSize: 11, fontWeight: 500 }}>Preview</label>
-                    <div className="flex flex-wrap items-center" style={{ gap: 4, marginTop: 6 }}>
-                      {tokenizeExpression(value).map((token, i) => (
-                        <span
-                          key={i}
-                          className={`inline-block rounded ${
-                            token.type === 'field'
-                              ? 'bg-[#f0faf7] text-[#007a62] border border-[#007a62]/20'
-                              : token.type === 'operator'
-                              ? 'bg-orange-50 text-orange-600'
-                              : token.type === 'function'
-                              ? 'bg-blue-50 text-blue-600'
-                              : token.type === 'string'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'text-gray-600'
-                          }`}
-                          style={{ padding: '2px 6px', fontSize: 12, fontFamily: 'monospace' }}
-                        >
-                          {token.text}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Validation */}
-                <ExpressionValidator value={value} fields={availableFields} />
               </div>
 
               {/* Right: Field picker + operators + functions */}
