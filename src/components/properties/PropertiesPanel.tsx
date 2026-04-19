@@ -19,7 +19,7 @@ import { MediaPanel } from './MediaPanel';
 import { ScriptFunctionLibrary } from '../scripts/ScriptFunctionLibrary';
 import { ScriptEditorModal } from '../scripts/ScriptEditorModal';
 // CascadingSelectWizard is now launched from per-question badges on the canvas
-import { Settings, MousePointerClick, List } from '../../utils/icons';
+import { Settings, MousePointerClick, List, SlidersHorizontal, Zap } from '../../utils/icons';
 
 export function PropertiesPanel() {
   const { form, selectedRowId, panelView, setPanelView } = useSurveyStore();
@@ -70,6 +70,7 @@ export function PropertiesPanel() {
           active={panelView === 'properties'}
           onClick={() => setPanelView('properties')}
           label="Properties"
+          icon={<SlidersHorizontal size={14} />}
         />
         <TabButton
           active={panelView === 'choices' || panelView === 'choiceLists'}
@@ -81,26 +82,28 @@ export function PropertiesPanel() {
             }
           }}
           label="Choices"
+          icon={<List size={14} />}
           badge={choiceListCount > 0 ? 'count' : undefined}
         />
         <TabButton
           active={panelView === 'scripts'}
           onClick={() => setPanelView('scripts')}
           label="Scripts"
+          icon={<Zap size={14} />}
           badge={scriptFuncCount > 0 ? 'count' : undefined}
         />
         <TabButton
           active={panelView === 'media'}
           onClick={() => setPanelView('media')}
+          label="Media"
           icon={<MediaTabIcon size={12} />}
           badge={mediaBadge}
-          title="Media"
         />
         <TabButton
           active={panelView === 'settings'}
           onClick={() => setPanelView('settings')}
+          label="Settings"
           icon={<Settings size={14} />}
-          title="Settings"
         />
       </div>
 
@@ -162,28 +165,29 @@ function TabButton({
   label,
   icon,
   badge,
-  title,
 }: {
   active: boolean;
   onClick: () => void;
   label?: string;
   icon?: React.ReactNode;
   badge?: 'count' | 'warn';
-  title?: string;
 }) {
+  // Show label only when active; otherwise icon-only with tooltip
+  const showLabel = active && label;
+
   return (
     <button
       onClick={onClick}
-      title={title || label || ''}
+      title={active ? undefined : label || ''}
       className={`flex items-center transition-fast relative whitespace-nowrap
         ${active
           ? 'text-[#007a62] bg-white border-b-2 border-[#007a62]'
           : 'text-gray-400 hover:text-gray-600'
         }`}
-      style={{ padding: label ? '10px 8px' : '10px 8px', gap: 4, fontSize: 11, fontWeight: 600 }}
+      style={{ padding: showLabel ? '10px 8px' : '10px 8px', gap: 4, fontSize: 11, fontWeight: 600 }}
     >
       {icon}
-      {label}
+      {showLabel && label}
       {badge === 'warn' && (
         <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" style={{ marginLeft: 1 }} />
       )}
