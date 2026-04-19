@@ -461,7 +461,7 @@ function InlineFieldNameEdit({
       return;
     }
 
-    const result = renameField(row.name, trimmed);
+    const result = renameField(row.name, trimmed, row.id);
     // The result includes which rows were updated (for potential toast notification later)
     if (result.updatedRows.length > 1) {
       // More than just the renamed field itself — references were updated
