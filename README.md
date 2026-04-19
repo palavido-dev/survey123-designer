@@ -1,10 +1,10 @@
 # Survey123 Designer
 
-> **Work in Progress** — This is a personal project I built for my own use, but I'm sharing it publicly in case others find it helpful. It's under active development and may have rough edges. Feedback, bug reports, and contributions are very welcome!
+> **Work in Progress.** This is a personal project I built for my own use, but I'm sharing it publicly in case others find it helpful. It's under active development and may have rough edges. Feedback, bug reports, and contributions are very welcome!
 
-A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys — plus a report template builder for generating `.docx` feature reports. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file — no XLSForm syntax knowledge required.
+A standalone, web-based WYSIWYG form designer for building ArcGIS Survey123 XLSForm surveys, plus a report template builder for generating `.docx` feature reports. Drag-and-drop question types onto a live canvas, configure properties visually, and export a ready-to-publish `.xlsx` file. No XLSForm syntax knowledge required.
 
-**[Try it live](https://palavido-dev.github.io/survey123-designer/)** — runs entirely in the browser, no install needed.
+**[Try it live](https://palavido-dev.github.io/survey123-designer/)** Runs entirely in the browser, no install needed.
 
 [![Support via PayPal](https://img.shields.io/badge/PayPal-Donate-blue?logo=paypal)](https://paypal.me/palavido)
 [![Sponsor on GitHub](https://img.shields.io/badge/GitHub-Sponsor-ea4aaa?logo=github)](https://github.com/sponsors/palavido-dev)
@@ -46,17 +46,17 @@ It solves a few key pain points: visual drag-and-drop instead of typing into Exc
 
 ### Drag-and-Drop Form Builder
 
-41 question types across 9 categories — text, numeric, selection, location, date/time, media, structure, hidden/calculated, and metadata. Appearance variants show up as separate draggable cards (Multiline Text, Spinner, Signature, Likert Scale, etc.), so you always know what you're getting. Reorder questions by dragging within the canvas, and nest them inside groups and repeats.
+41 question types across 9 categories: text, numeric, selection, location, date/time, media, structure, hidden/calculated, and metadata. Appearance variants show up as separate draggable cards (Multiline Text, Spinner, Signature, Likert Scale, etc.), so you always know what you're getting. Reorder questions by dragging within the canvas, and nest them inside groups and repeats.
 
 ### Visual Expression Builder
 
-Build `relevant`, `constraint`, and `calculation` expressions without memorizing XPath syntax. The expression builder provides a field picker (browse all form fields with type badges, click to insert `${field}` references), an operator palette (comparison, logical, arithmetic, and common values), and a categorized function library covering selection, text, math, date, and logic functions — each with a description of what it does.
+Build `relevant`, `constraint`, and `calculation` expressions without memorizing XPath syntax. The expression builder provides a field picker (browse all form fields with type badges, click to insert `${field}` references), an operator palette (comparison, logical, arithmetic, and common values), and a categorized function library covering selection, text, math, date, and logic functions, each with a description of what it does.
 
 ### Report Template Builder
 
 A full report template builder for creating Survey123 Feature Report `.docx` templates. Switch to Report mode via the toolbar toggle to access:
 
-- A field palette listing all form fields organized by type (text, date/time, select, etc.) — click to insert `${fieldname}` tokens into the editor
+- A field palette listing all form fields organized by type (text, date/time, select, etc.). Click to insert `${fieldname}` tokens into the editor
 - A rich text editor (TipTap) with formatting toolbar (bold, italic, underline, headings, lists, tables, code blocks)
 - A syntax reference panel showing all Survey123 report token patterns: field values, filters, conditionals, repeat blocks, images, dates, and multiline fields
 - Import existing `.docx` templates and export your work back to `.docx`
@@ -75,7 +75,7 @@ Double-click any question label on the canvas to edit it directly. For Note-type
 
 ### CSV File Support
 
-For `select_one_from_file` and `select_multiple_from_file` questions, upload CSV files directly in the designer. A built-in CSV editor lets you modify data inline — edit cells, add or remove rows and columns, rename headers, search across all columns, and sort by clicking column headers. CSV badge indicators on question cards give quick access to the editor.
+For `select_one_from_file` and `select_multiple_from_file` questions, upload CSV files directly in the designer. A built-in CSV editor lets you modify data inline: edit cells, add or remove rows and columns, rename headers, search across all columns, and sort by clicking column headers. CSV badge indicators on question cards give quick access to the editor.
 
 ### Media Panel
 
@@ -103,7 +103,7 @@ Validate the entire form before export: duplicate field names, missing labels, o
 
 ### Auto-Save & Recovery
 
-Your work is automatically saved to the browser's IndexedDB storage as you edit. If the page is accidentally refreshed or the browser crashes, a recovery banner appears on next load showing the form title, question count, and when it was last saved — with options to keep working or discard and start fresh. A subtle "Saved X ago" indicator in the bottom-right corner confirms auto-save status.
+Your work is automatically saved to the browser's IndexedDB storage as you edit. If the page is accidentally refreshed or the browser crashes, a recovery banner appears on next load showing the form title, question count, and when it was last saved, with options to keep working or discard and start fresh. A subtle "Saved X ago" indicator in the bottom-right corner confirms auto-save status.
 
 ### XLSX Import & Export
 
@@ -113,7 +113,7 @@ Open any existing Survey123 `.xlsx` form to continue editing, or start from scra
 
 Exported `.xlsx` files include the same quality-of-life features found in Survey123 Connect-generated spreadsheets:
 
-- **Data validation dropdowns** on the `type`, `appearance`, `required`, `readonly`, `bind::type`, `bind::esri:fieldType`, and `bind::esri:fieldLength` columns — with type-aware appearance lists (e.g., text questions only show text-valid appearances)
+- **Data validation dropdowns** on the `type`, `appearance`, `required`, `readonly`, `bind::type`, `bind::esri:fieldType`, and `bind::esri:fieldLength` columns, with type-aware appearance lists (e.g., text questions only show text-valid appearances)
 - **Row shading** for groups (purple `#E8DEF8`) and repeats (teal `#D0F0E8`) to visually distinguish structural nesting
 - **Styled header row** with dark background and white bold text
 - **Reference sheets** (`_appearances`, `_fieldtypes`) with named ranges powering the dropdowns
