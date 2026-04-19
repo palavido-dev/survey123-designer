@@ -1,10 +1,12 @@
 /**
  * Form Validation Utilities
  *
- * Expression validation (reusable from ExpressionBuilder)
+ * Expression validation (powered by AST parser from expressionParser.ts)
  * Field name validation (lowercase, no reserved words, valid chars)
  * PostgreSQL + Esri/ArcGIS reserved word checking
  */
+
+import { validateExpressionAST } from './expressionParser';
 
 // ============================================================
 // Expression Validation
@@ -15,72 +17,27 @@ export interface ValidationIssue {
   message: string;
 }
 
+/**
+ * Validate an XLSForm expression using the AST-based parser.
+ * Returns simplified issues (without position info) for form-level validation.
+ */
 export function validateExpression(
   value: string,
   fieldNames: Set<string>
 ): ValidationIssue[] {
   if (!value || !value.trim()) return [];
 
+  const diagnostics = validateExpressionAST(value, fieldNames);
+
+  // Deduplicate by message
+  const seen = new Set<string>();
   const issues: ValidationIssue[] = [];
-
-  // Check matching parentheses
-  let parenDepth = 0;
-  for (const ch of value) {
-    if (ch === '(') parenDepth++;
-    if (ch === ')') parenDepth--;
-    if (parenDepth < 0) break;
-  }
-  if (parenDepth !== 0) {
-    issues.push({ level: 'error', message: 'Unmatched parentheses' });
-  }
-
-  // Check matching quotes
-  const singleQuotes = (value.match(/'/g) || []).length;
-  if (singleQuotes % 2 !== 0) {
-    issues.push({ level: 'error', message: 'Unmatched single quote' });
-  }
-
-  // Check field references exist
-  const fieldRefs = value.match(/\$\{([^}]+)\}/g) || [];
-  for (const ref of fieldRefs) {
-    const name = ref.slice(2, -1);
-    if (!fieldNames.has(name) && name !== '.') {
-      issues.push({ level: 'warning', message: `Field "${name}" not found` });
+  for (const d of diagnostics) {
+    if (!seen.has(d.message)) {
+      seen.add(d.message);
+      issues.push({ level: d.level === 'info' ? 'warning' : d.level, message: d.message });
     }
   }
-
-  // Check for empty field refs
-  if (value.includes('${}')) {
-    issues.push({ level: 'error', message: 'Empty field reference ${}' });
-  }
-
-  // Check for common XLSForm function names
-  const funcCalls = value.match(/([a-z_-]+)\s*\(/gi) || [];
-  const knownFuncs = new Set([
-    'selected', 'count-selected', 'selected-at', 'concat', 'string-length',
-    'substr', 'contains', 'regex', 'sum', 'count', 'min', 'max', 'round',
-    'int', 'today', 'now', 'format-date', 'if', 'coalesce', 'once',
-    'pulldata', 'not', 'true', 'false', 'string', 'number', 'boolean',
-    'ceiling', 'floor', 'abs', 'pow', 'log', 'log10', 'sqrt', 'exp',
-    'exp10', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
-    'pi', 'random', 'indexed-repeat', 'position', 'instance', 'current',
-    'jr:choice-name', 'join', 'distance', 'area', 'normalize-space',
-    'translate', 'upper-case', 'lower-case', 'starts-with', 'ends-with',
-    'uuid', 'property', 'version', 'decimal-date-time', 'decimal-time',
-    'date', 'date-time', 'boolean-from-string', 'mod',
-  ]);
-  for (const call of funcCalls) {
-    const funcName = call.replace(/\s*\($/, '').toLowerCase();
-    if (!knownFuncs.has(funcName)) {
-      issues.push({ level: 'warning', message: `Unknown function "${funcName}"` });
-    }
-  }
-
-  // Check for doubled operators
-  if (/\b(and|or)\s+(and|or)\b/i.test(value)) {
-    issues.push({ level: 'error', message: 'Consecutive logical operators' });
-  }
-
   return issues;
 }
 
