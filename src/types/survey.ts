@@ -290,6 +290,105 @@ export interface ParsedFunction {
 }
 
 // ============================================================
+// Drawing Palette Files (.palette for draw/annotate)
+// ============================================================
+
+/** Esri line symbol styles */
+export type EsriLineStyle = 'esriSLSSolid' | 'esriSLSDash' | 'esriSLSDashDot' | 'esriSLSDashDotDot' | 'esriSLSDot' | 'esriSLSNull';
+
+/** Esri fill symbol styles */
+export type EsriFillStyle = 'esriSFSSolid' | 'esriSFSBackwardDiagonal' | 'esriSFSCross' | 'esriSFSDiagonalCross' | 'esriSFSForwardDiagonal' | 'esriSFSHorizontal' | 'esriSFSNull' | 'esriSFSVertical';
+
+/** Esri simple marker styles */
+export type EsriMarkerStyle = 'esriSMSCircle' | 'esriSMSCross' | 'esriSMSDiamond' | 'esriSMSSquare' | 'esriSMSX' | 'esriSMSTriangle';
+
+export interface EsriOutline {
+  type: 'esriSLS';
+  color?: string;
+  width?: number;
+  style?: EsriLineStyle | number[];
+}
+
+export interface EsriLineSymbol {
+  type: 'esriSLS';
+  color?: string;
+  width?: number;
+  style?: EsriLineStyle | number[];
+}
+
+export interface EsriFillSymbol {
+  type: 'esriSFS';
+  color?: string;
+  style?: EsriFillStyle;
+  outline?: EsriOutline;
+}
+
+export interface EsriSimpleMarkerSymbol {
+  type: 'esriSMS';
+  style?: EsriMarkerStyle;
+  color?: string;
+  size?: number;
+  outline?: EsriOutline;
+}
+
+export interface EsriPictureMarkerSymbol {
+  type: 'esriPMS';
+  url: string;
+  width?: number;
+  height?: number;
+}
+
+export type EsriSymbol = EsriLineSymbol | EsriFillSymbol | EsriSimpleMarkerSymbol | EsriPictureMarkerSymbol;
+
+export interface EsriTextSymbol {
+  type: 'esriTS';
+  color?: string;
+  font?: { size?: number; style?: 'italic'; weight?: 'bold' };
+  horizontalAlignment?: 'left' | 'center' | 'right';
+  verticalAlignment?: 'top' | 'middle' | 'bottom';
+  haloColor?: string;
+  haloSize?: string;
+  backgroundColor?: string;
+  borderLineColor?: string;
+  borderLineSize?: string;
+  anchor?: string;
+}
+
+export type PaletteToolType = 'line' | 'area' | 'marker' | 'text';
+export type PaletteDrawType = 'line' | 'freehand' | 'polyline' | 'polygon' | 'smart' | 'arrowto' | 'arrowfrom' | 'arrowdouble' | 'multiline';
+export type ArrowDecoration = 'arrowheadOpen' | 'arrowheadClosed' | 'arrowheadFilled';
+
+export interface PaletteTool {
+  id: string;
+  type: PaletteToolType;
+  label: string;
+  drawType?: PaletteDrawType;
+  symbol?: EsriSymbol;
+  textSymbol?: EsriTextSymbol;
+  multiline?: boolean;
+  textAnchor?: string;
+  beginDecoration?: ArrowDecoration;
+  endDecoration?: ArrowDecoration;
+}
+
+export interface PaletteToolset {
+  id: string;
+  title: string;
+  icon?: { name?: string; url?: string };
+  tools: PaletteTool[];
+}
+
+export interface PaletteFile {
+  id: string;
+  /** Filename without extension (e.g. "Electrical") */
+  name: string;
+  title: string;
+  description?: string;
+  icon?: { name?: string; url?: string };
+  toolsets: PaletteToolset[];
+}
+
+// ============================================================
 // Complete Form Model
 // ============================================================
 
@@ -299,6 +398,7 @@ export interface SurveyForm {
   choiceLists: ChoiceList[];
   mediaFiles: MediaFile[];
   scriptFiles: ScriptFile[];
+  paletteFiles: PaletteFile[];
 }
 
 // ============================================================
