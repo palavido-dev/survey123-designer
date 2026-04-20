@@ -275,26 +275,49 @@ export const useSurveyStore = create<SurveyStore>()(
     // Auto-create choice list for select types
     if (type === 'select_one' || type === 'select_multiple' || type === 'rank') {
       const listName = newRow.listName!;
-      const newList: ChoiceList = {
-        id: uuid(),
-        list_name: listName,
-        choices: [
-          { id: uuid(), list_name: listName, name: 'option_1', label: 'Option 1' },
-          { id: uuid(), list_name: listName, name: 'option_2', label: 'Option 2' },
-          { id: uuid(), list_name: listName, name: 'option_3', label: 'Option 3' },
-        ],
-      };
 
-      set({
-        form: {
-          ...state.form,
-          survey: newSurvey,
-          choiceLists: [...state.form.choiceLists, newList],
-        },
-        selectedRowId: newRow.id,
-        panelView: 'properties',
-        redoStack: [],
-      });
+      // Check if this list already exists (e.g., reusing "yes_no")
+      const existingList = state.form.choiceLists.find(cl => cl.list_name === listName);
+
+      if (existingList) {
+        // List already exists, just add the row
+        set({
+          form: { ...state.form, survey: newSurvey },
+          selectedRowId: newRow.id,
+          panelView: 'properties',
+          redoStack: [],
+        });
+      } else {
+        // Create appropriate default choices based on appearance
+        const isYesNo = appearance === 'yes_no_toggle';
+        const choices: ChoiceItem[] = isYesNo
+          ? [
+              { id: uuid(), list_name: listName, name: 'yes', label: 'Yes' },
+              { id: uuid(), list_name: listName, name: 'no', label: 'No' },
+            ]
+          : [
+              { id: uuid(), list_name: listName, name: 'option_1', label: 'Option 1' },
+              { id: uuid(), list_name: listName, name: 'option_2', label: 'Option 2' },
+              { id: uuid(), list_name: listName, name: 'option_3', label: 'Option 3' },
+            ];
+
+        const newList: ChoiceList = {
+          id: uuid(),
+          list_name: listName,
+          choices,
+        };
+
+        set({
+          form: {
+            ...state.form,
+            survey: newSurvey,
+            choiceLists: [...state.form.choiceLists, newList],
+          },
+          selectedRowId: newRow.id,
+          panelView: 'properties',
+          redoStack: [],
+        });
+      }
     } else {
       set({
         form: { ...state.form, survey: newSurvey },

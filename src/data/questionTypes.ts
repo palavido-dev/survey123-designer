@@ -258,7 +258,13 @@ export function createDefaultRow(type: QuestionType, appearance?: string): Surve
     case 'select_one':
     case 'select_multiple':
     case 'rank':
-      base.listName = `list_${name}`;
+      if (appearance === 'yes_no_toggle') {
+        base.listName = 'yes_no';
+        base.label = 'Yes/No Question';
+        base.name = `yes_no_${count}`;
+      } else {
+        base.listName = `list_${name}`;
+      }
       break;
     case 'select_one_from_file':
     case 'select_multiple_from_file':
