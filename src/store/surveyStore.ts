@@ -51,11 +51,15 @@ interface SurveyStore {
   lastSavedAt: number | null;        // timestamp of last auto-save
   hasRecoveredForm: boolean;          // true if form was loaded from IndexedDB on startup
 
+  // === Default Settings ===
+  defaultSettings: FormSettings | null;  // user-defined defaults for new forms
+
   // === UI State ===
   selectedRowId: string | null;
   panelView: PanelView;
   isDragging: boolean;
   collapsedGroups: Set<string>;
+  devicePreviewMode: 'desktop' | 'tablet' | 'phone';
   undoStack: SurveyForm[];
   redoStack: SurveyForm[];
 
@@ -105,6 +109,7 @@ interface SurveyStore {
   selectRow: (id: string | null) => void;
   setPanelView: (view: PanelView) => void;
   setDragging: (isDragging: boolean) => void;
+  setDevicePreviewMode: (mode: 'desktop' | 'tablet' | 'phone') => void;
   toggleGroupCollapse: (id: string) => void;
   openExpressionEditor: (rowId: string, mode: 'relevant' | 'calculation' | 'constraint') => void;
   closeExpressionEditor: () => void;
@@ -124,6 +129,10 @@ interface SurveyStore {
   // === Form Actions ===
   loadForm: (form: SurveyForm) => void;
   resetForm: () => void;
+
+  // === Default Settings Actions ===
+  saveDefaultSettings: (settings: FormSettings) => void;
+  clearDefaultSettings: () => void;
 
   // === Auto-save Actions ===
   dismissRecovery: () => void;
@@ -166,9 +175,11 @@ export const useSurveyStore = create<SurveyStore>()(
   form: { ...defaultForm },
   lastSavedAt: null,
   hasRecoveredForm: false,
+  defaultSettings: null,
   selectedRowId: null,
   panelView: 'properties',
   isDragging: false,
+  devicePreviewMode: 'desktop',
   collapsedGroups: new Set<string>(),
   expressionEditor: null,
   csvEditor: null,
@@ -890,6 +901,7 @@ export const useSurveyStore = create<SurveyStore>()(
   selectRow: (id) => set({ selectedRowId: id }),
   setPanelView: (view) => set({ panelView: view }),
   setDragging: (isDragging) => set({ isDragging }),
+  setDevicePreviewMode: (mode) => set({ devicePreviewMode: mode }),
   openExpressionEditor: (rowId, mode) => set({ expressionEditor: { rowId, mode } }),
   closeExpressionEditor: () => set({ expressionEditor: null }),
   openCsvEditor: (rowId, fileName) => set({ csvEditor: { rowId, fileName } }),
@@ -959,13 +971,34 @@ export const useSurveyStore = create<SurveyStore>()(
   },
 
   resetForm: () => {
+    const state = get();
+    const settingsToUse = state.defaultSettings || defaultSettings;
     set({
-      form: { ...defaultForm, survey: [], choiceLists: [], mediaFiles: [], scriptFiles: [] },
+      form: {
+        ...defaultForm,
+        settings: settingsToUse,
+        survey: [],
+        choiceLists: [],
+        mediaFiles: [],
+        scriptFiles: [],
+      },
       selectedRowId: null,
       hasRecoveredForm: false,
       undoStack: [],
       redoStack: [],
     });
+  },
+
+  // ----------------------------------------------------------
+  // Default Settings Actions
+  // ----------------------------------------------------------
+
+  saveDefaultSettings: (settings) => {
+    set({ defaultSettings: settings });
+  },
+
+  clearDefaultSettings: () => {
+    set({ defaultSettings: null });
   },
 
   // ----------------------------------------------------------
@@ -992,10 +1025,11 @@ export const useSurveyStore = create<SurveyStore>()(
   {
     name: 'survey123-designer-autosave',
     storage: createJSONStorage(() => idbStorage),
-    // Only persist form data and the save timestamp — not UI state
+    // Only persist form data, save timestamp, and default settings — not UI state
     partialize: (state) => ({
       form: state.form,
       lastSavedAt: state.lastSavedAt,
+      defaultSettings: state.defaultSettings,
     }),
     // On rehydration, detect recovered form
     onRehydrateStorage: () => {

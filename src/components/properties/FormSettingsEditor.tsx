@@ -2,7 +2,7 @@
  * Form Settings Editor — Matches left-pane font sizes and padding
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 
 function Field({
@@ -45,14 +45,30 @@ function Field({
 }
 
 export function FormSettingsEditor() {
-  const { form, updateSettings } = useSurveyStore();
+  const { form, updateSettings, saveDefaultSettings, clearDefaultSettings, defaultSettings } = useSurveyStore();
   const s = form.settings;
+  const [showDefaultSaved, setShowDefaultSaved] = useState(false);
+
+  const handleSaveAsDefault = () => {
+    saveDefaultSettings(s);
+    setShowDefaultSaved(true);
+    setTimeout(() => setShowDefaultSaved(false), 2500);
+  };
+
+  const handleClearDefaults = () => {
+    clearDefaultSettings();
+  };
 
   return (
     <div style={{ padding: 16 }}>
-      <h3 className="text-gray-800" style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>
-        Form Settings
-      </h3>
+      <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+        <h3 className="text-gray-800" style={{ fontSize: 14, fontWeight: 600 }}>
+          Form Settings
+        </h3>
+        {showDefaultSaved && (
+          <span className="text-[11px] text-green-600 font-medium">Saved as default</span>
+        )}
+      </div>
 
       <Field
         label="Form Title"
@@ -112,6 +128,35 @@ export function FormSettingsEditor() {
         mono
         help="Custom submission endpoint (optional)"
       />
+
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+        <p className="text-gray-600 text-[12px] font-medium mb-3">Save as defaults</p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleSaveAsDefault}
+            className="flex-1 py-2 px-3 text-[12px] font-medium rounded-lg
+              bg-[#00856a] text-white hover:bg-[#007560]
+              transition-fast active:scale-[0.98]"
+          >
+            Save as default
+          </button>
+          {defaultSettings && (
+            <button
+              onClick={handleClearDefaults}
+              className="flex-1 py-2 px-3 text-[12px] font-medium rounded-lg
+                bg-gray-100 text-gray-700 hover:bg-gray-200
+                transition-fast active:scale-[0.98]"
+            >
+              Clear defaults
+            </button>
+          )}
+        </div>
+        {defaultSettings && (
+          <p className="text-gray-400 text-[11px] mt-2">
+            New blank forms will use these settings
+          </p>
+        )}
+      </div>
     </div>
   );
 }

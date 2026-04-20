@@ -23,12 +23,14 @@ const SYNTAX_EXAMPLES = [
   { label: 'Field value', syntax: '${fieldname}', desc: 'Insert a field value' },
   { label: 'With filter', syntax: '${field | filter}', desc: 'Apply a pipe filter' },
   { label: 'Conditional', syntax: '${if field | selected:"val"}...${/}', desc: 'Show/hide content' },
+  { label: 'Else workaround', syntax: '${if cond}A${/}${if !cond}B${/}', desc: 'Survey123 reports have no ${else}; use paired inverse conditionals' },
   { label: 'Repeat', syntax: '${#repeatname}...${/}', desc: 'Loop through records' },
   { label: 'Image', syntax: '${$image | size:460:0}', desc: 'Embed an image' },
   { label: 'File', syntax: '${$file | size:460:0}', desc: 'Embed a file' },
   { label: 'Date', syntax: '${date | format:"MM/DD/YYYY"}', desc: 'Format a date' },
   { label: 'Report date', syntax: '${$date}', desc: 'Current report date' },
   { label: 'Multiline', syntax: '${field | appearance:"multiline"}', desc: 'Preserve line breaks' },
+  { label: 'Hide if empty', syntax: '${if fieldname}Label: ${fieldname}${/}', desc: 'Wrap a field in a conditional so blanks disappear' },
 ];
 
 // ============================================================

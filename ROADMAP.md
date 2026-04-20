@@ -52,3 +52,33 @@ This is a personal project under active development. Features are prioritized ba
 - [ ] Form preview mode (simulate filling out the form)
 - [ ] Diff viewer for comparing two `.xlsx` form versions
 - [ ] AI-assisted form building (describe what you want, get a form structure)
+
+## Community-Requested (from forum scans)
+
+Items below are sourced from the Esri Survey123 Ideas forum and Reddit. Marked done where Survey123 Designer already handles the request; open items are prioritization candidates. See `forum-monitor-reports/` for scan history.
+
+- [x] Allow repeats in web designer (Idea 1637247, 11 kudos) -> full repeat support shipping
+- [x] Grid theme supported in web app (84 kudos) -> w1-w4 group appearances
+- [x] Table view for repeats (88 kudos) -> table-list group appearance
+- [x] Form organization / template reuse (39 kudos) -> Template Library with 51 templates
+- [x] Info/help bubbles via guidance_hint (14 kudos) -> guidance_hint property editor
+- [x] Default photo name (125 kudos) -> body::esri:filename exposed in Body section
+- [x] Pulldata to populate choices (37 kudos) -> expression builder + JS function library
+- [x] Reserved-keyword field-name check (Idea 1657399) -> inline field name validation
+- [ ] Stacked repeats preview (175 kudos) -> add card/stacked preview toggle on canvas
+- [ ] Network drive / local folder workflow (137 kudos) -> File System Access API integration
+- [ ] Publish to specific AGOL folder (90 kudos) -> part of future AGOL publish work
+- [ ] Python publish script generator (40 kudos) -> export a .py file alongside .xlsx
+- [ ] Photo orientation enforcement (10 kudos)
+- [ ] On/off switch palette discoverability (32 kudos) -> yes_no_toggle card already in Selection
+- [ ] Scroll long guidance_hint preview (33 kudos) -> verify CSS
+- [ ] Same-as-last-entry for repeat fields (17 kudos) -> indexed-repeat() helper UI
+- [ ] Auto-populate repeats from previous repeats (32 kudos) -> indexed-repeat() helper UI
+- [ ] Upgrade deprecated XLSForm on import (17 kudos) -> pair with round-trip fidelity
+- [ ] Report template linter for unclosed tags (Ideas 1616654 + 1624529)
+- [ ] Hide-empty-fields bulk action in report editor (Idea 1658379)
+- [ ] Cascading-select-style wizard for select_multiple geometry (Idea 1677465)
+- [ ] Responsive device preview (Idea 1685138, 4 kudos)
+- [ ] User-defined default settings for new forms (Idea 1694682)
+- [ ] Terms and Conditions / disclaimer template (Idea 1680820)
+- [ ] Report filename expression preview (Ideas 1606813 4 kudos + 1688820)
