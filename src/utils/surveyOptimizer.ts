@@ -709,7 +709,6 @@ const allRules: OptimizationRule[] = [
   selectTwoChoicesAsToggle,
   noRequiredFields,
   missingHintsOnComplex,
-  consecutiveSameTypeQuestions,
   largeChoiceListMultipleQuestions,
   tooManyTopLevelQuestions,
   duplicateRelevantConditions,
