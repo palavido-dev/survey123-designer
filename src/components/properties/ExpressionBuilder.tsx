@@ -10,7 +10,7 @@
  *   - Raw edit mode for power users
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { SurveyRow } from '../../types/survey';
 import { parseJavaScriptFunctions } from '../../utils/scriptParser';
@@ -577,6 +577,15 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
       r.name
   );
 
+  // Build choice value map for autocomplete on select fields
+  const choiceValues = useMemo(() => {
+    const map = new Map<string, { name: string; label: string }[]>();
+    for (const cl of form.choiceLists) {
+      map.set(cl.list_name, cl.choices.map(c => ({ name: c.name, label: c.label })));
+    }
+    return map;
+  }, [form.choiceLists]);
+
   const filteredFields = fieldSearch
     ? availableFields.filter(
         (r) =>
@@ -1023,6 +1032,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
           onChange={onChange}
           placeholder={placeholder}
           fields={availableFields}
+          choiceValues={choiceValues}
           textareaRef={textareaRef}
           rows={2}
           showTokenPreview={!isOpen}
@@ -1488,6 +1498,7 @@ export function ExpressionBuilder({ value, onChange, currentRowId, label, placeh
                   onChange={onChange}
                   placeholder={placeholder}
                   fields={availableFields}
+                  choiceValues={choiceValues}
                   textareaRef={expandedTextareaRef}
                   rows={6}
                   showTokenPreview={true}

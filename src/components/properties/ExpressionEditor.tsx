@@ -26,6 +26,7 @@ import {
   type ExpressionDiagnostic,
   type CompletionItem,
   type HoverInfo,
+  type ChoiceValueMap,
 } from '../../utils/expressionParser';
 import type { SurveyRow } from '../../types/survey';
 
@@ -38,6 +39,8 @@ interface ExpressionEditorProps {
   onChange: (val: string) => void;
   placeholder?: string;
   fields: SurveyRow[];
+  /** Choice list values for smart autocomplete on select fields */
+  choiceValues?: ChoiceValueMap;
   /** Ref forwarded so ExpressionBuilder can call insertAtCursor */
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   /** Compact single-line mode vs multi-line */
@@ -50,11 +53,11 @@ interface ExpressionEditorProps {
 // Field info map builder
 // ============================================================
 
-function buildFieldMap(fields: SurveyRow[]): Map<string, { type: string; label: string }> {
-  const map = new Map<string, { type: string; label: string }>();
+function buildFieldMap(fields: SurveyRow[]): Map<string, { type: string; label: string; listName?: string }> {
+  const map = new Map<string, { type: string; label: string; listName?: string }>();
   for (const f of fields) {
     if (f.name) {
-      map.set(f.name, { type: f.type, label: f.label || f.name });
+      map.set(f.name, { type: f.type, label: f.label || f.name, listName: f.listName });
     }
   }
   return map;
@@ -92,6 +95,7 @@ export function ExpressionEditor({
   onChange,
   placeholder,
   fields,
+  choiceValues,
   textareaRef: externalRef,
   rows = 2,
   showTokenPreview = true,
@@ -128,8 +132,8 @@ export function ExpressionEditor({
   // Get completions
   const completions = useMemo(() => {
     if (!showAutocomplete || !isFocused) return [];
-    return getCompletions(value || '', cursorPos, fieldMap);
-  }, [value, cursorPos, fieldMap, showAutocomplete, isFocused]);
+    return getCompletions(value || '', cursorPos, fieldMap, choiceValues);
+  }, [value, cursorPos, fieldMap, choiceValues, showAutocomplete, isFocused]);
 
   // Clamp autocomplete index
   useEffect(() => {
@@ -206,7 +210,11 @@ export function ExpressionEditor({
 
     // Find the start of what the user was typing
     let insertStart = cursor;
-    if (item.kind === 'field' && item.label.startsWith('${')) {
+    if (item.kind === 'value') {
+      // For choice values, insertText is already correct (e.g., "'yes'" or "es'" for partial)
+      // Just insert at cursor position
+      insertStart = cursor;
+    } else if (item.kind === 'field' && item.label.startsWith('${')) {
       // For field references, find the ${ before cursor
       const before = currentValue.slice(0, cursor);
       const fieldStart = before.lastIndexOf('${');
@@ -223,7 +231,9 @@ export function ExpressionEditor({
     }
 
     let insertText = '';
-    if (item.kind === 'field' && item.label.startsWith('${')) {
+    if (item.kind === 'value') {
+      insertText = item.insertText;
+    } else if (item.kind === 'field' && item.label.startsWith('${')) {
       insertText = item.label;
     } else {
       insertText = item.label + (item.kind === 'function' ? '(' : '');
@@ -439,12 +449,14 @@ export function ExpressionEditor({
                 item.kind === 'field' ? 'bg-[#f0faf7] text-[#007a62]' :
                 item.kind === 'operator' ? 'bg-orange-50 text-orange-600' :
                 item.kind === 'keyword' ? 'bg-purple-50 text-purple-600' :
+                item.kind === 'value' ? 'bg-amber-50 text-amber-600' :
                 'bg-gray-50 text-gray-500'
               }`} style={{ width: 20, height: 20, fontSize: 9, fontWeight: 700 }}>
                 {item.kind === 'function' ? 'fn' :
                  item.kind === 'field' ? '$' :
                  item.kind === 'operator' ? 'op' :
-                 item.kind === 'keyword' ? 'kw' : '?'}
+                 item.kind === 'keyword' ? 'kw' :
+                 item.kind === 'value' ? 'val' : '?'}
               </span>
 
               {/* Label */}

@@ -1291,10 +1291,14 @@ export interface CompletionItem {
 /**
  * Get autocomplete suggestions at the given cursor position.
  */
+/** Map of choice list name to array of { name, label } values */
+export type ChoiceValueMap = Map<string, { name: string; label: string }[]>;
+
 export function getCompletions(
   input: string,
   cursorPos: number,
-  fieldNames: Map<string, { type: string; label: string }>,
+  fieldNames: Map<string, { type: string; label: string; listName?: string }>,
+  choiceValues?: ChoiceValueMap,
 ): CompletionItem[] {
   const items: CompletionItem[] = [];
   const allTokens = tokenize(input);
@@ -1333,6 +1337,16 @@ export function getCompletions(
       }
     }
     return items;
+  }
+
+  // ── Choice value suggestions ──────────────────────────────
+  // Detect pattern: ${field_name} = or ${field_name} != (with cursor after the operator)
+  // Also works for: selected(${field_name}, and inside quotes after the patterns above
+  if (choiceValues) {
+    const choiceSuggestions = getChoiceValueSuggestions(textBeforeCursor, fieldNames, choiceValues);
+    if (choiceSuggestions.length > 0) {
+      return choiceSuggestions;
+    }
   }
 
   // After a complete token, determine what makes sense next
@@ -1400,6 +1414,97 @@ export function getCompletions(
 
   // Sort by sortOrder then alphabetically
   items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || a.label.localeCompare(b.label));
+
+  return items;
+}
+
+/**
+ * Detect when the cursor is in a position where choice values should be suggested.
+ *
+ * Supported patterns:
+ *   ${field} =           -> suggest 'value1', 'value2', ...
+ *   ${field} !=          -> suggest 'value1', 'value2', ...
+ *   ${field} = '...      -> filter choice values by partial match
+ *   selected(${field},   -> suggest 'value1', 'value2', ...
+ *   selected(${field}, ' -> filter choice values by partial match
+ */
+function getChoiceValueSuggestions(
+  textBeforeCursor: string,
+  fieldNames: Map<string, { type: string; label: string; listName?: string }>,
+  choiceValues: ChoiceValueMap,
+): CompletionItem[] {
+  // Check if we're typing inside a partial string after a comparison
+  // Pattern: ${field} = 'partial or ${field} != 'partial
+  const partialStringMatch = textBeforeCursor.match(
+    /\$\{([^}]+)\}\s*[!=]{1,2}\s*'([^']*)$/
+  );
+  // Pattern: selected(${field}, 'partial
+  const selectedPartialMatch = textBeforeCursor.match(
+    /selected\s*\(\s*\$\{([^}]+)\}\s*,\s*'([^']*)$/
+  );
+
+  // Check if cursor is right after an operator with no quote started yet
+  // Pattern: ${field} = or ${field} !=
+  const afterOperatorMatch = textBeforeCursor.match(
+    /\$\{([^}]+)\}\s*[!=]{1,2}\s*$/
+  );
+  // Pattern: selected(${field},
+  const selectedAfterCommaMatch = textBeforeCursor.match(
+    /selected\s*\(\s*\$\{([^}]+)\}\s*,\s*$/
+  );
+
+  let fieldName: string | null = null;
+  let partialValue = '';
+  let inQuote = false;
+
+  if (partialStringMatch) {
+    fieldName = partialStringMatch[1];
+    partialValue = partialStringMatch[2].toLowerCase();
+    inQuote = true;
+  } else if (selectedPartialMatch) {
+    fieldName = selectedPartialMatch[1];
+    partialValue = selectedPartialMatch[2].toLowerCase();
+    inQuote = true;
+  } else if (afterOperatorMatch) {
+    fieldName = afterOperatorMatch[1];
+  } else if (selectedAfterCommaMatch) {
+    fieldName = selectedAfterCommaMatch[1];
+  }
+
+  if (!fieldName) return [];
+
+  // Look up the field to get its choice list
+  const fieldInfo = fieldNames.get(fieldName);
+  if (!fieldInfo || !fieldInfo.listName) return [];
+
+  // Only suggest for select_one / select_multiple types
+  if (!fieldInfo.type.startsWith('select_one') && !fieldInfo.type.startsWith('select_multiple')) return [];
+
+  const choices = choiceValues.get(fieldInfo.listName);
+  if (!choices || choices.length === 0) return [];
+
+  const items: CompletionItem[] = [];
+  for (const choice of choices) {
+    if (partialValue && !choice.name.toLowerCase().startsWith(partialValue) &&
+        !choice.label.toLowerCase().startsWith(partialValue)) {
+      continue;
+    }
+
+    // If we're already inside a quote, just complete the value + closing quote
+    // If not, insert the full 'value'
+    const insertText = inQuote
+      ? choice.name.slice(partialValue.length) + "'"
+      : "'" + choice.name + "'";
+
+    items.push({
+      label: choice.name,
+      kind: 'value',
+      detail: choice.label !== choice.name ? choice.label : undefined,
+      insertText,
+      documentation: `Choice value from list "${fieldInfo.listName}"`,
+      sortOrder: 0,
+    });
+  }
 
   return items;
 }
