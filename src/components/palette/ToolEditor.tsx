@@ -10,6 +10,7 @@ import type {
   PaletteTool,
   PaletteToolType,
   PaletteDrawType,
+  EsriSymbol,
   EsriLineSymbol,
   EsriFillSymbol,
   EsriSimpleMarkerSymbol,
@@ -226,8 +227,9 @@ export function ToolEditor({ tool, onUpdate }: ToolEditorProps) {
   const isArrow = tool.drawType?.startsWith('arrow') || false;
 
   // Helper to update nested symbol properties
-  const updateSymbol = (updates: Partial<EsriLineSymbol & EsriFillSymbol & EsriSimpleMarkerSymbol & EsriPictureMarkerSymbol>) => {
-    onUpdate({ symbol: { ...tool.symbol!, ...updates } as any });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateSymbol = (updates: Record<string, unknown>) => {
+    onUpdate({ symbol: { ...(tool.symbol as any), ...updates } as EsriSymbol });
   };
 
   const updateOutline = (updates: Partial<EsriOutline>) => {

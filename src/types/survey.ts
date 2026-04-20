@@ -398,7 +398,7 @@ export interface SurveyForm {
   choiceLists: ChoiceList[];
   mediaFiles: MediaFile[];
   scriptFiles: ScriptFile[];
-  paletteFiles: PaletteFile[];
+  paletteFiles?: PaletteFile[];
 }
 
 // ============================================================

@@ -76,9 +76,14 @@ interface ToolJSON {
  * Convert a PaletteFile to a .palette JSON string.
  */
 export function exportPaletteToJSON(palette: PaletteFile): string {
+  const toolsets = palette.toolsets
+    .filter((ts) => ts.tools.length > 0)
+    .map((ts) => convertToolset(ts));
+
   const output: PaletteJSON = {
     title: palette.title,
     type: 'drawTools',
+    toolsets,
   };
 
   if (palette.description) {
@@ -88,10 +93,6 @@ export function exportPaletteToJSON(palette: PaletteFile): string {
   if (palette.icon && (palette.icon.name || palette.icon.url)) {
     output.icon = palette.icon;
   }
-
-  output.toolsets = palette.toolsets
-    .filter((ts) => ts.tools.length > 0)
-    .map((ts) => convertToolset(ts));
 
   return JSON.stringify(output, null, 4);
 }
