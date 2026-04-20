@@ -257,7 +257,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
           {/* Left: Palette meta + toolset tabs + tool list */}
           <div className="flex-1 flex flex-col border-r border-gray-100 overflow-y-auto" style={{ minWidth: 0 }}>
             {/* Palette meta */}
-            <div className="px-6 py-5 border-b border-gray-100">
+            <div className="border-b border-gray-100" style={{ padding: '20px 24px' }}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Palette Name</label>
@@ -283,7 +283,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
             </div>
 
             {/* Toolset tabs */}
-            <div className="px-6 pt-4 pb-3">
+            <div style={{ padding: '16px 24px 12px' }}>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {palette.toolsets.map((ts, idx) => (
                   <button
@@ -323,7 +323,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
 
             {/* Toolset config */}
             {currentToolset && (
-              <div className="px-6 pb-5">
+              <div style={{ padding: '0 24px 20px' }}>
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Toolset Title</label>
@@ -360,7 +360,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
 
             {/* Tool list */}
             {currentToolset && (
-              <div className="flex-1 overflow-y-auto px-6 py-5">
+              <div className="flex-1 overflow-y-auto" style={{ padding: '20px 24px' }}>
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[12px] font-semibold text-gray-600">
                     Tools ({currentToolset.tools.length})
