@@ -35,7 +35,7 @@ export const questionCategories: QuestionCategory[] = [
       { id: 'note', type: 'note', label: 'Note', icon: 'StickyNote', description: 'Display read-only text on screen, takes no input' },
       { id: 'begin_group', type: 'begin_group', label: 'Group', icon: 'FolderOpen', description: 'Group related questions together' },
       { id: 'begin_group-compact', type: 'begin_group', label: 'Compact Group', icon: 'FolderOpen', defaultAppearance: 'compact', description: 'Group that starts collapsed, expandable by user' },
-      { id: 'begin_group-fieldlist', type: 'begin_group', label: 'Field List', icon: 'FolderOpen', defaultAppearance: 'field-list', description: 'Group displayed on a separate page (with pages style)' },
+      { id: 'begin_group-fieldlist', type: 'begin_group', label: 'Field List (Page)', icon: 'FolderOpen', defaultAppearance: 'field-list', description: 'Page break: children render on a separate page. Requires form style=pages (set in Form Settings).' },
       { id: 'begin_group-tablelist', type: 'begin_group', label: 'Table List', icon: 'FolderOpen', defaultAppearance: 'table-list', description: 'Formats select_one questions inside as a table' },
       { id: 'begin_group-grid1', type: 'begin_group', label: 'Grid 1-Col', icon: 'FolderOpen', defaultAppearance: 'w1', description: 'Grid group where children default to 1/4 width columns' },
       { id: 'begin_group-grid2', type: 'begin_group', label: 'Grid 2-Col', icon: 'FolderOpen', defaultAppearance: 'w2', description: 'Grid group where children default to 2/4 (half) width columns' },
@@ -43,7 +43,7 @@ export const questionCategories: QuestionCategory[] = [
       { id: 'begin_group-grid4', type: 'begin_group', label: 'Grid 4-Col', icon: 'FolderOpen', defaultAppearance: 'w4', description: 'Grid group where children default to full width (4/4) columns' },
       { id: 'begin_repeat', type: 'begin_repeat', label: 'Repeat', icon: 'Repeat', description: 'Repeating set of questions (add multiple entries)' },
       { id: 'begin_repeat-compact', type: 'begin_repeat', label: 'Compact Repeat', icon: 'Repeat', defaultAppearance: 'compact', description: 'Repeat that starts collapsed, expandable by user' },
-      { id: 'begin_repeat-fieldlist', type: 'begin_repeat', label: 'Field List Repeat', icon: 'Repeat', defaultAppearance: 'field-list', description: 'Each repeat entry displays on a separate page' },
+      { id: 'begin_repeat-fieldlist', type: 'begin_repeat', label: 'Field List Repeat (Page per entry)', icon: 'Repeat', defaultAppearance: 'field-list', description: 'Page break per entry: each repeat instance renders on its own page. Requires form style=pages.' },
     ],
   },
   {

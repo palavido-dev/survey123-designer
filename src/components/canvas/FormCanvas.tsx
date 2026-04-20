@@ -214,7 +214,7 @@ function HeaderInlineEdit({
 }
 
 export function FormCanvas() {
-  const { form, selectedRowId, selectRow, collapsedGroups, expressionEditor, csvEditor, updateRow, updateSettings, closeExpressionEditor, closeCsvEditor } = useSurveyStore();
+  const { form, selectedRowId, selectRow, collapsedGroups, devicePreviewMode, setDevicePreviewMode, expressionEditor, csvEditor, updateRow, updateSettings, closeExpressionEditor, closeCsvEditor } = useSurveyStore();
   const { setNodeRef, isOver } = useDroppable({ id: 'canvas-drop-zone' });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -377,8 +377,52 @@ export function FormCanvas() {
       </div>
 
       {/* Form content area */}
-      <div className="flex justify-center flex-1">
-      <div style={{ width: '100%', maxWidth: 720, padding: '20px 24px 32px' }}>
+      <div className="flex flex-col justify-center flex-1">
+        {/* Device Preview Toggle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setDevicePreviewMode('phone')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-fast ${
+                devicePreviewMode === 'phone'
+                  ? 'bg-white text-[#007a62] shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Phone preview (375px)"
+            >
+              Phone
+            </button>
+            <button
+              onClick={() => setDevicePreviewMode('tablet')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-fast ${
+                devicePreviewMode === 'tablet'
+                  ? 'bg-white text-[#007a62] shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Tablet preview (768px)"
+            >
+              Tablet
+            </button>
+            <button
+              onClick={() => setDevicePreviewMode('desktop')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-fast ${
+                devicePreviewMode === 'desktop'
+                  ? 'bg-white text-[#007a62] shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Desktop preview (full width)"
+            >
+              Desktop
+            </button>
+          </div>
+        </div>
+      <div className="flex justify-center flex-1 overflow-hidden">
+      <div style={{
+        width: '100%',
+        maxWidth: devicePreviewMode === 'phone' ? 375 : devicePreviewMode === 'tablet' ? 768 : 720,
+        padding: '20px 24px 32px',
+        transition: 'max-width 0.2s ease-out',
+      }}>
 
         {/* Survey Card */}
         <div className="bg-white rounded-xl shadow-card" style={{ overflow: 'hidden' }}>
@@ -444,6 +488,7 @@ export function FormCanvas() {
             <p className="text-[11px] text-gray-400">XLSForm Designer</p>
           </div>
         </div>
+      </div>
       </div>
       </div>
 

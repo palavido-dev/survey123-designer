@@ -122,6 +122,24 @@ Exported `.xlsx` files include the same quality-of-life features found in Survey
 
 Undo/Redo with keyboard shortcuts (Ctrl+Z / Ctrl+Shift+Z), question type and field name indicators on each card, collapsible groups, and form-level settings (title, form ID, version, style, default language).
 
+## Features You May Not Know About
+
+Several powerful features exist but aren't immediately obvious. Here are some gems that forum users keep asking about:
+
+- **Multi-Page Forms via Field List.** Create traditional multi-page surveys by grouping questions in groups with the `field-list` appearance. The canvas visually renders each group as a separate page.
+
+- **Cascading Dropdowns with Choice Filters.** Build parent-child question relationships where child options filter based on parent selection. Use the Cascading Select Wizard to auto-generate the filter expressions visually.
+
+- **Grid Layouts with Column Widths.** Arrange questions in 1, 2, 3, or 4 column grids using the `w1`, `w2`, `w3`, `w4` appearance variants. Add these to groups or individual questions to create multi-column layouts.
+
+- **Responsive Device Preview.** Toggle between Phone (375px), Tablet (768px), and Desktop (full width) preview modes in the canvas header to test how your form looks on different screen sizes.
+
+- **Custom JavaScript via pulldata()** Survey123 supports running JavaScript functions for complex calculations and text processing. Use the JavaScript Function Library in the Properties panel with 85+ templates, or write your own functions. They export to the `scripts/` folder in ZIP output.
+
+- **CSV Data Files.** For `select_one_from_file` and `select_multiple_from_file` questions, upload and edit CSV files directly in the designer. The built-in CSV editor lets you modify data without leaving the app.
+
+- **Save Default Settings.** Set up your preferred form title pattern, default language, and other settings once, then save them as defaults. Every new blank form will use these settings automatically.
+
 ## Getting Started
 
 ### Prerequisites
