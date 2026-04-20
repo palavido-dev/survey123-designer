@@ -1207,7 +1207,21 @@ function LogicBadges({ row }: { row: SurveyRow }) {
   const { form, updateRow, openExpressionEditor, openCsvEditor, pushUndo, selectRow } = useSurveyStore();
   const [showCascadingWizard, setShowCascadingWizard] = useState<{ parentId?: string } | null>(null);
   const [showCascadingDetail, setShowCascadingDetail] = useState(false);
+  const [showPaletteDropdown, setShowPaletteDropdown] = useState(false);
   const cascadingBadgeRef = useRef<HTMLSpanElement>(null);
+  const paletteBadgeRef = useRef<HTMLSpanElement>(null);
+
+  // Close palette dropdown on click outside
+  useEffect(() => {
+    if (!showPaletteDropdown) return;
+    const handler = (e: MouseEvent) => {
+      if (paletteBadgeRef.current && !paletteBadgeRef.current.contains(e.target as Node)) {
+        setShowPaletteDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showPaletteDropdown]);
 
   // Build set of all field names for expression validation
   const allFieldNames = React.useMemo(
@@ -1429,6 +1443,124 @@ function LogicBadges({ row }: { row: SurveyRow }) {
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
                 />
+              )}
+            </span>
+          );
+        })()}
+
+        {/* Palette badge — for image questions with draw/annotate appearance */}
+        {row.type === 'image' && (row.appearance || '').match(/\b(draw|annotate)\b/) && (() => {
+          const palettes = form.paletteFiles || [];
+          // Extract current palette from parameters (palette=name)
+          const paramStr = row.parameters || '';
+          const paletteMatch = paramStr.match(/palette\s*=\s*(\S+)/);
+          const currentPalette = paletteMatch ? paletteMatch[1] : '';
+          const hasPalette = !!currentPalette;
+
+          const setPalette = (name: string) => {
+            // Update parameters string, replacing or adding palette=name
+            let params = row.parameters || '';
+            if (params.match(/palette\s*=\s*\S+/)) {
+              params = name
+                ? params.replace(/palette\s*=\s*\S+/, `palette=${name}`)
+                : params.replace(/\s*palette\s*=\s*\S+/, '').trim();
+            } else if (name) {
+              params = params ? `${params} palette=${name}` : `palette=${name}`;
+            }
+            updateRow(row.id, { parameters: params || undefined });
+            setShowPaletteDropdown(false);
+          };
+
+          return (
+            <span className="relative" ref={paletteBadgeRef}>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setShowPaletteDropdown(!showPaletteDropdown);
+                }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`inline-flex items-center gap-1 border rounded-full cursor-pointer select-none transition-fast ${
+                  hasPalette
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
+                    : 'bg-transparent text-gray-300 border-gray-200/60 hover:bg-gray-50 hover:text-gray-400 hover:border-gray-300'
+                }`}
+                style={{ padding: '2px 8px', fontSize: 10, fontWeight: 500 }}
+                title={hasPalette ? `Palette: ${currentPalette}` : 'Assign a drawing palette'}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                </svg>
+                {hasPalette ? currentPalette : 'Palette'}
+                {!hasPalette && (
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                )}
+              </span>
+
+              {/* Palette dropdown */}
+              {showPaletteDropdown && (
+                <div
+                  className="absolute left-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
+                  style={{ minWidth: 180 }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {palettes.length > 0 ? (
+                    <>
+                      <div className="px-3 py-2 border-b border-gray-100">
+                        <span className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">
+                          Available Palettes
+                        </span>
+                      </div>
+                      {palettes.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPalette(p.name);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-[12px] hover:bg-gray-50 transition-colors flex items-center justify-between ${
+                            currentPalette === p.name ? 'bg-emerald-50 text-[#007a62] font-medium' : 'text-gray-700'
+                          }`}
+                        >
+                          <span>{p.title}</span>
+                          <span className="text-[10px] font-mono text-gray-400">{p.name}</span>
+                        </button>
+                      ))}
+                      {hasPalette && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPalette('');
+                          }}
+                          className="w-full text-left px-3 py-2 text-[12px] text-red-500 hover:bg-red-50 border-t border-gray-100 transition-colors"
+                        >
+                          Remove palette
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-3 py-3 text-center">
+                      <p className="text-[11px] text-gray-400 mb-2">No palettes created yet</p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPaletteDropdown(false);
+                          // Switch to Media tab to create a palette
+                          const store = useSurveyStore.getState();
+                          store.setPanelView('media');
+                        }}
+                        className="px-3 py-1.5 text-[11px] font-medium text-[#007a62] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                      >
+                        Create in Media tab
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </span>
           );
