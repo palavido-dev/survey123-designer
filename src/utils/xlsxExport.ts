@@ -21,6 +21,7 @@ import * as XLSX from 'xlsx-js-style';
 import JSZip from 'jszip';
 import { SurveyForm, SurveyRow, ChoiceList, ChoiceItem, FormSettings, QuestionType } from '../types/survey';
 import { buildTypeColumnValue } from '../data/questionTypes';
+import { exportPaletteToJSON } from './paletteExport';
 
 // ============================================================
 // Full Survey Sheet Columns (matching Survey123 Connect Advanced Template)
@@ -210,6 +211,16 @@ export async function exportToZip(form: SurveyForm): Promise<void> {
     const scriptsFolder = zip.folder('scripts')!;
     for (const sf of scriptFiles) {
       scriptsFolder.file(sf.fileName, sf.content);
+    }
+  }
+
+  // Add .palette files into media/ folder
+  const paletteFiles = (form.paletteFiles || []).filter((f) => f.toolsets.length > 0);
+  if (paletteFiles.length > 0) {
+    const palMediaFolder = zip.folder('media') || zip.folder('media')!;
+    for (const pf of paletteFiles) {
+      const json = exportPaletteToJSON(pf);
+      palMediaFolder.file(`${pf.name}.palette`, json);
     }
   }
 
@@ -1027,7 +1038,7 @@ function parseWorkbook(wb: XLSX.WorkBook): SurveyForm {
     settings.footer_text = generatedNoteMap['generated_note_form_footer'].label;
   }
 
-  return { settings, survey: filteredSurvey, choiceLists, mediaFiles: [], scriptFiles: [] };
+  return { settings, survey: filteredSurvey, choiceLists, mediaFiles: [], scriptFiles: [], paletteFiles: [] };
 }
 
 function parseTypeColumn(typeStr: string): {

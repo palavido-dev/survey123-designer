@@ -13,6 +13,7 @@ import React, { useRef, useState } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { MediaFile, SurveyForm } from '../../types/survey';
 import { v4 as uuid } from 'uuid';
+import { PaletteManager } from '../palette/PaletteManager';
 
 // ============================================================
 // CSV parser (same as CsvFilePicker — shared logic)
@@ -413,6 +414,11 @@ export function MediaPanel() {
         onChange={handleFileUpload}
         className="hidden"
       />
+
+      {/* Drawing Palettes section */}
+      <div className="mt-6 pt-5 border-t border-gray-200">
+        <PaletteManager />
+      </div>
     </div>
   );
 }

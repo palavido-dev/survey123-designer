@@ -19,6 +19,7 @@ import {
   PanelView,
   MediaFile,
   ScriptFile,
+  PaletteFile,
 } from '../types/survey';
 import { createDefaultRow } from '../data/questionTypes';
 import { validateForm, FormValidationResult } from '../utils/validation';
@@ -103,6 +104,11 @@ interface SurveyStore {
   linkMediaFileToQuestion: (fileName: string, questionId: string) => void;
   unlinkMediaFileFromQuestion: (fileName: string, questionId: string) => void;
 
+  // === Palette File Actions ===
+  addPaletteFile: (file: PaletteFile) => void;
+  removePaletteFile: (fileId: string) => void;
+  updatePaletteFile: (fileId: string, updates: Partial<PaletteFile>) => void;
+
   // === Settings Actions ===
   updateSettings: (updates: Partial<FormSettings>) => void;
 
@@ -165,6 +171,7 @@ const defaultForm: SurveyForm = {
   choiceLists: [],
   mediaFiles: [],
   scriptFiles: [],
+  paletteFiles: [],
 };
 
 // ============================================================
@@ -880,6 +887,48 @@ export const useSurveyStore = create<SurveyStore>()(
   },
 
   // ----------------------------------------------------------
+  // Palette File Actions
+  // ----------------------------------------------------------
+
+  addPaletteFile: (file) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        paletteFiles: [...(state.form.paletteFiles || []), file],
+      },
+      redoStack: [],
+    });
+  },
+
+  removePaletteFile: (fileId) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        paletteFiles: (state.form.paletteFiles || []).filter((f) => f.id !== fileId),
+      },
+      redoStack: [],
+    });
+  },
+
+  updatePaletteFile: (fileId, updates) => {
+    const state = get();
+    state.pushUndo();
+    set({
+      form: {
+        ...state.form,
+        paletteFiles: (state.form.paletteFiles || []).map((f) =>
+          f.id === fileId ? { ...f, ...updates } : f
+        ),
+      },
+      redoStack: [],
+    });
+  },
+
+  // ----------------------------------------------------------
   // Settings Actions
   // ----------------------------------------------------------
 
@@ -991,7 +1040,7 @@ export const useSurveyStore = create<SurveyStore>()(
 
   loadForm: (form) => {
     set({
-      form: { ...form, mediaFiles: form.mediaFiles || [], scriptFiles: form.scriptFiles || [] },
+      form: { ...form, mediaFiles: form.mediaFiles || [], scriptFiles: form.scriptFiles || [], paletteFiles: form.paletteFiles || [] },
       selectedRowId: null,
       hasRecoveredForm: false,
       undoStack: [],
