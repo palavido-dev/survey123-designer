@@ -1,12 +1,9 @@
 /**
  * Media Panel — Central view of all CSV/media file references in the form
  *
- * Shows:
- *   - All uploaded CSV files with column counts, row counts, and which questions reference them
- *   - All detected file references from select_*_from_file questions and pulldata() calls
- *   - Status indicators: uploaded (green), missing (red/yellow)
- *   - Click to open CSV editor modal, or upload if missing
- *   - Upload new file button at the bottom
+ * Organized into collapsible sections:
+ *   1. Media Files: CSV uploads, file references, pulldata() tracking
+ *   2. Drawing Palettes: Custom .palette file editor for draw/annotate questions
  */
 
 import React, { useRef, useState } from 'react';
@@ -63,13 +60,9 @@ function parseCsv(text: string): { columns: string[]; rows: Record<string, strin
 
 interface FileReference {
   fileName: string;
-  /** Question IDs that reference this file */
   referencedByQuestions: { id: string; name: string; label: string; type: string }[];
-  /** How the file is referenced */
   referenceType: 'select_from_file' | 'pulldata' | 'both';
-  /** Whether we have an uploaded copy */
   isUploaded: boolean;
-  /** The media file data if uploaded */
   mediaFile?: MediaFile;
 }
 
@@ -88,7 +81,6 @@ function detectFileReferences(form: SurveyForm): FileReference[] {
     return refMap.get(fileName)!;
   };
 
-  // 1) select_*_from_file questions
   for (const row of form.survey) {
     if (['select_one_from_file', 'select_multiple_from_file'].includes(row.type) && row.fileName) {
       const ref = getOrCreate(row.fileName);
@@ -99,7 +91,6 @@ function detectFileReferences(form: SurveyForm): FileReference[] {
     }
   }
 
-  // 2) pulldata() references in expressions
   const pulldataRegex = /pulldata\s*\(\s*['"]([^'"]+)['"]/g;
   for (const row of form.survey) {
     const expressions = [row.calculation, row.relevant, row.constraint, row.default].filter(Boolean);
@@ -110,7 +101,6 @@ function detectFileReferences(form: SurveyForm): FileReference[] {
         const csvName = match[1];
         const fileName = csvName.endsWith('.csv') ? csvName : csvName + '.csv';
         const ref = getOrCreate(fileName);
-        // Only add the question if not already listed
         if (!ref.referencedByQuestions.some((q) => q.id === row.id)) {
           ref.referencedByQuestions.push({
             id: row.id, name: row.name, label: row.label || row.name, type: row.type,
@@ -122,7 +112,6 @@ function detectFileReferences(form: SurveyForm): FileReference[] {
     }
   }
 
-  // 3) Mark uploaded files
   const mediaFiles = form.mediaFiles || [];
   for (const mf of mediaFiles) {
     const ref = getOrCreate(mf.fileName);
@@ -130,7 +119,6 @@ function detectFileReferences(form: SurveyForm): FileReference[] {
     ref.mediaFile = mf;
   }
 
-  // Also include any uploaded files that aren't referenced yet
   for (const mf of mediaFiles) {
     if (!refMap.has(mf.fileName)) {
       refMap.set(mf.fileName, {
@@ -147,6 +135,53 @@ function detectFileReferences(form: SurveyForm): FileReference[] {
 }
 
 // ============================================================
+// Collapsible Section (matches QuestionProperties pattern)
+// ============================================================
+
+function Section({ title, icon, count, children, defaultOpen = true, action }: {
+  title: string;
+  icon: React.ReactNode;
+  count?: number;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  action?: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-b border-gray-100">
+      <div className="flex items-center">
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex-1 flex items-center text-gray-600 hover:bg-gray-50 transition-fast"
+          style={{ padding: '10px 16px', gap: 8 }}
+        >
+          <div className={`transition-transform duration-150 text-gray-400 ${open ? 'rotate-0' : '-rotate-90'}`}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+          <span className="flex items-center gap-2">
+            {icon}
+            <span className="text-[13px] font-semibold">{title}</span>
+          </span>
+          {count !== undefined && (
+            <span className="text-[10px] font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full ml-1">
+              {count}
+            </span>
+          )}
+        </button>
+        {action && open && (
+          <div style={{ paddingRight: 16 }}>
+            {action}
+          </div>
+        )}
+      </div>
+      {open && <div style={{ padding: '0 16px 16px 16px' }}>{children}</div>}
+    </div>
+  );
+}
+
+// ============================================================
 // Icons
 // ============================================================
 
@@ -157,6 +192,17 @@ function FileIcon({ size = 14 }: { size?: number }) {
       <polyline points="14 2 14 8 20 8" />
       <line x1="16" y1="13" x2="8" y2="13" />
       <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
+function PaletteIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 19l7-7 3 3-7 7-3-3z" />
+      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+      <path d="M2 2l7.586 7.586" />
+      <circle cx="11" cy="11" r="2" />
     </svg>
   );
 }
@@ -202,6 +248,7 @@ export function MediaPanel() {
 
   const uploadedCount = fileReferences.filter((r) => r.isUploaded).length;
   const missingCount = fileReferences.filter((r) => !r.isUploaded).length;
+  const paletteCount = (form.paletteFiles || []).length;
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -216,7 +263,6 @@ export function MediaPanel() {
         return;
       }
 
-      // Use the target filename if we're uploading for a specific missing reference
       const fileName = uploadTarget || file.name;
 
       const mediaFile: MediaFile = {
@@ -244,168 +290,163 @@ export function MediaPanel() {
   };
 
   return (
-    <div style={{ padding: '16px 16px 24px' }}>
-      {/* Header summary */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-          <FileIcon size={16} />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700">Media Files</h3>
-          <p className="text-[10px] text-gray-400">
-            {fileReferences.length === 0
-              ? 'No file references found'
-              : `${uploadedCount} uploaded${missingCount > 0 ? `, ${missingCount} missing` : ''}`}
-          </p>
-        </div>
-      </div>
-
-      {/* File reference list */}
-      {fileReferences.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="rounded-full bg-gray-50 w-12 h-12 flex items-center justify-center mx-auto mb-3">
-            <FileIcon size={20} />
+    <div>
+      {/* ====== Media Files Section ====== */}
+      <Section
+        title="Media Files"
+        icon={<FileIcon size={14} />}
+        count={fileReferences.length > 0 ? fileReferences.length : undefined}
+        defaultOpen={true}
+        action={
+          <button
+            type="button"
+            onClick={() => { setUploadTarget(null); fileInputRef.current?.click(); }}
+            className="px-2.5 py-1 text-[11px] font-medium text-[#007a62] bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+          >
+            + Upload CSV
+          </button>
+        }
+      >
+        {fileReferences.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-[12px] text-gray-400 mb-1">No media files yet</p>
+            <p className="text-[11px] text-gray-300">
+              Add a select_from_file question or use pulldata() to reference CSV files
+            </p>
           </div>
-          <p className="text-xs text-gray-400 mb-1">No media files yet</p>
-          <p className="text-[11px] text-gray-300">
-            Add a select_from_file question or use pulldata() to reference CSV files
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {fileReferences.map((ref) => (
-            <div
-              key={ref.fileName}
-              className={`border rounded-lg overflow-hidden transition-fast ${
-                ref.isUploaded
-                  ? 'border-gray-200 hover:border-emerald-300'
-                  : 'border-amber-200 bg-amber-50/30'
-              }`}
-            >
-              {/* File header */}
+        ) : (
+          <div className="space-y-2">
+            {fileReferences.map((ref) => (
               <div
-                className={`flex items-center gap-2 px-4 py-3 ${
-                  ref.isUploaded ? 'cursor-pointer hover:bg-gray-50' : ''
+                key={ref.fileName}
+                className={`border rounded-lg overflow-hidden transition-fast ${
+                  ref.isUploaded
+                    ? 'border-gray-200 hover:border-emerald-300'
+                    : 'border-amber-200 bg-amber-50/30'
                 }`}
-                onClick={() => {
-                  if (ref.isUploaded) {
-                    openCsvEditor('', ref.fileName);
-                  }
-                }}
               >
-                {/* Status icon */}
-                <div className={`flex-shrink-0 ${ref.isUploaded ? 'text-emerald-500' : 'text-amber-500'}`}>
-                  {ref.isUploaded ? <CheckCircleIcon /> : <AlertIcon />}
-                </div>
-
-                {/* File info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-xs text-gray-700 truncate font-medium">
-                      {ref.fileName}
-                    </span>
+                {/* File header */}
+                <div
+                  className={`flex items-center gap-2 px-3 py-2.5 ${
+                    ref.isUploaded ? 'cursor-pointer hover:bg-gray-50' : ''
+                  }`}
+                  onClick={() => {
+                    if (ref.isUploaded) {
+                      openCsvEditor('', ref.fileName);
+                    }
+                  }}
+                >
+                  <div className={`flex-shrink-0 ${ref.isUploaded ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    {ref.isUploaded ? <CheckCircleIcon /> : <AlertIcon />}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {ref.isUploaded && ref.mediaFile && (
-                      <span className="text-[10px] text-gray-400">
-                        {ref.mediaFile.columns.length} cols, {ref.mediaFile.totalRows} rows
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[12px] text-gray-700 truncate font-medium">
+                        {ref.fileName}
                       </span>
-                    )}
-                    {!ref.isUploaded && (
-                      <span className="text-[10px] text-amber-600 font-medium">
-                        Not uploaded
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {ref.isUploaded && ref.mediaFile && (
+                        <span className="text-[10px] text-gray-400">
+                          {ref.mediaFile.columns.length} cols, {ref.mediaFile.totalRows} rows
+                        </span>
+                      )}
+                      {!ref.isUploaded && (
+                        <span className="text-[10px] text-amber-600 font-medium">
+                          Not uploaded
+                        </span>
+                      )}
+                      <span className="text-[10px] text-gray-300">
+                        {ref.referenceType === 'select_from_file' && 'select'}
+                        {ref.referenceType === 'pulldata' && 'pulldata'}
+                        {ref.referenceType === 'both' && 'select + pulldata'}
                       </span>
-                    )}
-                    <span className="text-[10px] text-gray-300">
-                      {ref.referenceType === 'select_from_file' && 'select'}
-                      {ref.referenceType === 'pulldata' && 'pulldata'}
-                      {ref.referenceType === 'both' && 'select + pulldata'}
-                    </span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex-shrink-0 flex items-center gap-1">
-                  {ref.isUploaded ? (
-                    <span className="text-[10px] text-gray-300 whitespace-nowrap">
-                      Click to edit
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setUploadTarget(ref.fileName);
-                        fileInputRef.current?.click();
-                      }}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-[#007a62] bg-emerald-50 rounded hover:bg-emerald-100 transition-fast"
-                    >
-                      <UploadIcon size={10} />
-                      Upload
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Referenced by */}
-              {ref.referencedByQuestions.length > 0 && (
-                <div className="border-t border-gray-100 px-4 py-2 bg-gray-50/50">
-                  <span className="text-[9px] text-gray-400 uppercase tracking-wide font-semibold">
-                    Used by
-                  </span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {ref.referencedByQuestions.map((q) => (
+                  <div className="flex-shrink-0 flex items-center gap-1">
+                    {ref.isUploaded ? (
+                      <span className="text-[10px] text-gray-300 whitespace-nowrap">
+                        Click to edit
+                      </span>
+                    ) : (
                       <button
-                        key={q.id}
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigateToQuestion(q.id);
+                          setUploadTarget(ref.fileName);
+                          fileInputRef.current?.click();
                         }}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-gray-500 bg-white border border-gray-200 rounded hover:border-[#007a62] hover:text-[#007a62] transition-fast"
-                        title={`${q.name} (${q.type})`}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-[#007a62] bg-emerald-50 rounded hover:bg-emerald-100 transition-fast"
                       >
-                        {q.name}
+                        <UploadIcon size={10} />
+                        Upload
                       </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Column preview for uploaded files */}
-              {ref.isUploaded && ref.mediaFile && ref.mediaFile.columns.length > 0 && (
-                <div className="border-t border-gray-100 px-4 py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {ref.mediaFile.columns.slice(0, 8).map((col) => (
-                      <span
-                        key={col}
-                        className="inline-block bg-gray-50 border border-gray-200 rounded text-[10px] font-mono text-gray-500 px-1.5 py-0.5"
-                      >
-                        {col}
-                      </span>
-                    ))}
-                    {ref.mediaFile.columns.length > 8 && (
-                      <span className="text-[9px] text-gray-300">
-                        +{ref.mediaFile.columns.length - 8} more
-                      </span>
                     )}
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* Upload new file button */}
-      <button
-        type="button"
-        onClick={() => { setUploadTarget(null); fileInputRef.current?.click(); }}
-        className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 text-xs font-medium text-[#007a62] border border-dashed border-emerald-300 rounded-lg hover:bg-emerald-50 transition-fast"
+                {/* Referenced by */}
+                {ref.referencedByQuestions.length > 0 && (
+                  <div className="border-t border-gray-100 px-3 py-2 bg-gray-50/50">
+                    <span className="text-[9px] text-gray-400 uppercase tracking-wide font-semibold">
+                      Used by
+                    </span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {ref.referencedByQuestions.map((q) => (
+                        <button
+                          key={q.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigateToQuestion(q.id);
+                          }}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-gray-500 bg-white border border-gray-200 rounded hover:border-[#007a62] hover:text-[#007a62] transition-fast"
+                          title={`${q.name} (${q.type})`}
+                        >
+                          {q.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Column preview for uploaded files */}
+                {ref.isUploaded && ref.mediaFile && ref.mediaFile.columns.length > 0 && (
+                  <div className="border-t border-gray-100 px-3 py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {ref.mediaFile.columns.slice(0, 8).map((col) => (
+                        <span
+                          key={col}
+                          className="inline-block bg-gray-50 border border-gray-200 rounded text-[10px] font-mono text-gray-500 px-1.5 py-0.5"
+                        >
+                          {col}
+                        </span>
+                      ))}
+                      {ref.mediaFile.columns.length > 8 && (
+                        <span className="text-[9px] text-gray-300">
+                          +{ref.mediaFile.columns.length - 8} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {/* ====== Drawing Palettes Section ====== */}
+      <Section
+        title="Drawing Palettes"
+        icon={<PaletteIcon size={14} />}
+        count={paletteCount > 0 ? paletteCount : undefined}
+        defaultOpen={true}
       >
-        <UploadIcon size={14} />
-        Upload CSV File
-      </button>
+        <PaletteManager />
+      </Section>
 
       <input
         ref={fileInputRef}
@@ -414,11 +455,6 @@ export function MediaPanel() {
         onChange={handleFileUpload}
         className="hidden"
       />
-
-      {/* Drawing Palettes section */}
-      <div className="mt-6 pt-5 border-t border-gray-200">
-        <PaletteManager />
-      </div>
     </div>
   );
 }

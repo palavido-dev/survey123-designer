@@ -352,25 +352,33 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
             {currentToolset && (
               <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[12px] font-medium text-gray-600">
+                  <span className="text-[12px] font-semibold text-gray-600">
                     Tools ({currentToolset.tools.length})
                   </span>
-                  <div className="flex gap-1.5">
-                    {(['line', 'area', 'marker', 'text'] as PaletteToolType[]).map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => addTool(type)}
-                        className="px-2 py-1 text-[11px] bg-gray-50 hover:bg-emerald-50 text-gray-500 hover:text-[#007a62] rounded-md transition-colors capitalize"
-                      >
-                        + {type}
-                      </button>
-                    ))}
-                  </div>
+                </div>
+
+                {/* Add tool buttons */}
+                <div className={`grid grid-cols-4 gap-2 ${currentToolset.tools.length > 0 ? 'mb-3' : 'mb-0'}`}>
+                  {([
+                    { type: 'line' as PaletteToolType, icon: 'M5 19L19 5', label: 'Line' },
+                    { type: 'area' as PaletteToolType, icon: 'M4,20 12,4 20,20', label: 'Area' },
+                    { type: 'marker' as PaletteToolType, icon: '', label: 'Marker' },
+                    { type: 'text' as PaletteToolType, icon: '', label: 'Text' },
+                  ]).map(({ type, label }) => (
+                    <button
+                      key={type}
+                      onClick={() => addTool(type)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2 text-[12px] font-medium border border-dashed border-gray-300 text-gray-500 hover:border-[#007a62] hover:text-[#007a62] hover:bg-emerald-50 rounded-lg transition-colors"
+                    >
+                      <ToolTypeIcon type={type} color="currentColor" />
+                      <span>+ {label}</span>
+                    </button>
+                  ))}
                 </div>
 
                 {currentToolset.tools.length === 0 && (
-                  <div className="text-center py-8 text-gray-400 text-[12px]">
-                    No tools yet. Add a line, area, marker, or text tool above.
+                  <div className="text-center py-4 text-gray-400 text-[11px]">
+                    Add a tool type above to get started
                   </div>
                 )}
 
