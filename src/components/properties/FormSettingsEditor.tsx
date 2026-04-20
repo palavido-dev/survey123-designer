@@ -130,6 +130,37 @@ export function FormSettingsEditor() {
       />
 
       <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+        <p className="text-gray-600 text-[12px] font-medium mb-3">Web App Customization</p>
+        <p className="text-gray-400 text-[11px] mb-4" style={{ lineHeight: 1.4 }}>
+          These settings customize the Survey123 web app appearance. Supports HTML and {'${field}'} references (except submit text).
+        </p>
+
+        <Field
+          label="Submit Button Text"
+          value={s.submit_text || ''}
+          onChange={(v) => updateSettings({ submit_text: v })}
+          placeholder="Submit"
+          help="Custom label for the submit button (plain text only)"
+        />
+
+        <Field
+          label="Thank You Message"
+          value={s.thank_you_message || ''}
+          onChange={(v) => updateSettings({ thank_you_message: v })}
+          placeholder="Thank you for your response!"
+          help="Shown after submission. Supports HTML."
+        />
+
+        <Field
+          label="Form Footer"
+          value={s.footer_text || ''}
+          onChange={(v) => updateSettings({ footer_text: v })}
+          placeholder="© 2026 My Organization"
+          help="Displayed at the bottom of the form. Supports HTML."
+        />
+      </div>
+
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
         <p className="text-gray-600 text-[12px] font-medium mb-3">Save as defaults</p>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
