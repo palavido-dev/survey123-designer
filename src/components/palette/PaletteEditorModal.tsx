@@ -81,10 +81,20 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
   // ----------------------------------------------------------
 
   const addToolset = useCallback(() => {
-    setPalette((p) => ({
-      ...p,
-      toolsets: [...p.toolsets, createDefaultToolset()],
-    }));
+    setPalette((p) => {
+      // Generate a unique toolset title
+      const existingTitles = new Set(p.toolsets.map((ts) => ts.title));
+      let title = 'Toolset';
+      let n = 2;
+      while (existingTitles.has(title)) {
+        title = `Toolset ${n}`;
+        n++;
+      }
+      return {
+        ...p,
+        toolsets: [...p.toolsets, { ...createDefaultToolset(), title }],
+      };
+    });
     setActiveToolsetIdx(palette.toolsets.length);
   }, [palette.toolsets.length]);
 
@@ -247,7 +257,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
           {/* Left: Palette meta + toolset tabs + tool list */}
           <div className="flex-1 flex flex-col border-r border-gray-100 overflow-y-auto" style={{ minWidth: 0 }}>
             {/* Palette meta */}
-            <div className="px-6 pt-5 pb-4">
+            <div className="px-6 py-5 border-b border-gray-100">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Palette Name</label>
@@ -273,7 +283,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
             </div>
 
             {/* Toolset tabs */}
-            <div className="px-6 pb-3">
+            <div className="px-6 pt-4 pb-3">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {palette.toolsets.map((ts, idx) => (
                   <button
@@ -313,7 +323,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
 
             {/* Toolset config */}
             {currentToolset && (
-              <div className="px-6 pb-4">
+              <div className="px-6 pb-5">
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Toolset Title</label>
@@ -346,12 +356,12 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
             )}
 
             {/* Separator */}
-            <div className="border-t border-gray-100" />
+            <div className="border-t border-gray-200" />
 
             {/* Tool list */}
             {currentToolset && (
-              <div className="flex-1 overflow-y-auto px-6 py-4">
-                <div className="flex items-center justify-between mb-3">
+              <div className="flex-1 overflow-y-auto px-6 py-5">
+                <div className="flex items-center justify-between mb-4">
                   <span className="text-[12px] font-semibold text-gray-600">
                     Tools ({currentToolset.tools.length})
                   </span>

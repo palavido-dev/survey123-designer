@@ -260,7 +260,7 @@ export function ToolEditor({ tool, onUpdate }: ToolEditorProps) {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-5">
       {/* Basic */}
       <SectionHeader title="Basic" />
 
