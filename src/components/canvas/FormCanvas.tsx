@@ -379,8 +379,8 @@ export function FormCanvas() {
       {/* Form content area */}
       <div className="flex flex-col justify-center flex-1">
         {/* Device Preview Toggle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex justify-center" style={{ padding: '12px 0 8px' }}>
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg" style={{ padding: '4px 6px' }}>
             <button
               onClick={() => setDevicePreviewMode('phone')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-fast ${
