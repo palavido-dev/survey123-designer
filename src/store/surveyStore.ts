@@ -72,6 +72,7 @@ interface SurveyStore {
   // === Validation State ===
   validationResult: FormValidationResult | null;
   showValidationPanel: boolean;
+  showOptimizer: boolean;
 
   // === Survey Row Actions ===
   addRow: (type: QuestionType, index?: number, appearance?: string) => void;
@@ -120,6 +121,7 @@ interface SurveyStore {
   runValidation: () => FormValidationResult;
   clearValidation: () => void;
   setShowValidationPanel: (show: boolean) => void;
+  setShowOptimizer: (show: boolean) => void;
 
   // === History ===
   undo: () => void;
@@ -185,6 +187,7 @@ export const useSurveyStore = create<SurveyStore>()(
   csvEditor: null,
   validationResult: null,
   showValidationPanel: false,
+  showOptimizer: false,
   undoStack: [],
   redoStack: [],
 
@@ -891,7 +894,10 @@ export const useSurveyStore = create<SurveyStore>()(
   },
 
   setShowValidationPanel: (show) => {
-    set({ showValidationPanel: show });
+    set({ showValidationPanel: show, showOptimizer: false });
+  },
+  setShowOptimizer: (show) => {
+    set({ showOptimizer: show, showValidationPanel: false });
   },
 
   // ----------------------------------------------------------

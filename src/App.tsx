@@ -235,6 +235,7 @@ export default function App() {
         <RecoveryBanner />
         <Toolbar />
         <ValidationPanel />
+        <SurveyOptimizer />
 
         {mode === 'form' ? (
           /* ===== Form Builder Mode ===== */

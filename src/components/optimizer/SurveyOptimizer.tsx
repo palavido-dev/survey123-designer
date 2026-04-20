@@ -30,15 +30,12 @@ const SEVERITY_COLORS: Record<string, string> = {
   'suggestion': 'bg-gray-100 text-gray-700',
 };
 
-interface SurveyOptimizerProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-export function SurveyOptimizer({ open, onClose }: SurveyOptimizerProps) {
+export function SurveyOptimizer() {
   const form = useSurveyStore((s) => s.form);
   const selectRow = useSurveyStore((s) => s.selectRow);
   const setPanelView = useSurveyStore((s) => s.setPanelView);
+  const open = useSurveyStore((s) => s.showOptimizer);
+  const onClose = useSurveyStore((s) => s.setShowOptimizer);
   const [expandedRules, setExpandedRules] = useState<Set<string>>(new Set());
 
   const results = useMemo(() => analyzeSurvey(form), [form]);
@@ -96,7 +93,7 @@ export function SurveyOptimizer({ open, onClose }: SurveyOptimizerProps) {
           </div>
         </div>
         <button
-          onClick={onClose}
+          onClick={() => onClose(false)}
           className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition-colors"
         >
           <X size={16} />
