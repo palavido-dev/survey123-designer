@@ -6699,4 +6699,4 @@ export const FORM_TEMPLATES: FormTemplate[] = [
   usfsHazardTreeTemplate,
 ];
 
-export const TEMPLATE_CATEGORIES = Array.from(new Set(FORM_TEMPLATES.map(t => t.category)));
+export const TEMPLATE_CATEGORIES = Array.from(new Set(FORM_TEMPLATES.map(t => t.category))).sort();

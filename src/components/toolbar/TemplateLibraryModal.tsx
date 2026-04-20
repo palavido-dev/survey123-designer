@@ -96,7 +96,7 @@ export function TemplateLibraryModal({ open, onClose, onSelect }: Props) {
         t.tags.some(tag => tag.toLowerCase().includes(q))
       );
     }
-    return results;
+    return results.sort((a, b) => a.name.localeCompare(b.name));
   }, [searchQuery, selectedCategory]);
 
   const categoryCounts = useMemo(() => {
