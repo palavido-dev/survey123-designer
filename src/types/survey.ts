@@ -237,6 +237,10 @@ export interface FormSettings {
   style?: string;
   default_language?: string;
   submission_url?: string;
+  // Web app customization (exported as generated_note_ rows)
+  submit_text?: string;
+  thank_you_message?: string;
+  footer_text?: string;
 }
 
 // ============================================================

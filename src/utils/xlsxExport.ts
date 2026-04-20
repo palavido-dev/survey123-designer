@@ -142,7 +142,7 @@ async function buildXlsxBlob(form: SurveyForm): Promise<Blob> {
   const wb = XLSX.utils.book_new();
 
   // --- Survey Sheet (always all columns) ---
-  const surveyData = buildSurveySheet(form.survey);
+  const surveyData = buildSurveySheet(form.survey, form.settings);
   const surveyWs = XLSX.utils.aoa_to_sheet(surveyData);
   applyColumnWidths(surveyWs, surveyData);
   applyGroupRepeatShading(surveyWs, form.survey, surveyData[0].length);
@@ -239,7 +239,7 @@ function triggerDownload(blob: Blob, fileName: string): void {
 // Build Survey Sheet — ALL 40 columns always present
 // ============================================================
 
-function buildSurveySheet(rows: SurveyRow[]): string[][] {
+function buildSurveySheet(rows: SurveyRow[], settings?: FormSettings): string[][] {
   const header = [...SURVEY_COLUMNS];
   const data: string[][] = [header];
 
@@ -269,6 +269,35 @@ function buildSurveySheet(rows: SurveyRow[]): string[][] {
       return val.toString();
     });
     data.push(rowData);
+  }
+
+  // Append generated_note_ rows for web app customization
+  if (settings) {
+    const nameIdx = header.indexOf('name');
+    const typeIdx = header.indexOf('type');
+    const labelIdx = header.indexOf('label');
+    const hintIdx = header.indexOf('hint');
+
+    const generatedNotes: { name: string; label: string; hint?: string }[] = [];
+
+    if (settings.submit_text) {
+      generatedNotes.push({ name: 'generated_note_form_submit_text', label: settings.submit_text });
+    }
+    if (settings.thank_you_message) {
+      generatedNotes.push({ name: 'generated_note_prompt_submitted', label: settings.thank_you_message });
+    }
+    if (settings.footer_text) {
+      generatedNotes.push({ name: 'generated_note_form_footer', label: settings.footer_text });
+    }
+
+    for (const gn of generatedNotes) {
+      const row = new Array(header.length).fill('');
+      row[typeIdx] = 'note';
+      row[nameIdx] = gn.name;
+      row[labelIdx] = gn.label;
+      if (gn.hint && hintIdx >= 0) row[hintIdx] = gn.hint;
+      data.push(row);
+    }
   }
 
   return data;
@@ -956,6 +985,16 @@ function parseWorkbook(wb: XLSX.WorkBook): SurveyForm {
     }
   }
 
+  // Extract generated_note_ rows into settings and remove from survey
+  const generatedNoteMap: Record<string, { label: string; hint?: string }> = {};
+  const filteredSurvey = survey.filter((row) => {
+    if (row.name?.startsWith('generated_note_')) {
+      generatedNoteMap[row.name] = { label: row.label, hint: row.hint };
+      return false;
+    }
+    return true;
+  });
+
   // Parse settings
   const settings: FormSettings = {
     form_title: 'Imported Survey',
@@ -977,7 +1016,18 @@ function parseWorkbook(wb: XLSX.WorkBook): SurveyForm {
     }
   }
 
-  return { settings, survey, choiceLists, mediaFiles: [], scriptFiles: [] };
+  // Map generated_note_ rows to settings fields
+  if (generatedNoteMap['generated_note_form_submit_text']) {
+    settings.submit_text = generatedNoteMap['generated_note_form_submit_text'].label;
+  }
+  if (generatedNoteMap['generated_note_prompt_submitted']) {
+    settings.thank_you_message = generatedNoteMap['generated_note_prompt_submitted'].label;
+  }
+  if (generatedNoteMap['generated_note_form_footer']) {
+    settings.footer_text = generatedNoteMap['generated_note_form_footer'].label;
+  }
+
+  return { settings, survey: filteredSurvey, choiceLists, mediaFiles: [], scriptFiles: [] };
 }
 
 function parseTypeColumn(typeStr: string): {
