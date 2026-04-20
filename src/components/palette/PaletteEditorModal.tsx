@@ -215,8 +215,8 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007a62" strokeWidth="2">
                 <path d="M12 19l7-7 3 3-7 7-3-3z" />
                 <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
                 <path d="M2 2l7.586 7.586" />
@@ -247,25 +247,25 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
           {/* Left: Palette meta + toolset tabs + tool list */}
           <div className="flex-1 flex flex-col border-r border-gray-100 overflow-y-auto" style={{ minWidth: 0 }}>
             {/* Palette meta */}
-            <div className="px-5 pt-4 pb-3">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="px-6 pt-5 pb-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[11px] text-gray-500 font-medium block mb-1">Palette Name</label>
+                  <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Palette Name</label>
                   <input
                     type="text"
                     value={palette.name}
                     onChange={(e) => updatePaletteMeta({ name: e.target.value.replace(/\s/g, '_') })}
-                    className="w-full px-3 py-1.5 text-[13px] border border-gray-200 rounded-lg font-mono focus:border-violet-400 focus:outline-none"
+                    className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg font-mono focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
                     placeholder="my_palette"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-gray-500 font-medium block mb-1">Display Title</label>
+                  <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Display Title</label>
                   <input
                     type="text"
                     value={palette.title}
                     onChange={(e) => updatePaletteMeta({ title: e.target.value })}
-                    className="w-full px-3 py-1.5 text-[13px] border border-gray-200 rounded-lg focus:border-violet-400 focus:outline-none"
+                    className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
                     placeholder="My Palette"
                   />
                 </div>
@@ -273,8 +273,8 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
             </div>
 
             {/* Toolset tabs */}
-            <div className="px-5 pb-2">
-              <div className="flex items-center gap-1 flex-wrap">
+            <div className="px-6 pb-3">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {palette.toolsets.map((ts, idx) => (
                   <button
                     key={ts.id}
@@ -284,7 +284,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
                     }}
                     className={`group px-3 py-1.5 text-[12px] rounded-lg font-medium transition-colors flex items-center gap-1.5 ${
                       idx === activeToolsetIdx
-                        ? 'bg-violet-100 text-violet-700'
+                        ? 'bg-[#e8f5f1] text-[#007a62]'
                         : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
                     }`}
                   >
@@ -304,7 +304,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
                 ))}
                 <button
                   onClick={addToolset}
-                  className="px-2 py-1.5 text-[12px] text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
+                  className="px-2.5 py-1.5 text-[12px] text-gray-400 hover:text-[#007a62] hover:bg-emerald-50 rounded-lg transition-colors"
                 >
                   + Add Toolset
                 </button>
@@ -313,19 +313,19 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
 
             {/* Toolset config */}
             {currentToolset && (
-              <div className="px-5 pb-3">
-                <div className="flex gap-3">
+              <div className="px-6 pb-4">
+                <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="text-[11px] text-gray-500 font-medium block mb-1">Toolset Title</label>
+                    <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Toolset Title</label>
                     <input
                       type="text"
                       value={currentToolset.title}
                       onChange={(e) => updateToolset(activeToolsetIdx, { title: e.target.value })}
-                      className="w-full px-3 py-1.5 text-[13px] border border-gray-200 rounded-lg focus:border-violet-400 focus:outline-none"
+                      className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
                     />
                   </div>
                   <div style={{ width: 140 }}>
-                    <label className="text-[11px] text-gray-500 font-medium block mb-1">Icon</label>
+                    <label className="text-[11px] text-gray-500 font-medium block mb-1.5">Icon</label>
                     <select
                       value={currentToolset.icon?.name || ''}
                       onChange={(e) =>
@@ -333,7 +333,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
                           icon: e.target.value ? { name: e.target.value } : undefined,
                         })
                       }
-                      className="w-full px-2 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white focus:border-violet-400 focus:outline-none"
+                      className="w-full px-2.5 py-2 text-[12px] border border-gray-200 rounded-lg bg-white focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
                     >
                       <option value="">None</option>
                       {CALCITE_ICONS.map((ic) => (
@@ -350,17 +350,17 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
 
             {/* Tool list */}
             {currentToolset && (
-              <div className="flex-1 overflow-y-auto px-5 py-3">
+              <div className="flex-1 overflow-y-auto px-6 py-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-[12px] font-medium text-gray-600">
                     Tools ({currentToolset.tools.length})
                   </span>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1.5">
                     {(['line', 'area', 'marker', 'text'] as PaletteToolType[]).map((type) => (
                       <button
                         key={type}
                         onClick={() => addTool(type)}
-                        className="px-2 py-1 text-[11px] bg-gray-50 hover:bg-violet-50 text-gray-500 hover:text-violet-600 rounded transition-colors capitalize"
+                        className="px-2 py-1 text-[11px] bg-gray-50 hover:bg-emerald-50 text-gray-500 hover:text-[#007a62] rounded-md transition-colors capitalize"
                       >
                         + {type}
                       </button>
@@ -426,7 +426,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 text-[13px] text-white bg-violet-600 rounded-lg hover:bg-violet-700 transition-colors font-medium"
+              className="px-4 py-2 text-[13px] text-white bg-[#007a62] rounded-lg hover:bg-[#006652] transition-colors font-medium"
             >
               {existing ? 'Save Changes' : 'Create Palette'}
             </button>
@@ -460,20 +460,13 @@ function ToolRow({
   onMoveUp: () => void;
   onMoveDown: () => void;
 }) {
-  const typeColors: Record<string, string> = {
-    line: 'bg-blue-50 text-blue-600',
-    area: 'bg-green-50 text-green-600',
-    marker: 'bg-amber-50 text-amber-600',
-    text: 'bg-purple-50 text-purple-600',
-  };
-
   const symbolColor = getToolColor(tool);
 
   return (
     <div
       onClick={onSelect}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
-        isActive ? 'bg-violet-50 border border-violet-200' : 'hover:bg-gray-50 border border-transparent'
+        isActive ? 'bg-[#e8f5f1] border border-emerald-200' : 'hover:bg-gray-50 border border-transparent'
       }`}
     >
       {/* Color swatch / preview */}
@@ -487,7 +480,7 @@ function ToolRow({
       <div className="flex-1 min-w-0">
         <div className="text-[13px] text-gray-800 truncate">{tool.label}</div>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${typeColors[tool.type] || 'bg-gray-100 text-gray-500'}`}>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
             {tool.type}
           </span>
           {tool.drawType && (

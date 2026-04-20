@@ -124,7 +124,7 @@ function TextInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className={`w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white focus:border-violet-400 focus:outline-none ${mono ? 'font-mono' : ''}`}
+      className={`w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none ${mono ? 'font-mono' : ''}`}
     />
   );
 }
@@ -150,7 +150,7 @@ function NumberInput({
       min={min}
       max={max}
       step={step}
-      className="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white font-mono focus:border-violet-400 focus:outline-none"
+      className="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white font-mono focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
     />
   );
 }
@@ -172,7 +172,7 @@ function ColorInput({ value, onChange }: { value: string; onChange: (v: string) 
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder="#ff0000 or red"
-        className="flex-1 px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white font-mono focus:border-violet-400 focus:outline-none"
+        className="flex-1 px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white font-mono focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
       />
     </div>
   );
@@ -191,7 +191,7 @@ function SelectInput({
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white focus:border-violet-400 focus:outline-none"
+      className="w-full px-2.5 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-white focus:border-[#007a62] focus:ring-1 focus:ring-[#007a62]/20 focus:outline-none"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>
@@ -477,7 +477,7 @@ export function ToolEditor({ tool, onUpdate }: ToolEditorProps) {
                     });
                   }
                 }}
-                className="text-[11px] text-violet-600 hover:text-violet-700 font-medium"
+                className="text-[11px] text-[#007a62] hover:text-[#006652] font-medium"
               >
                 Switch to {tool.symbol?.type === 'esriSMS' ? 'image marker' : 'simple marker'}
               </button>
