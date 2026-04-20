@@ -3,16 +3,18 @@
  * Includes Form/Report mode toggle
  */
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useSurveyStore } from '../../store/surveyStore';
 import { useReportStore } from '../../store/reportStore';
 import { exportToXlsx, exportToZip, importFromXlsx } from '../../utils/xlsxExport';
 import { importDocxToHtml, exportHtmlToDocx } from '../../utils/reportDocx';
 import {
-  Download, Upload, Undo2, Redo2, FileText, Plus, AlertCircle, BookOpen, ChevronDown,
+  Download, Upload, Undo2, Redo2, FileText, Plus, AlertCircle, BookOpen, ChevronDown, Lightbulb,
 } from '../../utils/icons';
+import { analyzeSurvey } from '../../utils/surveyOptimizer';
 import type { AppMode } from '../../types/report';
 import { ValidationPanel } from './ValidationPanel';
+import { SurveyOptimizer } from '../optimizer/SurveyOptimizer';
 import { TemplateLibraryModal } from './TemplateLibraryModal';
 import type { FormTemplate } from '../../data/formTemplates';
 
@@ -46,7 +48,12 @@ export function Toolbar() {
 
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
+  const [showOptimizer, setShowOptimizer] = useState(false);
   const newMenuRef = useRef<HTMLDivElement>(null);
+
+  // Compute optimizer suggestions
+  const optimizationResults = useMemo(() => analyzeSurvey(form), [form]);
+  const suggestionCount = optimizationResults.reduce((sum, r) => sum + r.matches.length, 0);
 
   // Close "New" dropdown on outside click
   useEffect(() => {
@@ -273,6 +280,21 @@ export function Toolbar() {
               )}
             </button>
 
+            <button
+              onClick={() => setShowOptimizer(!showOptimizer)}
+              className="flex items-center text-[13px] font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-fast relative"
+              style={{ padding: '6px 12px', gap: 6 }}
+              title="Analyze form structure and get optimization suggestions"
+            >
+              <Lightbulb size={15} className="text-gray-400" />
+              Optimize
+              {suggestionCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full text-[10px] font-bold flex items-center justify-center px-1 bg-[#00856a] text-white">
+                  {suggestionCount}
+                </span>
+              )}
+            </button>
+
             <div className="bg-gray-200" style={{ width: 1, height: 20, margin: '0 4px' }} />
 
             <button
@@ -398,6 +420,11 @@ export function Toolbar() {
         onSelect={handleLoadTemplate}
       />
 
+      {/* Survey Optimizer Panel */}
+      <SurveyOptimizer
+        open={showOptimizer}
+        onClose={() => setShowOptimizer(false)}
+      />
     </div>
   );
 }

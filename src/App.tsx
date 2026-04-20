@@ -25,6 +25,7 @@ import { useReportStore } from './store/reportStore';
 import { QuestionType } from './types/survey';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { ValidationPanel } from './components/toolbar/ValidationPanel';
+import { SurveyOptimizer } from './components/optimizer/SurveyOptimizer';
 import { QuestionPalette } from './components/sidebar/QuestionPalette';
 import { FormCanvas } from './components/canvas/FormCanvas';
 import { PropertiesPanel } from './components/properties/PropertiesPanel';

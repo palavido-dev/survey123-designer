@@ -17,6 +17,7 @@ import {
   ToggleLeft, Maximize2, Minimize2, MousePointerClick,
   Pen, AlignLeft, BookOpen, Library, ChevronUp,
   Zap, Shield, Droplets, HardHat, TreePine, Wind, Building2, Heart, MapPinned,
+  Lightbulb, TrendingUp,
 } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -33,6 +34,7 @@ const iconMap: Record<string, LucideIcon> = {
   ToggleLeft, Maximize2, Minimize2, MousePointerClick,
   Pen, AlignLeft, BookOpen, Library, ChevronUp,
   Zap, Shield, Droplets, HardHat, TreePine, Wind, Building2, Heart, MapPinned,
+  Lightbulb, TrendingUp,
 };
 
 export function getIcon(name: string): LucideIcon {
@@ -53,4 +55,5 @@ export {
   ToggleLeft, Maximize2, Minimize2, MousePointerClick,
   Pen, AlignLeft, BookOpen, Library, ChevronUp,
   Zap, Shield, Droplets, HardHat, TreePine, Wind, Building2, Heart, MapPinned,
+  Lightbulb, TrendingUp,
 };
