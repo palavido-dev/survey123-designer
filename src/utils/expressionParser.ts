@@ -564,12 +564,12 @@ export const FUNCTION_REGISTRY: Record<string, FunctionSignature> = {
   // ---- Data/Lookup ----
   'pulldata': {
     name: 'pulldata',
-    description: 'Look up a value from a CSV file or call a JavaScript function',
+    description: 'Look up a value from a CSV file, device property, or call a JavaScript function',
     params: [
       { name: 'source', type: 'string' },
-      { name: 'return_col', type: 'string' },
-      { name: 'lookup_col', type: 'string' },
-      { name: 'lookup_value', type: 'any' },
+      { name: 'return_col_or_property', type: 'string' },
+      { name: 'lookup_col', type: 'string', optional: true },
+      { name: 'lookup_value', type: 'any', optional: true },
     ],
     returnType: 'any',
     example: "pulldata('facilities', 'address', 'id', ${facility_id})",
