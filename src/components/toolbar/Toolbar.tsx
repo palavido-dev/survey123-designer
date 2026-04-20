@@ -14,7 +14,7 @@ import {
 import { analyzeSurvey } from '../../utils/surveyOptimizer';
 import type { AppMode } from '../../types/report';
 import { ValidationPanel } from './ValidationPanel';
-import { SurveyOptimizer } from '../optimizer/SurveyOptimizer';
+
 import { TemplateLibraryModal } from './TemplateLibraryModal';
 import type { FormTemplate } from '../../data/formTemplates';
 
@@ -48,7 +48,8 @@ export function Toolbar() {
 
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showTemplateLibrary, setShowTemplateLibrary] = useState(false);
-  const [showOptimizer, setShowOptimizer] = useState(false);
+  const showOptimizer = useSurveyStore((s) => s.showOptimizer);
+  const setShowOptimizer = useSurveyStore((s) => s.setShowOptimizer);
   const newMenuRef = useRef<HTMLDivElement>(null);
 
   // Compute optimizer suggestions
@@ -420,11 +421,6 @@ export function Toolbar() {
         onSelect={handleLoadTemplate}
       />
 
-      {/* Survey Optimizer Panel */}
-      <SurveyOptimizer
-        open={showOptimizer}
-        onClose={() => setShowOptimizer(false)}
-      />
     </div>
   );
 }
