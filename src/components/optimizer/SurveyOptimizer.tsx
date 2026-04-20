@@ -101,7 +101,7 @@ export function SurveyOptimizer() {
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto" style={{ maxHeight: 330 }}>
+      <div className="overflow-y-auto" style={{ maxHeight: 330, padding: '8px 16px 12px' }}>
         {isClean ? (
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
             <svg className="w-12 h-12 mb-3 text-[#00856a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -111,28 +111,27 @@ export function SurveyOptimizer() {
             <p className="text-xs text-gray-400 mt-1">No optimization suggestions at this time</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div>
             {/* Summary stats */}
-            <div className="px-4 py-3 bg-gray-50 flex items-center gap-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                  {results.length} suggestion{results.length !== 1 ? 's' : ''}
-                </span>
-              </div>
+            <div className="flex items-center gap-4" style={{ padding: '8px 0 12px' }}>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                {results.length} suggestion{results.length !== 1 ? 's' : ''}
+              </span>
               {totalSuggestions > 0 && (
                 <span className="text-xs text-gray-500">{totalSuggestions} issue{totalSuggestions !== 1 ? 's' : ''} across your form</span>
               )}
             </div>
 
             {/* Results by category */}
+            <div className="space-y-4">
             {Array.from(groupedByCategory.entries()).map(([category, categoryResults]) => {
               const catLabel = CATEGORY_LABELS[category] || category;
               const colors = CATEGORY_COLORS[category];
 
               return (
-                <div key={category} className={colors.bgColor}>
+                <div key={category} className={`${colors.bgColor} rounded-lg overflow-hidden border border-gray-100`}>
                   {/* Category header */}
-                  <div className={`px-4 py-2 ${colors.textColor}`}>
+                  <div className={`${colors.textColor}`} style={{ padding: '8px 14px' }}>
                     <span className="text-[11px] font-semibold uppercase tracking-wide">{catLabel} ({categoryResults.length})</span>
                   </div>
 
@@ -141,11 +140,12 @@ export function SurveyOptimizer() {
                     const isExpanded = expandedRules.has(result.ruleId);
 
                     return (
-                      <div key={result.ruleId} className="border-b border-gray-100 last:border-0">
+                      <div key={result.ruleId} className="border-t border-gray-100/60">
                         {/* Collapsible header */}
                         <button
                           onClick={() => toggleExpanded(result.ruleId)}
-                          className="w-full px-4 py-3 text-left hover:bg-white/50 transition-colors flex items-start gap-3"
+                          className="w-full text-left hover:bg-white/50 transition-colors flex items-start gap-3"
+                          style={{ padding: '10px 14px' }}
                         >
                           {/* Severity badge */}
                           <div className="flex-shrink-0 mt-0.5">
@@ -163,24 +163,25 @@ export function SurveyOptimizer() {
                           {/* Expand indicator */}
                           <div className="text-gray-400 flex-shrink-0 mt-0.5">
                             <svg className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                           </div>
                         </button>
 
                         {/* Expanded matches */}
                         {isExpanded && (
-                          <div className="px-4 pb-3 space-y-2 bg-white/30">
+                          <div className="space-y-2 bg-white/30" style={{ padding: '0 14px 12px' }}>
                             {result.matches.map((match, idx) => (
-                              <div key={idx} className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
-                                <p className="text-xs text-gray-700 leading-relaxed mb-2">{match.suggestedFix}</p>
+                              <div key={idx} className="bg-white rounded-lg border border-gray-100 shadow-sm" style={{ padding: '10px 12px' }}>
+                                <p className="text-xs text-gray-700 leading-relaxed" style={{ marginBottom: 8 }}>{match.suggestedFix}</p>
 
                                 {/* Action buttons */}
                                 <div className="flex items-center gap-2">
                                   {match.rowIds.length > 0 && (
                                     <button
                                       onClick={() => handleGoToQuestion(match.rowIds[0])}
-                                      className="text-xs px-3 py-1.5 rounded-md border border-[#00856a] text-[#00856a] hover:bg-[#00856a]/5 transition-colors font-medium"
+                                      className="text-xs rounded-md border border-[#00856a] text-[#00856a] hover:bg-[#00856a]/5 transition-colors font-medium"
+                                      style={{ padding: '5px 12px' }}
                                     >
                                       {match.rowIds.length === 1 ? 'Go to question' : `Go to first (${match.rowIds.length} affected)`}
                                     </button>
@@ -199,6 +200,7 @@ export function SurveyOptimizer() {
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </div>
