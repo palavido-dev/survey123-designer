@@ -223,7 +223,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
         style={{ width: 920, maxHeight: '90vh' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between border-b border-gray-200" style={{ padding: '16px 24px' }}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#007a62" strokeWidth="2">
@@ -430,7 +430,7 @@ export function PaletteEditorModal({ paletteId, onClose }: PaletteEditorModalPro
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50" style={{ padding: '12px 24px' }}>
           <div className="text-[11px] text-gray-400">
             {palette.toolsets.reduce((sum, ts) => sum + ts.tools.length, 0)} total tools across{' '}
             {palette.toolsets.length} toolset{palette.toolsets.length !== 1 ? 's' : ''}
