@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Marketing / research / outreach drafts
+reddit-post*.md
+forum-monitor-reports/
+spec-monitor-reports/
+esri-community-post/
