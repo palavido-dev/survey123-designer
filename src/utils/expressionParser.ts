@@ -575,6 +575,19 @@ export const FUNCTION_REGISTRY: Record<string, FunctionSignature> = {
     example: "pulldata('facilities', 'address', 'id', ${facility_id})",
     category: 'Data/Lookup',
   },
+  'search': {
+    name: 'search',
+    description: 'Filter choices from a CSV file or feature layer (used in select_one_from_file appearance, choice_filter, or pulldata-style lookups). Match types: matches, startswith, endswith, contains.',
+    params: [
+      { name: 'file_or_layer', type: 'string' },
+      { name: 'match_type', type: 'string', optional: true },
+      { name: 'column', type: 'string', optional: true },
+      { name: 'value', type: 'any', optional: true },
+    ],
+    returnType: 'node-set',
+    example: "search('cities', 'matches', 'state', ${state})",
+    category: 'Data/Lookup',
+  },
   'indexed-repeat': {
     name: 'indexed-repeat',
     description: 'Get a value from a specific repeat instance by index',
